@@ -30,16 +30,33 @@
     if (source !== 'user') return;
 
     if (!this._isOpen) {
-      var sel = this._quill.getSelection();
-      if (!sel || sel.index < 1) return;
-      var charBefore = this._quill.getText(sel.index - 1, 1);
-      if (charBefore === '/') {
-        this._open(sel.index - 1);
+      // Use the delta to find the insert position — getSelection() returns
+      // the pre-insert index during text-change and is not reliable here.
+      var info = this._getInsertInfo(delta);
+      if (info && info.text === '/') {
+        this._open(info.index);
       }
       return;
     }
 
     this._updateFromDocument();
+  };
+
+  // Returns { index, text } for the first insert op in a delta, or null.
+  SlashCommand.prototype._getInsertInfo = function (delta) {
+    var offset = 0;
+    var ops = (delta && delta.ops) || [];
+    for (var i = 0; i < ops.length; i++) {
+      var op = ops[i];
+      if (typeof op.retain === 'number') {
+        offset += op.retain;
+      } else if (typeof op.insert === 'string') {
+        return { index: offset, text: op.insert };
+      } else {
+        return null;
+      }
+    }
+    return null;
   };
 
   SlashCommand.prototype._onSelectionChange = function (range) {
