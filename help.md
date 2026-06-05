@@ -27,6 +27,41 @@ Instead, serve it over localhost. Pick whichever you have:
 
 ---
 
+## Stage 2 — Widget System, Feature 3: Toolbar Dropdown
+
+### [x] Test the toolbar widget dropdown — DONE
+
+**What**: Verify that the Insert Widget icon button in the app header opens a dropdown, widgets insert correctly, and the dropdown closes as expected.
+
+**Checklist:**
+- [x] A small grid-plus icon button appears on the right side of the app header (before the "unsaved" status)
+- [x] Hovering the button shows a border; clicking it lights up with the primary colour (active state) and opens the dropdown
+- [x] The dropdown lists all registered widgets (Callout) with icon, name, and description
+- [x] Clicking a widget in the dropdown inserts it at the current cursor position in the editor
+- [x] Clicking anywhere outside the dropdown closes it without inserting
+- [x] Pressing `Escape` closes the dropdown and returns focus to the button
+- [x] The dropdown is scrollable (ready for when more widgets are registered)
+- [x] No console errors throughout
+
+---
+
+## Stage 2 — Widget System, Feature 2: Slash Command
+
+### [x] Test the slash command palette — DONE
+
+**What**: Verify that typing `/` in the editor opens the widget palette, filtering works, keyboard nav works, and inserting a widget removes the trigger text.
+
+**Checklist:**
+- [x] Type `/` anywhere in the editor — palette appears near the cursor showing all registered widgets
+- [x] Type `/cal` — list filters to just Callout
+- [x] Press `↑`/`↓` — selection highlight moves through the list
+- [x] Press `Enter` — widget inserts, the `/` and any query text are removed
+- [x] Press `Escape` — palette closes, nothing inserted
+- [x] Click a list item with the mouse — widget inserts
+- [x] No console errors throughout
+
+---
+
 ## Stage 2 — Widget System, Feature 1: Blot Base Class
 
 ### [x] Test the widget registry and Callout blot — DONE

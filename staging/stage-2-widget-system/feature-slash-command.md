@@ -4,16 +4,16 @@
 The `/` key interception that opens a command palette for inserting widgets. Type `/` anywhere in the editor → a dropdown appears with all registered widgets → type to filter → press Enter to insert.
 
 ## Acceptance Criteria
-- [ ] Typing `/` at the start of a line or after a space opens the command palette
-- [ ] The palette shows all registered widgets (name + icon + short description)
-- [ ] Typing additional characters filters the list (substring match is fine)
-- [ ] Pressing `↑`/`↓` navigates the list
-- [ ] Pressing `Enter` inserts the selected widget and closes the palette
-- [ ] Pressing `Escape` closes the palette without inserting
-- [ ] Clicking a list item inserts that widget
-- [ ] The `/` character that triggered the palette is removed when a widget is inserted
-- [ ] The palette closes if the cursor moves away from the trigger position
-- [ ] Palette is positioned near the cursor (not always top-left)
+- [x] Typing `/` at the start of a line or after a space opens the command palette
+- [x] The palette shows all registered widgets (name + icon + short description)
+- [x] Typing additional characters filters the list (substring match is fine)
+- [x] Pressing `↑`/`↓` navigates the list
+- [x] Pressing `Enter` inserts the selected widget and closes the palette
+- [x] Pressing `Escape` closes the palette without inserting
+- [x] Clicking a list item inserts that widget
+- [x] The `/` character that triggered the palette is removed when a widget is inserted
+- [x] The palette closes if the cursor moves away from the trigger position
+- [x] Palette is positioned near the cursor (not always top-left)
 
 ## Implementation Notes
 - Listen for Quill's `text-change` event; detect when the last character typed is `/`

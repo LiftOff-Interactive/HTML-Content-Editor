@@ -11,10 +11,10 @@ Build the infrastructure that all widgets share. By the end of this stage, no wi
 ## Definition of Done
 - [x] `src/blots/base.js` exists and is well-documented — the template all widget authors follow
 - [x] `src/registry.js` exists — a map of all registered widgets
-- [ ] Typing `/` in the editor opens a command palette with a list of widget names
-- [ ] Fuzzy-searching the palette filters the list
-- [ ] Pressing Enter or clicking a result inserts a placeholder blot for that widget
-- [ ] The toolbar has a "Insert Widget" dropdown that shows the same list
+- [x] Typing `/` in the editor opens a command palette with a list of widget names
+- [x] Fuzzy-searching the palette filters the list
+- [x] Pressing Enter or clicking a result inserts a placeholder blot for that widget
+- [x] The toolbar has a "Insert Widget" dropdown that shows the same list
 - [x] `CalloutBlot` stub proves the system works end to end (renders preview, full modal edit)
 - [x] Clicking a blot opens a modal edit UI (`src/ui/modal.js` — used by all widgets)
 
