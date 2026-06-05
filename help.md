@@ -4,25 +4,53 @@ These are tasks only you (the human) can complete. Claude cannot create accounts
 
 ---
 
-## Stage 1 — Editor Shell (Current)
+## Stage 1 — Theme Panel (Current)
 
-### [ ] Test the editor shell in your browser
-**What**: Open `index.html` directly as a `file://` URL and verify everything works.
-**Why**: This is the only remaining gate before the editor shell feature is done. Three acceptance criteria require human eyes.
+### [ ] Test the theme panel in your browser
+**What**: Open `index.html` and verify the theme panel works end-to-end.
 **How**:
 1. Double-click `index.html` (or drag it into Chrome/Firefox)
-2. Check: does the editor appear? Can you type in it?
-3. Check: does the toolbar work? Try bold, italic, the heading dropdown, bullet list
-4. Open DevTools Console — are there any errors?
-5. Repeat in Firefox
+2. The left sidebar should show a live preview card at the top, three preset buttons, and controls below
 
-**What to look for:**
-- Quill editor loads (white paper area with toolbar above it)
-- Toolbar buttons respond on click (bold toggles, heading dropdown opens)
-- Typing in the editor works normally
-- No red errors in the browser console
+**Checklist — work through these in order:**
 
-**After testing**: Tell Claude what you saw. If it all works, we tick off the ACs, commit, and move to the theme panel.
+**Live preview**
+- [ ] The preview card shows "Heading Text" in one font and body text below it in another, with a blue button
+- [ ] The preview updates instantly as you change any setting (no reload needed)
+
+**Preset buttons**
+- [ ] Click **Bold** — preview shifts to purple, body font changes to Inter, the editor's primary color turns purple
+- [ ] Click **Soft** — preview shifts to teal/amber, background warms to cream
+- [ ] Click **Neutral** — everything returns to the default blue/grey/Georgia look
+
+**Color pickers**
+- [ ] Click the Primary color swatch, pick any color — the button in the preview, editor toolbar hover states, and heading links update immediately
+- [ ] Click Background, pick a color — the editor writing area and the preview card background both change
+- [ ] Click Text, pick a very light color — text in the editor and preview becomes hard to read (confirms the var is wired)
+
+**Typography controls**
+- [ ] Change **Body** font to "Courier New" — body text in the editor and preview switches to monospace immediately
+- [ ] Change **Heading** font to "Georgia" — headings (`H1`, `H2`, `H3`) in the editor switch to serif
+- [ ] Change **Line height** to "Loose (1.8)" — paragraph spacing in the editor visibly increases
+- [ ] Change **Size** to "Large (18px)" — all text in the editor grows
+
+**Layout controls**
+- [ ] Change **Max width** to "Narrow (680px)" — the editor column visibly narrows on screen
+- [ ] Change **Corners** to "Full" — note this for when widgets arrive; sharp/medium/full should all feel different
+
+**Reset**
+- [ ] After making several changes, click **Reset to default** — all controls and the preview should snap back to the Neutral defaults
+
+**Editor still works**
+- [ ] Type in the editor — it still accepts input normally
+- [ ] Toolbar buttons (bold, italic, heading dropdown, bullet list) still work
+- [ ] DevTools Console (F12) — no red errors
+
+---
+
+## Stage 1 — Editor Shell
+
+### [x] Test the editor shell in your browser — DONE
 
 ---
 

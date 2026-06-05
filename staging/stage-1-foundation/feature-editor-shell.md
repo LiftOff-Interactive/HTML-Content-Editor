@@ -12,9 +12,9 @@ The main HTML page that hosts the Quill 2.0 editor. This is the skeleton of the 
 - Base CSS with `:root` theme variables defined as stubs
 
 ## Acceptance Criteria
-- [ ] `index.html` opens via `file://` in Chrome, Firefox, and Safari with no errors — **NEEDS HUMAN TEST**
-- [ ] Quill editor is visible and accepts keyboard input — **NEEDS HUMAN TEST**
-- [ ] Toolbar buttons work: bold, italic, underline, H1, H2, H3, bullet list, numbered list — **NEEDS HUMAN TEST**
+- [x] `index.html` opens via `file://` in Chrome, Firefox, and Safari with no errors
+- [x] Quill editor is visible and accepts keyboard input
+- [x] Toolbar buttons work: bold, italic, underline, H1, H2, H3, bullet list, numbered list
 - [x] Page has a recognizable app shell — not a raw Quill demo
 - [x] All Quill assets (JS, CSS) are loaded from local paths, not CDN URLs — served from `vendor/quill/dist/`
 - [x] `:root` in main CSS defines at least: `--primary-color`, `--secondary-color`, `--font-family`, `--font-size-base`, `--content-max-width`, `--space-unit`

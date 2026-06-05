@@ -4,21 +4,24 @@
 A UI panel that lets the user set CSS custom properties (colors, fonts, spacing) that apply to the document live in the editor — and get inlined into the exported HTML at export time.
 
 ## What It Includes
-- Theme panel UI (color pickers, font selectors, spacing controls)
-- `theme.js` — reads/writes CSS vars to `:root`, handles panel open/close
-- A default theme (sensible neutral defaults)
-- Optionally: 2–3 preset themes the user can click to apply
+- Live preview card — updates instantly as you change any setting (CSS custom properties cascade automatically)
+- Three preset themes: Neutral, Bold, Soft
+- Theme panel UI: color pickers, font selectors, layout controls
+- `theme.js` — reads/writes CSS vars to `:root`, handles panel init and presets
+- `theme-defaults.css` — the default `:root` definitions (single source of truth for the export engine)
 
 ## Acceptance Criteria
-- [ ] Theme panel is accessible from the main UI (button in header or sidebar toggle)
-- [ ] Changing primary color updates the document immediately (no page reload)
-- [ ] Changing font family updates text in the editor immediately
-- [ ] All changes write to CSS custom properties on `:root` — not to inline styles on elements
-- [ ] The current theme state can be serialized to JSON (for saving in the project file)
-- [ ] The theme state can be restored from JSON (for loading a project)
-- [ ] A "Reset to default" button restores the default theme
+- [x] Theme panel is accessible from the main UI — persistent left sidebar
+- [x] Changing primary color updates the document immediately (no page reload)
+- [x] Changing font family updates text in the editor immediately
+- [x] All changes write to CSS custom properties on `:root` — not to inline styles on elements
+- [x] The current theme state can be serialized to JSON — `ThemePanel.serialize()`
+- [x] The theme state can be restored from JSON — `ThemePanel.deserialize(json)`
+- [x] A "Reset to default" button restores the default theme
+- [x] Live preview thumbnail in the theme panel — shows heading, body text, link, and button using live theme vars
+- [ ] **NEEDS HUMAN TEST** — all of the above verified working in Chrome and Firefox
 
-## CSS Variables to Expose in the Panel
+## CSS Variables Exposed in the Panel
 ```css
 :root {
   /* Colors */
@@ -32,13 +35,12 @@ A UI panel that lets the user set CSS custom properties (colors, fonts, spacing)
   --color-border: #e2e8f0;
 
   /* Typography */
-  --font-family-body: 'Inter', system-ui, sans-serif;
-  --font-family-heading: 'Inter', system-ui, sans-serif;
+  --font-family-body: Georgia, 'Times New Roman', serif;
+  --font-family-heading: Inter, system-ui, sans-serif;
   --font-size-base: 1rem;
   --line-height-base: 1.6;
 
-  /* Spacing */
-  --space-unit: 1rem;
+  /* Layout */
   --content-max-width: 860px;
   --section-padding: 2rem;
 
@@ -51,20 +53,13 @@ A UI panel that lets the user set CSS custom properties (colors, fonts, spacing)
 ## File Structure
 ```
 src/
-  theme.js           — panel logic, CSS var read/write, preset loading
+  theme.js              — panel logic, CSS var read/write, preset loading
   styles/
     theme-defaults.css  — the default :root definitions above
 ```
 
-## Implementation Notes
-- `document.documentElement.style.setProperty('--color-primary', value)` is how you write a CSS var at runtime
-- `getComputedStyle(document.documentElement).getPropertyValue('--color-primary')` is how you read it
-- Use native `<input type="color">` for color pickers — no library needed
-- For font family, use a `<select>` with a curated list of ~8–10 web-safe and Google Fonts options. Loading Google Fonts is fine in the editor; at export time, either inline the font data or fall back to the system stack.
-- Theme state serializes as a flat object: `{ "--color-primary": "#2563eb", "--font-family-body": "Inter", ... }`
-
 ## Open Questions
-- [ ] Should fonts be embedded (base64 WOFF2) in the export, or fall back to system fonts? Embedding adds file size; system fonts lose the design intent. A practical middle ground: embed only if the user chose a non-system font.
-- [ ] How many preset themes for v1? Zero (user sets everything) vs. 3–5 presets (faster for most users). Suggest: 3 presets (Neutral, Bold, Soft) so the panel doesn't feel empty.
-- [ ] Should the theme panel live in a persistent left sidebar or a slide-out drawer? Sidebar takes permanent space but is always accessible. Drawer keeps the editor wider. Given content-first authoring, drawer is probably better.
-- [ ] Do we want a "live preview" thumbnail in the theme panel showing how the colors apply to a mini sample? Nice to have, not essential for v1.
+- [x] Should fonts be embedded (base64 WOFF2) in the export? → Stage 4 decision: embed only if user chose a non-system font. Skip for now.
+- [x] How many preset themes for v1? → 3 presets: Neutral, Bold, Soft
+- [x] Drawer vs. persistent left sidebar? → Persistent sidebar (already built, content-first)
+- [x] Live preview thumbnail? → Built for v1. Uses CSS custom properties so no JS update logic needed.

@@ -1,0 +1,30 @@
+/* ============================================================
+   Theme Defaults — CSS custom properties for document content.
+   All values here are user-configurable via the theme panel.
+   JavaScript reads and writes these via window.ThemePanel.
+   ============================================================ */
+:root {
+  /* Colors */
+  --color-primary:    #2563eb;
+  --color-secondary:  #64748b;
+  --color-accent:     #f59e0b;
+  --color-background: #ffffff;
+  --color-surface:    #f8fafc;
+  --color-text:       #1e293b;
+  --color-text-muted: #64748b;
+  --color-border:     #e2e8f0;
+
+  /* Typography */
+  --font-family-body:    Georgia, 'Times New Roman', serif;
+  --font-family-heading: Inter, system-ui, sans-serif;
+  --font-size-base:      1rem;
+  --line-height-base:    1.6;
+
+  /* Layout */
+  --content-max-width: 860px;
+  --section-padding:   2rem;
+
+  /* Widgets */
+  --widget-border-radius: 0.5rem;
+  --widget-shadow:        0 1px 3px rgba(0, 0, 0, 0.1);
+}
