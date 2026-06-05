@@ -4,47 +4,74 @@ These are tasks only you (the human) can complete. Claude cannot create accounts
 
 ---
 
-## Stage 1 — Theme Panel (Current)
+## How to open the editor (always do this first)
 
-### [ ] Test the theme panel in your browser
-**What**: Open `index.html` and verify the theme panel works end-to-end.
+**Do not open `index.html` by double-clicking it.** Chrome blocks certain Quill internals when running from `file://`, which causes a console error on load.
+
+Instead, serve it over localhost. Pick whichever you have:
+
+**Option A — VS Code Live Server (easiest)**
+1. Install the "Live Server" extension in VS Code (search "Live Server" by Ritwick Dey)
+2. Right-click `index.html` in the Explorer panel → **Open with Live Server**
+3. Chrome opens automatically at `http://127.0.0.1:5500`
+
+**Option B — Python (if you have Python 3)**
+1. Open a terminal in the project folder
+2. Run: `python -m http.server 8080`
+3. Open `http://localhost:8080` in Chrome
+
+**Option C — Node (no install)**
+1. Open a terminal in the project folder
+2. Run: `npx serve .`
+3. Open the URL it prints (usually `http://localhost:3000`)
+
+---
+
+## Stage 2 — Widget System, Feature 1: Blot Base Class
+
+### [x] Test the widget registry and Callout blot — DONE
+
+**What**: Verify that the base class, registry, and CalloutBlot stub all work end-to-end in the browser. There's no insert UI yet (that's Feature 2) so you'll insert the widget manually from the DevTools console.
+
 **How**:
-1. Double-click `index.html` (or drag it into Chrome/Firefox)
-2. The left sidebar should show a live preview card at the top, three preset buttons, and controls below
+1. Serve via localhost (see "How to open the editor" above — do not double-click)
+2. Open DevTools with **F12** — keep the Console tab open throughout
+3. Check for errors on load — the Console should be clean (no red)
 
-**Checklist — work through these in order:**
+**Checklist:**
 
-**Live preview**
-- [ ] The preview card shows "Heading Text" in one font and body text below it in another, with a blue button
-- [ ] The preview updates instantly as you change any setting (no reload needed)
+**Registry loads**
+- [x] In the Console, type `WidgetRegistry.getAll()` and press Enter — you should see an array containing `CalloutBlot`
+- [x] Type `WidgetRegistry.get('callout')` — should return the `CalloutBlot` class, not `null`
 
-**Preset buttons**
-- [ ] Click **Bold** — preview shifts to purple, body font changes to Inter, the editor's primary color turns purple
-- [ ] Click **Soft** — preview shifts to teal/amber, background warms to cream
-- [ ] Click **Neutral** — everything returns to the default blue/grey/Georgia look
+**Insert a Callout widget**
+- [x] Click in the editor to place your cursor, then run this in the Console:
+  ```js
+  contentEditor.quill.insertEmbed(0, 'callout', { _v: 1, type: 'info', title: 'Test note', body: 'Hello world' })
+  ```
+- [x] A callout block should appear at the top of the editor — blue left border, info icon (ℹ️), bold title "Test note", grey body text "Hello world"
+- [x] The block has a dashed-border placeholder feel and highlights with a blue outline when you hover over it
 
-**Color pickers**
-- [ ] Click the Primary color swatch, pick any color — the button in the preview, editor toolbar hover states, and heading links update immediately
-- [ ] Click Background, pick a color — the editor writing area and the preview card background both change
-- [ ] Click Text, pick a very light color — text in the editor and preview becomes hard to read (confirms the var is wired)
+**Click to edit**
+- [x] Click the callout block — a modal dialog opens with three fields: Type (dropdown), Title (text), Body (textarea)
+- [x] Change all three fields and click **Save** — the callout re-renders immediately with the new content and correct icon
+- [x] Open again and click **Cancel** (or press Escape, or click the backdrop) — nothing changes
 
-**Typography controls**
-- [ ] Change **Body** font to "Courier New" — body text in the editor and preview switches to monospace immediately
-- [ ] Change **Heading** font to "Georgia" — headings (`H1`, `H2`, `H3`) in the editor switch to serif
-- [ ] Change **Line height** to "Loose (1.8)" — paragraph spacing in the editor visibly increases
-- [ ] Change **Size** to "Large (18px)" — all text in the editor grows
+**Delta stays in sync**
+- [x] After editing, run `contentEditor.quill.getContents()` in the Console — find the callout op in the delta; its `insert` value should match what you just typed, not the original data
 
-**Layout controls**
-- [ ] Change **Max width** to "Narrow (680px)" — the editor column visibly narrows on screen
-- [ ] Change **Corners** to "Full" — note this for when widgets arrive; sharp/medium/full should all feel different
+**Corner radius reflects theme**
+- [x] Change **Corners** in the theme sidebar to "Full" — the callout's rounded corners should update immediately (it uses `--widget-border-radius`)
 
-**Reset**
-- [ ] After making several changes, click **Reset to default** — all controls and the preview should snap back to the Neutral defaults
+**No console errors**
+- [x] Throughout all of the above, the DevTools Console should have zero red errors
 
-**Editor still works**
-- [ ] Type in the editor — it still accepts input normally
-- [ ] Toolbar buttons (bold, italic, heading dropdown, bullet list) still work
-- [ ] DevTools Console (F12) — no red errors
+---
+
+## Stage 1 — Theme Panel
+
+### [x] Test the theme panel in your browser — DONE
+_(Live preview was removed. Presets, color pickers, typography, layout controls, and reset all verified working.)_
 
 ---
 
@@ -56,20 +83,20 @@ These are tasks only you (the human) can complete. Claude cannot create accounts
 
 ## Before Stage 1
 
-### [ ] GitHub Account
+### [x] GitHub Account
 **What**: A GitHub account to host the repository and publish via GitHub Pages.
 **Why**: The project's v1 release target is a public GitHub repo with GitHub Pages hosting.
 **Link**: https://github.com/signup
 **Blocks**: Stage 6 (release), but set up early so you can push code from day one.
 
-### [ ] Git Installed Locally
+### [x] Git Installed Locally
 **What**: Git must be installed on your machine.
 **Why**: Version control for the project.
 **Link**: https://git-scm.com/downloads
 **Blocks**: All stages (needed to commit and push).
 **Check**: Run `git --version` in your terminal. If it prints a version, you're good.
 
-### [ ] GitHub CLI (Optional but Recommended)
+### [x] GitHub CLI (Optional but Recommended)
 **What**: The `gh` CLI tool for creating repos and managing GitHub from the terminal.
 **Why**: Makes repo creation and GitHub Pages setup faster.
 **Link**: https://cli.github.com/
@@ -80,7 +107,7 @@ These are tasks only you (the human) can complete. Claude cannot create accounts
 
 ## Before Stage 6 (Release)
 
-### [ ] Create GitHub Repository
+### [x] Create GitHub Repository
 **What**: Create a public GitHub repository named `html-content-editor` (or your preferred name).
 **Why**: This is where the project lives publicly and where GitHub Pages is enabled.
 **How (with gh CLI)**:

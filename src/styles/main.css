@@ -269,53 +269,213 @@ body {
   border-color: var(--color-text-muted);
 }
 
-/* ---- Theme Preview ---- */
-.theme-preview {
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--color-border);
+/* ============================================================
+   Widget Blots — shared styles for all widget types
+   ============================================================ */
+.widget-blot {
+  display: block;
+  position: relative;
+  margin: 8px 0;
+  border-radius: var(--widget-border-radius);
+  box-shadow: var(--widget-shadow);
+  cursor: pointer;
+  user-select: none;
 }
 
-.tp-doc {
-  background: var(--color-background);
+.widget-blot:hover {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+.widget-placeholder {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 16px;
+  background: var(--color-surface);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--widget-border-radius);
+  font-family: var(--font-family-ui);
+}
+
+.widget-placeholder-icon {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.widget-placeholder-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+}
+
+/* ---- Callout widget ---- */
+.callout-preview {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 16px;
+  border-left: 3px solid var(--color-primary);
+  background: var(--color-surface);
+  border-radius: var(--widget-border-radius);
+  font-family: var(--font-family-body);
+}
+
+.callout-preview--warning { border-left-color: var(--color-accent); }
+.callout-preview--success { border-left-color: #16a34a; }
+.callout-preview--danger  { border-left-color: #dc2626; }
+
+.callout-preview-icon {
+  font-size: 16px;
+  line-height: 1;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.callout-preview-body strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text);
+  margin-bottom: 2px;
+}
+
+.callout-preview-body p {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* ============================================================
+   Widget Modal — shared edit dialog for all widget types
+   ============================================================ */
+.widget-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.widget-modal {
+  background: var(--color-header-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+  width: 420px;
+  max-width: calc(100vw - 32px);
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-family-ui);
+}
+
+.widget-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.widget-modal-close {
+  background: none;
+  border: none;
+  font-size: 18px;
+  line-height: 1;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: 0 2px;
+}
+
+.widget-modal-close:hover { color: var(--color-text); }
+
+.widget-modal-body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.widget-modal-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.widget-modal-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+}
+
+.widget-modal-input,
+.widget-modal-select,
+.widget-modal-textarea {
+  font-size: 13px;
+  font-family: var(--font-family-ui);
+  color: var(--color-text);
+  background: var(--color-sidebar-bg);
   border: 1px solid var(--color-border);
   border-radius: 4px;
-  padding: 10px 12px;
-  overflow: hidden;
+  padding: 6px 8px;
+  width: 100%;
+  transition: border-color var(--duration-fast) var(--ease);
 }
 
-.tp-heading {
-  font-family: var(--font-family-heading);
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--color-text);
-  margin-bottom: 5px;
-  line-height: 1.2;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.widget-modal-input:focus,
+.widget-modal-select:focus,
+.widget-modal-textarea:focus {
+  outline: none;
+  border-color: var(--color-primary);
 }
 
-.tp-body {
-  font-family: var(--font-family-body);
-  font-size: 10px;
-  color: var(--color-text);
-  line-height: 1.5;
-  margin-bottom: 8px;
+.widget-modal-textarea {
+  resize: vertical;
+  min-height: 72px;
 }
 
-.tp-link {
-  color: var(--color-primary);
-  text-decoration: underline;
-  text-underline-offset: 1px;
+.widget-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--color-border);
 }
 
-.tp-btn {
-  display: inline-block;
-  padding: 3px 8px;
-  background: var(--color-primary);
-  color: #ffffff;
+.widget-modal-btn {
+  padding: 6px 14px;
+  font-size: 13px;
   font-family: var(--font-family-ui);
-  font-size: 9px;
   font-weight: 500;
-  border-radius: var(--widget-border-radius);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease),
+              border-color var(--duration-fast) var(--ease);
+}
+
+.widget-modal-btn--cancel {
+  background: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+}
+
+.widget-modal-btn--cancel:hover {
+  border-color: var(--color-text-muted);
+  color: var(--color-text);
+}
+
+.widget-modal-btn--save {
+  background: var(--color-primary);
+  border: 1px solid var(--color-primary);
+  color: #ffffff;
+}
+
+.widget-modal-btn--save:hover {
+  filter: brightness(1.1);
 }

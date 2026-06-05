@@ -1,4 +1,4 @@
-# Feature — Blot Base Class
+# Feature — Blot Base Class ✓ DONE
 
 ## What It Is
 The shared Quill Custom Blot pattern that every widget extends. This is the most architecturally important file in the project. Getting it right means every future widget is easy to add. Getting it wrong means refactoring everything.
@@ -12,13 +12,13 @@ Every widget blot must implement:
 - Static metadata: `blotName`, `tagName`, `widgetName`, `widgetLabel`, `widgetIcon`, `widgetDescription`, `defaultData`
 
 ## Acceptance Criteria
-- [ ] `src/blots/base.js` is written and well-commented (this is worth documenting clearly)
-- [ ] The base class handles the Quill embed registration boilerplate
-- [ ] The base class stores widget data in a `data-widget` attribute as JSON on the root node
-- [ ] `static value(node)` reliably reads that data back (this is how Quill serializes the delta)
-- [ ] The base class dispatches a click event to open edit UI
-- [ ] `src/registry.js` has a `register(BlotClass)` function and a `getAll()` function
-- [ ] One stub widget (`CalloutBlot` with hardcoded placeholder content) proves the pattern works
+- [x] `src/blots/base.js` is written and well-commented
+- [x] The base class handles the Quill BlockEmbed registration boilerplate
+- [x] Widget data stored as JSON in `data-widget-data` attribute on the root node
+- [x] `static value(node)` reads the attribute back — how Quill serializes the delta
+- [x] The base class attaches a click listener in `attach()` that calls `edit(data)`
+- [x] `src/registry.js` has `register(BlotClass)`, `getAll()`, and `get(blotName)` functions; calls `Quill.register` internally
+- [x] `CalloutBlot` stub proves the pattern end-to-end (renders preview, modal-based edit — human verified ✓)
 
 ## Conceptual API
 ```js
@@ -46,11 +46,7 @@ registry.register(CalloutBlot)
 - **Edit trigger**: A click on the blot should open an edit panel/modal. The base class handles the click listener; subclasses provide the edit UI.
 
 ## Open Questions
-- [ ] **Edit UI pattern**: When a user clicks a widget to edit it, what opens? Options:
-  - (a) A modal dialog with form fields for the widget's data
-  - (b) A slide-in side panel
-  - (c) Inline contenteditable fields inside the blot itself
-  - Recommendation: Modal for v1 — simplest to implement consistently across all widgets, avoids contenteditable conflicts with Quill
-- [ ] **Quill 2.0 Blot API**: Has the Blot API changed significantly from Quill 1.x? Need to verify with Quill 2.0 docs before implementing. The `Embed` blot type is likely the right base.
-- [ ] **Export render isolation**: Should each widget's export HTML include its own `<style>` block? Yes — each widget should be self-contained in the export so they don't interfere with each other or the page.
-- [ ] **Data versioning in blots**: Should widget data include a schema version field? Suggest yes: `{ _v: 1, type: 'info', title: '', body: '' }`. This enables future migrations.
+- [x] **Edit UI pattern**: Using `prompt()` for Stage 2. Real modal dialog planned for Stage 3 when widget content gets complex.
+- [x] **Quill 2.0 Blot API**: Uses `BlockEmbed` (`blots/block/embed`). API is compatible. `attach()` lifecycle used for rendering and click wiring.
+- [x] **Export render isolation**: Each widget's `renderExport` is responsible for self-contained output. Decided: yes, per-widget `<style>` blocks in export.
+- [x] **Data versioning in blots**: `_v: 1` included in `defaultData` for all widgets from day one.
