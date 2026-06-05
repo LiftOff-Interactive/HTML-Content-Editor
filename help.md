@@ -4,6 +4,28 @@ These are tasks only you (the human) can complete. Claude cannot create accounts
 
 ---
 
+## Stage 1 — Editor Shell (Current)
+
+### [ ] Test the editor shell in your browser
+**What**: Open `index.html` directly as a `file://` URL and verify everything works.
+**Why**: This is the only remaining gate before the editor shell feature is done. Three acceptance criteria require human eyes.
+**How**:
+1. Double-click `index.html` (or drag it into Chrome/Firefox)
+2. Check: does the editor appear? Can you type in it?
+3. Check: does the toolbar work? Try bold, italic, the heading dropdown, bullet list
+4. Open DevTools Console — are there any errors?
+5. Repeat in Firefox
+
+**What to look for:**
+- Quill editor loads (white paper area with toolbar above it)
+- Toolbar buttons respond on click (bold toggles, heading dropdown opens)
+- Typing in the editor works normally
+- No red errors in the browser console
+
+**After testing**: Tell Claude what you saw. If it all works, we tick off the ACs, commit, and move to the theme panel.
+
+---
+
 ## Before Stage 1
 
 ### [ ] GitHub Account

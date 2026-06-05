@@ -5,26 +5,29 @@ _Last updated: 2026-06-05 · Current stage: Stage 1 — Foundation_
 Get a working editor shell in the browser: Quill 2.0 loading on a page, a basic toolbar, and a theme panel that sets CSS custom properties. The goal is a blank canvas that feels like a real editor.
 
 ## Current State
-Project just scaffolded. No source code written yet. The `quill/` directory exists (likely a downloaded Quill build or initial exploration). Scaffold docs are complete.
+Editor shell is built and open in the browser. All source files are written. Human verification in Chrome/Firefox/Safari is the only remaining gate before this feature is done and we move to the theme panel.
+
+Key structural decision made: `quill/` is the full Quill 2.0.3 source repo (not a pre-built dist). Pre-built UMD files were extracted from npm into `vendor/quill/dist/`. This is now the canonical local Quill path for the project.
 
 ## Files I'm Working On
-- `staging/stage-1-foundation/feature-editor-shell.md` — Quill setup, page shell, toolbar
-- `staging/stage-1-foundation/feature-theme-panel.md` — CSS vars, theme panel UI
+- `staging/stage-1-foundation/feature-editor-shell.md` — BUILT, pending human browser test
+- `staging/stage-1-foundation/feature-theme-panel.md` — not started yet
 
 ## Things I've Changed
 - 2026-06-05: Completed project planning interview, confirmed vision and roadmap
 - 2026-06-05: Scaffolded all documentation and staging files
 - 2026-06-05: Initialized git repository
+- 2026-06-05: Discovered `quill/` is a source repo; extracted pre-built dist to `vendor/quill/dist/`
+- 2026-06-05: Built `index.html`, `src/editor.js`, `src/styles/main.css`, `src/styles/editor.css`
+- 2026-06-05: Created full app shell: sticky header, sticky sidebar, centered 860px editor, sticky toolbar
 
 ## Tried But Failed
 _Nothing yet._
 
 ## Next Up
-1. Inspect the existing `quill/` directory — understand what's already there
-2. Create `src/` directory structure
-3. Build `index.html` — the editor shell with Quill 2.0 loaded
-4. Add basic toolbar (bold, italic, headings — standard Quill)
-5. Add theme panel skeleton (sidebar or modal with CSS var controls)
+1. **[HUMAN]** Open `index.html` in Chrome and Firefox — verify editor loads, toolbar works, no console errors (see `help.md`)
+2. Once testing passes: tick off acceptance criteria in `feature-editor-shell.md` and commit
+3. Begin `feature-theme-panel.md` — `src/theme.js`, `src/styles/theme-defaults.css`, sidebar controls
 
 ## Pointer
 → Current stage folder: `staging/stage-1-foundation/`

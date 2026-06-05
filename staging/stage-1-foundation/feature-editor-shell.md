@@ -12,12 +12,12 @@ The main HTML page that hosts the Quill 2.0 editor. This is the skeleton of the 
 - Base CSS with `:root` theme variables defined as stubs
 
 ## Acceptance Criteria
-- [ ] `index.html` opens via `file://` in Chrome, Firefox, and Safari with no errors
-- [ ] Quill editor is visible and accepts keyboard input
-- [ ] Toolbar buttons work: bold, italic, underline, H1, H2, H3, bullet list, numbered list
-- [ ] Page has a recognizable app shell — not a raw Quill demo
-- [ ] All Quill assets (JS, CSS) are loaded from local paths, not CDN URLs
-- [ ] `:root` in main CSS defines at least: `--primary-color`, `--secondary-color`, `--font-family`, `--font-size-base`, `--content-max-width`, `--space-unit`
+- [ ] `index.html` opens via `file://` in Chrome, Firefox, and Safari with no errors — **NEEDS HUMAN TEST**
+- [ ] Quill editor is visible and accepts keyboard input — **NEEDS HUMAN TEST**
+- [ ] Toolbar buttons work: bold, italic, underline, H1, H2, H3, bullet list, numbered list — **NEEDS HUMAN TEST**
+- [x] Page has a recognizable app shell — not a raw Quill demo
+- [x] All Quill assets (JS, CSS) are loaded from local paths, not CDN URLs — served from `vendor/quill/dist/`
+- [x] `:root` in main CSS defines at least: `--primary-color`, `--secondary-color`, `--font-family`, `--font-size-base`, `--content-max-width`, `--space-unit`
 
 ## File Structure to Create
 ```
@@ -36,7 +36,7 @@ src/
 - Don't add save/load/export buttons yet — those come in later stages
 
 ## Open Questions
-- [ ] What max-width feels right for the content area? 800px? 860px? 960px? (Check what Rise and similar tools use — around 860px is common)
-- [ ] Should the toolbar be top-fixed or floating? Top-fixed is simpler; floating (bubble) is more Word-like. Given this is a desktop tool for long-form content, top-fixed is probably better.
-- [ ] Does the `quill/` directory already have a working Quill build? Need to inspect it first before downloading anything.
-- [ ] Should the app shell have a left sidebar (for theme panel) or use a top/right slide-out panel? Left sidebar is more editor-like (VS Code, Notion pattern).
+- [x] What max-width feels right for the content area? → **860px** (`--content-max-width: 860px`)
+- [x] Should the toolbar be top-fixed or floating? → **Sticky top-fixed** (`position: sticky; top: var(--header-height)`)
+- [x] Does the `quill/` directory already have a working Quill build? → **No** — it's the full source repo. Pre-built UMD files extracted from npm into `vendor/quill/dist/`.
+- [x] Should the app shell have a left sidebar or slide-out panel? → **Left sidebar** (placeholder now, controls in next feature)

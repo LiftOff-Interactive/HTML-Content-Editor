@@ -1,0 +1,202 @@
+/* ============================================================
+   Quill Snow Theme Overrides
+   ============================================================ */
+
+/* -- Toolbar -- */
+.ql-toolbar.ql-snow {
+  border: none;
+  border-bottom: 1px solid var(--color-border);
+  padding: 6px calc(var(--space-unit) * 1.5);
+  border-radius: var(--border-radius) var(--border-radius) 0 0;
+  background: var(--color-surface);
+  /* Sticky: sticks just below the fixed app header when scrolling */
+  position: sticky;
+  top: var(--header-height);
+  z-index: 100;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+}
+
+/* -- Editor container -- */
+.ql-container.ql-snow {
+  border: none;
+  font-family: var(--font-family);
+  font-size: var(--font-size-base);
+  border-radius: 0 0 var(--border-radius) var(--border-radius);
+}
+
+/* -- Editor content area -- */
+.ql-editor {
+  min-height: 60vh;
+  padding: calc(var(--space-unit) * 5) calc(var(--space-unit) * 7);
+  line-height: 1.75;
+  color: var(--color-text);
+}
+
+.ql-editor.ql-blank::before {
+  font-style: italic;
+  color: var(--color-text-muted);
+  font-family: var(--font-family);
+  left: calc(var(--space-unit) * 7);
+  right: calc(var(--space-unit) * 7);
+}
+
+/* ============================================================
+   Toolbar Button States
+   ============================================================ */
+.ql-snow.ql-toolbar button,
+.ql-snow .ql-toolbar button {
+  border-radius: 3px;
+  transition:
+    background var(--duration-fast) var(--ease),
+    color var(--duration-fast) var(--ease);
+}
+
+.ql-snow.ql-toolbar button:hover,
+.ql-snow .ql-toolbar button:hover {
+  background: #eef2ff;
+  color: var(--primary-color);
+}
+
+.ql-snow.ql-toolbar button.ql-active,
+.ql-snow .ql-toolbar button.ql-active {
+  background: #e0e7ff;
+  color: var(--primary-color);
+}
+
+/* SVG icon colors — default */
+.ql-snow .ql-stroke {
+  stroke: var(--color-text);
+}
+
+.ql-snow .ql-fill,
+.ql-snow .ql-stroke.ql-fill {
+  fill: var(--color-text);
+}
+
+/* SVG icon colors — hover / active */
+.ql-snow.ql-toolbar button:hover .ql-stroke,
+.ql-snow .ql-toolbar button:hover .ql-stroke,
+.ql-snow.ql-toolbar button.ql-active .ql-stroke,
+.ql-snow .ql-toolbar button.ql-active .ql-stroke {
+  stroke: var(--primary-color);
+}
+
+.ql-snow.ql-toolbar button:hover .ql-fill,
+.ql-snow .ql-toolbar button:hover .ql-fill,
+.ql-snow.ql-toolbar button.ql-active .ql-fill,
+.ql-snow .ql-toolbar button.ql-active .ql-fill {
+  fill: var(--primary-color);
+}
+
+/* ============================================================
+   Header Dropdown (H1 / H2 / H3)
+   ============================================================ */
+.ql-snow .ql-picker {
+  color: var(--color-text);
+  font-family: var(--font-family-ui);
+  font-size: 13px;
+}
+
+.ql-snow .ql-picker-label:hover,
+.ql-snow .ql-picker-label.ql-active {
+  color: var(--primary-color);
+}
+
+.ql-snow .ql-picker-label:hover .ql-stroke,
+.ql-snow .ql-picker-label.ql-active .ql-stroke {
+  stroke: var(--primary-color);
+}
+
+.ql-snow .ql-picker-options {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+  border-radius: var(--border-radius);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.04);
+}
+
+/* Human-readable dropdown labels */
+.ql-snow .ql-picker.ql-header .ql-picker-label::before,
+.ql-snow .ql-picker.ql-header .ql-picker-item::before {
+  content: 'Normal';
+}
+
+.ql-snow .ql-picker.ql-header .ql-picker-label[data-value="1"]::before,
+.ql-snow .ql-picker.ql-header .ql-picker-item[data-value="1"]::before {
+  content: 'Heading 1';
+}
+
+.ql-snow .ql-picker.ql-header .ql-picker-label[data-value="2"]::before,
+.ql-snow .ql-picker.ql-header .ql-picker-item[data-value="2"]::before {
+  content: 'Heading 2';
+}
+
+.ql-snow .ql-picker.ql-header .ql-picker-label[data-value="3"]::before,
+.ql-snow .ql-picker.ql-header .ql-picker-item[data-value="3"]::before {
+  content: 'Heading 3';
+}
+
+/* ============================================================
+   Content Typography
+   ============================================================ */
+.ql-editor h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.2;
+  margin-top: 2em;
+  margin-bottom: 0.5em;
+  color: var(--color-text);
+}
+
+.ql-editor h1:first-child {
+  margin-top: 0;
+}
+
+.ql-editor h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1.3;
+  margin-top: 1.75em;
+  margin-bottom: 0.4em;
+  color: var(--color-text);
+}
+
+.ql-editor h3 {
+  font-size: 1.2rem;
+  font-weight: 600;
+  line-height: 1.4;
+  margin-top: 1.5em;
+  margin-bottom: 0.35em;
+  color: var(--color-text);
+}
+
+.ql-editor p {
+  margin-bottom: 0.9em;
+}
+
+.ql-editor p:last-child {
+  margin-bottom: 0;
+}
+
+.ql-editor ul,
+.ql-editor ol {
+  padding-left: 1.5em;
+  margin-bottom: 0.9em;
+}
+
+.ql-editor li {
+  margin-bottom: 0.25em;
+}
+
+.ql-editor strong {
+  font-weight: 700;
+}
+
+.ql-editor em {
+  font-style: italic;
+}
+
+.ql-editor a {
+  color: var(--primary-color);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}

@@ -1,0 +1,171 @@
+/* ============================================================
+   CSS Custom Properties — theme values live here
+   ============================================================ */
+:root {
+  /* Brand */
+  --primary-color: #4263eb;
+  --secondary-color: #364fc7;
+
+  /* Content typography */
+  --font-family: Georgia, 'Times New Roman', serif;
+  --font-family-ui: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  --font-size-base: 16px;
+
+  /* Layout */
+  --content-max-width: 860px;
+  --space-unit: 8px;
+  --header-height: 52px;
+  --sidebar-width: 260px;
+  --border-radius: 6px;
+
+  /* Surfaces */
+  --color-bg: #f0f0ef;
+  --color-surface: #ffffff;
+  --color-header-bg: #ffffff;
+  --color-sidebar-bg: #f7f7f6;
+
+  /* Text */
+  --color-text: #1c1c1a;
+  --color-text-muted: #868681;
+
+  /* Borders */
+  --color-border: #e6e6e3;
+
+  /* Motion */
+  --duration-fast: 120ms;
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ============================================================
+   Reset
+   ============================================================ */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* ============================================================
+   Base
+   ============================================================ */
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-family-ui);
+  font-size: var(--font-size-base);
+  background: var(--color-bg);
+  color: var(--color-text);
+  line-height: 1.5;
+  min-height: 100vh;
+}
+
+/* ============================================================
+   App Shell
+   ============================================================ */
+#app {
+  min-height: 100vh;
+}
+
+/* ---- Header ---- */
+#app-header {
+  position: sticky;
+  top: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--header-height);
+  padding: 0 calc(var(--space-unit) * 2);
+  background: var(--color-header-bg);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.header-brand {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--space-unit) * 1);
+}
+
+.brand-icon {
+  color: var(--primary-color);
+  flex-shrink: 0;
+}
+
+.brand-name {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--color-text);
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--space-unit) * 1);
+}
+
+.header-status {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+/* ---- Body ---- */
+#app-body {
+  display: flex;
+  min-height: calc(100vh - var(--header-height));
+}
+
+/* ---- Sidebar ---- */
+#sidebar {
+  width: var(--sidebar-width);
+  flex-shrink: 0;
+  background: var(--color-sidebar-bg);
+  border-right: 1px solid var(--color-border);
+  position: sticky;
+  top: var(--header-height);
+  height: calc(100vh - var(--header-height));
+  overflow-y: auto;
+}
+
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  height: 44px;
+  padding: 0 calc(var(--space-unit) * 2);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.sidebar-title {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.sidebar-content {
+  padding: calc(var(--space-unit) * 2);
+}
+
+.sidebar-placeholder {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  font-style: italic;
+  line-height: 1.5;
+}
+
+/* ---- Editor Area ---- */
+#editor-area {
+  flex: 1;
+  padding: calc(var(--space-unit) * 4) calc(var(--space-unit) * 3) calc(var(--space-unit) * 12);
+}
+
+#editor-wrap {
+  max-width: var(--content-max-width);
+  margin: 0 auto;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+}
