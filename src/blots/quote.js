@@ -1,111 +1,7 @@
-/**
- * QuoteBlot — Pull Quote widget
- *
- * A stylized blockquote for testimonials, pull quotes, or key statements.
- * Data: just a quote text and an optional attribution line — the simplest
- * possible widget to verify that the slash command, insert, and edit modal
- * all work end-to-end.
- */
-
 (function () {
   'use strict';
 
-  class QuoteBlot extends BaseWidgetBlot {
-    static blotName          = 'quote';
-    static tagName           = 'div';
-    static widgetName        = 'quote';
-    static widgetLabel       = 'Quote';
-    static widgetIcon        = '❝';
-    static widgetDescription = 'A stylized pull quote or testimonial';
-    static defaultData       = { _v: 1, text: 'Enter your quote here.', attribution: '' };
-
-    renderEditor(container, data) {
-      container.innerHTML = `
-        <div class="quote-blot" style="
-          position: relative;
-          padding: 1.5rem 1.5rem 1.25rem 2rem;
-          border-left: 4px solid var(--color-primary, #6366f1);
-          background: var(--color-surface, #f8fafc);
-          border-radius: var(--widget-border-radius, 0.5rem);
-          cursor: pointer;
-          user-select: none;
-        ">
-          <div style="
-            font-size: 3rem;
-            line-height: 1;
-            color: var(--color-primary, #6366f1);
-            opacity: 0.3;
-            font-family: Georgia, serif;
-            margin-bottom: -0.5rem;
-            pointer-events: none;
-          ">❝</div>
-          <p style="
-            margin: 0.5rem 0 0;
-            font-size: 1.15rem;
-            font-style: italic;
-            line-height: 1.6;
-            color: var(--color-text, #1e293b);
-          ">${_escapeHtml(data.text)}</p>
-          ${data.attribution ? `
-            <p style="
-              margin: 0.75rem 0 0;
-              font-size: 0.875rem;
-              color: var(--color-text-muted, #64748b);
-              font-style: normal;
-            ">— ${_escapeHtml(data.attribution)}</p>
-          ` : ''}
-          <span style="
-            position: absolute;
-            top: 0.5rem;
-            right: 0.75rem;
-            font-size: 0.7rem;
-            color: #94a3b8;
-            pointer-events: none;
-          ">Click to edit</span>
-        </div>`;
-    }
-
-    renderExport(container, data) {
-      container.innerHTML = `
-        <style>
-          .quote-export {
-            position: relative;
-            padding: 1.5rem 1.5rem 1.25rem 2rem;
-            border-left: 4px solid #6366f1;
-            background: #f8fafc;
-            border-radius: 0.5rem;
-            margin: 1.5rem 0;
-          }
-          .quote-export__mark {
-            display: block;
-            font-size: 3rem;
-            line-height: 1;
-            color: #6366f1;
-            opacity: 0.3;
-            font-family: Georgia, serif;
-            margin-bottom: -0.5rem;
-          }
-          .quote-export__text {
-            margin: 0.5rem 0 0;
-            font-size: 1.15rem;
-            font-style: italic;
-            line-height: 1.6;
-          }
-          .quote-export__attribution {
-            margin: 0.75rem 0 0;
-            font-size: 0.875rem;
-            opacity: 0.65;
-          }
-        </style>
-        <div class="quote-export">
-          <span class="quote-export__mark">❝</span>
-          <p class="quote-export__text">${_escapeHtml(data.text)}</p>
-          ${data.attribution ? `<p class="quote-export__attribution">— ${_escapeHtml(data.attribution)}</p>` : ''}
-        </div>`;
-    }
-  }
-
-  function _escapeHtml(str) {
+  function esc(str) {
     return String(str)
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
@@ -113,6 +9,114 @@
       .replace(/"/g, '&quot;');
   }
 
-  Quill.register('formats/quote', QuoteBlot);
-  window.WidgetRegistry.register(QuoteBlot);
+  function buildAttributionHtml(escapedName, escapedRole) {
+    if (!escapedName && !escapedRole) return '';
+    if (escapedName && escapedRole) return '— ' + escapedName + ', ' + escapedRole;
+    return '— ' + (escapedName || escapedRole);
+  }
+
+  class QuoteBlot extends BaseWidgetBlot {
+    static blotName          = 'quote';
+    static tagName           = 'div';
+    static widgetName        = 'quote';
+    static widgetLabel       = 'Quote';
+    static widgetIcon        = '“';
+    static widgetDescription = 'A stylized pull quote or blockquote';
+    static defaultData       = {
+      _v: 1,
+      style: 'pull',
+      quote: 'The only way to do great work is to love what you do.',
+      attribution: 'Steve Jobs',
+      role: '',
+    };
+
+    renderEditor(container, data) {
+      const style    = data.style || 'pull';
+      const attrHtml = buildAttributionHtml(esc(data.attribution), esc(data.role));
+
+      container.innerHTML =
+        '<blockquote class="quote-widget quote-widget--' + style + '">' +
+          (style === 'pull'
+            ? '<span class="quote-mark" aria-hidden="true">“</span>'
+            : '') +
+          '<div class="quote-text">' + (data.quote || '') + '</div>' +
+          (attrHtml
+            ? '<footer class="quote-attribution"><cite>' + attrHtml + '</cite></footer>'
+            : '') +
+        '</blockquote>';
+    }
+
+    renderExport(container, data) {
+      const style  = data.style || 'pull';
+      const root   = getComputedStyle(document.documentElement);
+
+      const primary = root.getPropertyValue('--color-primary').trim()        || '#2563eb';
+      const surface = root.getPropertyValue('--color-surface').trim()        || '#f8fafc';
+      const text    = root.getPropertyValue('--color-text').trim()           || '#1e293b';
+      const muted   = root.getPropertyValue('--color-text-muted').trim()     || '#64748b';
+      const font    = root.getPropertyValue('--font-family-body').trim()     || 'Georgia, serif';
+      const radius  = root.getPropertyValue('--widget-border-radius').trim() || '0.5rem';
+
+      let blockStyle, markHtml, textStyle;
+
+      if (style === 'pull') {
+        blockStyle =
+          'font-family:' + font + ';text-align:center;padding:24px 32px;margin:8px 0;';
+        markHtml =
+          '<span aria-hidden="true" style="display:block;font-size:56px;line-height:0.6;' +
+          'color:' + primary + ';font-family:Georgia,serif;margin-bottom:12px;">“</span>';
+        textStyle =
+          'font-size:1.4em;line-height:1.5;color:' + text + ';font-style:italic;margin:0;';
+      } else if (style === 'sidebar') {
+        blockStyle =
+          'font-family:' + font + ';padding:12px 16px 12px 20px;' +
+          'border-left:4px solid ' + primary + ';margin:8px 0;';
+        markHtml = '';
+        textStyle = 'font-size:1em;color:' + text + ';line-height:1.6;margin:0;';
+      } else {
+        blockStyle =
+          'font-family:' + font + ';background:' + surface + ';' +
+          'border-radius:' + radius + ';padding:20px 24px;text-align:center;margin:8px 0;';
+        markHtml = '';
+        textStyle =
+          'font-size:1.1em;color:' + primary + ';font-weight:600;line-height:1.5;margin:0;';
+      }
+
+      const attrStyle =
+        'display:block;margin-top:' + (style === 'sidebar' ? '8px' : '14px') + ';' +
+        'font-size:0.85em;font-style:italic;color:' + muted + ';';
+
+      const attrHtml = buildAttributionHtml(esc(data.attribution), esc(data.role));
+
+      container.innerHTML =
+        '<blockquote style="' + blockStyle + '">' +
+          markHtml +
+          '<p style="' + textStyle + '">' + (data.quote || '') + '</p>' +
+          (attrHtml
+            ? '<footer><cite style="' + attrStyle + '">' + attrHtml + '</cite></footer>'
+            : '') +
+        '</blockquote>';
+    }
+
+    edit(data) {
+      WidgetModal.open({
+        title: 'Edit Quote',
+        fields: [
+          { key: 'style', label: 'Style', type: 'select', options: [
+            { value: 'pull',      label: 'Pull — large centered quote' },
+            { value: 'sidebar',   label: 'Sidebar — left-border accent' },
+            { value: 'highlight', label: 'Highlight — colored background' },
+          ]},
+          { key: 'quote',       label: 'Quote text (HTML allowed)', type: 'textarea' },
+          { key: 'attribution', label: 'Attribution (optional)',    type: 'text' },
+          { key: 'role',        label: 'Role / title (optional)',   type: 'text' },
+        ],
+        data: data,
+      }).then(function (newData) {
+        if (newData) this.updateData(Object.assign({}, data, newData));
+      }.bind(this));
+    }
+  }
+
+  WidgetRegistry.register(QuoteBlot);
 })();

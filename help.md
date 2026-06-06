@@ -27,6 +27,46 @@ Instead, serve it over localhost. Pick whichever you have:
 
 ---
 
+## Stage 3 — Tier 1 Widgets, Feature 2: Tabs
+
+### [x] Test the Tabs widget
+
+**What**: Verify that the Tabs widget inserts correctly, tab switching works in the editor, the edit modal is functional, and the exported HTML is self-contained and interactive.
+
+**Checklist:**
+
+**Insert**
+- [x] Type `/tabs` in the editor — palette shows Tabs widget; press Enter — a 3-tab widget inserts (Tab 1 / Tab 2 / Tab 3)
+- [x] Insert via the toolbar dropdown as well
+
+**Tab switching in the editor**
+- [x] Click "Tab 2" in the tab bar — the panel switches to Tab 2 content; "Tab 2" label gets the primary colour underline
+- [x] Click "Tab 1" — switches back
+- [x] Clicking the tab bar does NOT open the edit modal
+
+**Edit modal**
+- [x] Click the content area (below the tabs) — the Edit Tabs modal opens
+- [x] Left column lists all 3 tabs; clicking a tab name selects it and shows its label + content on the right
+- [x] Change the label of Tab 1 — the left column updates in real time
+- [x] Add a tab — list grows; new tab is selected automatically
+- [x] Delete a tab (only visible when 3+ tabs present) — list shrinks; selected index adjusts
+- [x] Reorder with ▲▼ buttons — tab moves up/down in the list
+- [x] Cannot delete below 2 tabs (✕ button disappears at 2 tabs)
+- [x] Cannot add above 8 tabs (+ Add Tab button grays out at 8)
+- [x] Click **Save** — widget re-renders with updated tabs and content
+- [x] Click **Cancel** (or Escape, or backdrop) — no changes
+
+**No console errors**
+- [x] No red errors in DevTools throughout
+
+---
+
+## Stage 3 — Tier 1 Widgets, Feature 1: Callout
+
+### [x] Test the Callout widget — DONE
+
+---
+
 ## Stage 2 — Widget System, Feature 3: Toolbar Dropdown
 
 ### [x] Test the toolbar widget dropdown — DONE

@@ -26,15 +26,21 @@ A visually distinct quotation block — larger than normal text, often with a la
 - All styles should look intentional, not like a default blockquote
 
 ## Acceptance Criteria
-- [ ] Widget inserts via slash command (`/quote`) and toolbar dropdown
-- [ ] Edit modal: quote text (textarea), attribution (text field, optional), role (text field, optional, e.g. "CEO, Acme Corp"), style selector (3 options)
-- [ ] All 3 styles render correctly in editor and export
-- [ ] Quote text supports basic formatting (bold, italic) — store as HTML
-- [ ] Uses `<blockquote>` element in the export HTML (semantic)
-- [ ] Accessible: `<cite>` element wraps attribution
-- [ ] Renders correctly in exported HTML with no external dependencies
+- [x] Widget inserts via slash command (`/quote`) and toolbar dropdown
+- [x] Edit modal: quote text (textarea), attribution (text field, optional), role (text field, optional, e.g. "CEO, Acme Corp"), style selector (3 options)
+- [x] All 3 styles render correctly in editor and export
+- [x] Quote text supports basic formatting (bold, italic) — store as HTML
+- [x] Uses `<blockquote>` element in the export HTML (semantic)
+- [x] Accessible: `<cite>` element wraps attribution
+- [x] Renders correctly in exported HTML with no external dependencies
 
-## Open Questions
-- [ ] **Decorative quotation mark**: Should it be a CSS `::before` pseudo-element or a literal `"` character in the HTML? CSS pseudo-element is cleaner but requires the styles to be present. In export, inline styles handle this — use `::before` in the inlined `<style>` block.
-- [ ] **Character limit**: Should there be a character limit on the quote to prevent absurdly long pull quotes? A soft warning (e.g., "Pull quotes work best under 200 characters") is more helpful than a hard limit.
-- [ ] **Image avatar for attribution**: Some pull quote designs include a small circular photo next to the attribution. Out of scope for v1.
+## Implementation Notes
+- Decorative `"` mark is a literal `<span>` in the DOM (not `::before`) — works in both editor and export without needing a `<style>` block
+- Pull/sidebar/highlight styles all use CSS classes in editor render, fully resolved inline styles in export
+- `WidgetModal.open()` used (simple 4-field widget, no custom modal needed)
+- Quote text stored as raw HTML and rendered with innerHTML; attribution/role are escaped plain text
+
+## Open Questions (resolved)
+- [x] Decorative quotation mark: literal `<span>` with `"` character — no `::before` needed
+- [x] Character limit: none for v1 — no hard or soft limit implemented
+- [x] Image avatar: out of scope for v1

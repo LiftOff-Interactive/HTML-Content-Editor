@@ -25,19 +25,22 @@ A list of expandable/collapsible panels. Each panel has a clickable header that 
 - Uses `--color-primary` for the active state
 
 ## Acceptance Criteria
-- [ ] Widget inserts via slash command (`/accordion`) and toolbar dropdown
-- [ ] Default state: 3 items with placeholder headers and content
-- [ ] Edit modal: toggle `allowMultiple`, add/delete/reorder items, edit header and content per item
-- [ ] Expand/collapse works in the editor
-- [ ] Expand/collapse works in exported HTML with no external JS
-- [ ] Animation is smooth (CSS max-height transition) in both editor and export
-- [ ] Accessible: uses `<details>`/`<summary>` HTML elements OR implements full ARIA (`aria-expanded`, `aria-controls`, `role="region"`)
-- [ ] Chevron rotates 180° on open
+- [x] Widget inserts via slash command (`/accordion`) and toolbar dropdown
+- [x] Default state: 3 items with placeholder headers and content
+- [x] Edit modal: toggle `allowMultiple`, add/delete/reorder items, edit header and content per item
+- [x] Image insert in content: "📷 Insert image" button reads a local file, base64-encodes it, and inserts an `<img>` tag at the cursor position in the content textarea
+- [ ] Expand/collapse works in the editor — **needs human verification**
+- [ ] Expand/collapse works in exported HTML with no external JS — **needs human verification**
+- [x] Animation is smooth (CSS grid-template-rows transition) in both editor and export
+- [x] Accessible: uses `<details>`/`<summary>` HTML elements
+- [ ] Chevron rotates 180° on open — **needs human verification**
 
 ## Implementation Note
-Using native `<details>`/`<summary>` is the simplest approach for export — no JS required, accessibility is built in, animation just needs a CSS trick. The trade-off: `allowMultiple: false` (close-others behavior) requires a tiny JS snippet even in export. That's fine — it's a small self-contained script block.
+Used `<details>`/`<summary>` with CSS `grid-template-rows: 0fr → 1fr` transition for smooth animation (overrides browser UA `display:none`). `allowMultiple: false` handled by a self-contained IIFE script block in the export, same pattern as the Tabs widget.
 
-## Open Questions
-- [ ] **`<details>`/`<summary>` vs. custom JS**: Native elements are simpler and more accessible. Custom JS gives more animation control. Recommend: `<details>`/`<summary>` with a small script block for the "close others" behavior when `allowMultiple` is false.
+## Open Questions (resolved)
+- [x] `<details>`/`<summary>` approach chosen — small IIFE handles close-others in export
+- [x] Content: HTML textarea for v1, same as Tabs
+- [x] Icon customization: out of scope for v1
 - [ ] **Content richness**: Same question as Tabs — plain text or HTML in content areas? Suggest same answer: accept HTML in the textarea for v1.
 - [ ] **Icon customization**: Should users be able to pick a custom icon per item (e.g., a numbered circle for process steps)? Out of scope for v1 — use chevron only.

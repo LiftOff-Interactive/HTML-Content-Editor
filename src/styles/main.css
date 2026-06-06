@@ -479,3 +479,297 @@ body {
 .widget-modal-btn--save:hover {
   filter: brightness(1.1);
 }
+
+/* ---- Tabs widget ---- */
+.tabs-widget {
+  border: 1px solid var(--color-border);
+  border-radius: var(--widget-border-radius);
+  overflow: hidden;
+}
+
+.tabs-bar {
+  display: flex;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+  overflow-x: auto;
+}
+
+.tab-btn {
+  padding: 8px 16px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: none;
+  cursor: pointer;
+  font-family: var(--font-family-ui);
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  transition: color var(--duration-fast) var(--ease),
+              border-bottom-color var(--duration-fast) var(--ease);
+}
+
+.tab-btn--active {
+  border-bottom-color: var(--color-primary);
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.tab-btn:hover:not(.tab-btn--active) {
+  color: var(--color-text);
+}
+
+.tabs-panels {
+  /* panels container — no shared styles needed */
+}
+
+.tab-panel {
+  display: none;
+  padding: 16px;
+  font-family: var(--font-family-body);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-base);
+  color: var(--color-text);
+}
+
+.tab-panel--active {
+  display: block;
+}
+
+/* ---- Accordion widget ---- */
+.accordion-widget {
+  border: 1px solid var(--color-border);
+  border-radius: var(--widget-border-radius);
+  overflow: hidden;
+}
+
+.accordion-item {
+  border-top: 1px solid var(--color-border);
+}
+
+.accordion-item:first-child {
+  border-top: none;
+}
+
+.accordion-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+  background: var(--color-surface);
+  font-family: var(--font-family-body);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text);
+  transition: background var(--duration-fast) var(--ease);
+}
+
+.accordion-summary::-webkit-details-marker {
+  display: none;
+}
+
+.accordion-summary::marker {
+  display: none;
+}
+
+.accordion-summary:hover {
+  background: var(--color-background);
+}
+
+.accordion-item[open] > .accordion-summary {
+  color: var(--color-primary);
+}
+
+.accordion-header-text {
+  flex: 1;
+}
+
+.accordion-chevron {
+  font-size: 10px;
+  display: inline-block;
+  color: var(--color-text-muted);
+  transition: transform var(--duration-fast) var(--ease),
+              color var(--duration-fast) var(--ease);
+}
+
+.accordion-item[open] > .accordion-summary .accordion-chevron {
+  transform: rotate(180deg);
+  color: var(--color-primary);
+}
+
+/* Grid trick: animates open/close without display:none interrupting the transition */
+.accordion-body {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.25s ease;
+}
+
+.accordion-item[open] > .accordion-body {
+  grid-template-rows: 1fr;
+}
+
+.accordion-body-inner {
+  overflow: hidden;
+  padding: 0 16px;
+  font-family: var(--font-family-body);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-base);
+  color: var(--color-text);
+}
+
+.accordion-item[open] > .accordion-body > .accordion-body-inner {
+  padding: 12px 16px;
+}
+
+/* ---- Quote widget ---- */
+.quote-widget {
+  font-family: var(--font-family-body);
+  margin: 8px 0;
+}
+
+/* Pull: large centered quote with decorative opening mark */
+.quote-widget--pull {
+  text-align: center;
+  padding: 24px 32px;
+}
+
+.quote-widget--pull .quote-mark {
+  display: block;
+  font-size: 56px;
+  line-height: 0.6;
+  color: var(--color-primary);
+  font-family: Georgia, serif;
+  margin-bottom: 12px;
+}
+
+.quote-widget--pull .quote-text {
+  font-size: 1.4em;
+  line-height: 1.5;
+  color: var(--color-text);
+  font-style: italic;
+}
+
+.quote-widget--pull .quote-attribution {
+  margin-top: 14px;
+}
+
+/* Sidebar: left-border accent, compact */
+.quote-widget--sidebar {
+  padding: 12px 16px 12px 20px;
+  border-left: 4px solid var(--color-primary);
+}
+
+.quote-widget--sidebar .quote-mark {
+  display: none;
+}
+
+.quote-widget--sidebar .quote-text {
+  font-size: 1em;
+  color: var(--color-text);
+  line-height: 1.6;
+}
+
+.quote-widget--sidebar .quote-attribution {
+  margin-top: 8px;
+}
+
+/* Highlight: colored background box */
+.quote-widget--highlight {
+  background: var(--color-surface);
+  border-radius: var(--widget-border-radius);
+  padding: 20px 24px;
+  text-align: center;
+}
+
+.quote-widget--highlight .quote-mark {
+  display: none;
+}
+
+.quote-widget--highlight .quote-text {
+  font-size: 1.1em;
+  color: var(--color-primary);
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.quote-widget--highlight .quote-attribution {
+  margin-top: 14px;
+}
+
+/* Shared attribution footer */
+.quote-attribution {
+  font-size: 0.85em;
+  font-style: italic;
+  color: var(--color-text-muted);
+}
+
+/* ---- Timeline widget ---- */
+.timeline-widget {
+  list-style: none;
+  padding: 8px 0;
+  margin: 0;
+}
+
+.timeline-item {
+  position: relative;
+  padding-left: 64px;
+  padding-bottom: 24px;
+}
+
+.timeline-item:last-child {
+  padding-bottom: 0;
+}
+
+.timeline-dot {
+  position: absolute;
+  left: 0;
+  top: 4px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: var(--font-family-ui);
+}
+
+.timeline-line {
+  position: absolute;
+  left: 13px;
+  top: 32px;
+  bottom: 0;
+  width: 2px;
+  background: var(--color-border);
+}
+
+.timeline-date {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-primary);
+  font-family: var(--font-family-ui);
+  margin-bottom: 2px;
+}
+
+.timeline-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text);
+  font-family: var(--font-family-body);
+  margin-bottom: 4px;
+}
+
+.timeline-content {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  font-family: var(--font-family-body);
+  line-height: 1.6;
+}
