@@ -95,6 +95,23 @@ body {
   color: var(--color-text-muted);
 }
 
+.header-btn {
+  padding: 5px 12px;
+  font-size: 12px;
+  font-family: var(--font-family-ui);
+  font-weight: 500;
+  background: var(--color-primary);
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: filter var(--duration-fast) var(--ease);
+}
+
+.header-btn:hover {
+  filter: brightness(1.1);
+}
+
 /* ---- Body ---- */
 #app-body {
   display: flex;
