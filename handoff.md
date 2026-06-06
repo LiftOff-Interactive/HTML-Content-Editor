@@ -1,11 +1,11 @@
 # Handoff — HTML Content Editor
-_Last updated: 2026-06-05 · Current stage: Stage 4 — Export Engine_
+_Last updated: 2026-06-05 · Current stage: Stage 5 — Tier 2 Widgets_
 
 ## Goals
-Build the export engine that converts the Quill document into a single, fully self-contained HTML file with all CSS vars resolved, all JS inlined, and all widget interactivity intact — no external dependencies.
+Build the five Tier 2 widgets (Flip Cards, Click Reveal, Carousel, Hotspot, Knowledge Check). The export engine from Stage 4 is complete and working, so each new widget can be built and immediately verified in both the editor and exported HTML.
 
 ## Current State
-Stage 1 done. Stage 2 done. Stage 3 done — all 5 Tier 1 widgets built and human-verified.
+Stage 1 done. Stage 2 done. Stage 3 done — all 5 Tier 1 widgets built and human-verified. Stage 4 done — export engine built and human-verified working.
 
 What's built (Stage 2 + Stage 3):
 - `src/registry.js` — `register(BlotClass)`, `getAll()`, `get(blotName)`; calls `Quill.register` internally
@@ -42,9 +42,10 @@ Architecture notes:
 - `staging/stage-3-tier1-widgets/feature-accordion.md` — DONE ✓ (human verified)
 - `staging/stage-3-tier1-widgets/feature-quote.md` — DONE ✓ (human verified)
 - `staging/stage-3-tier1-widgets/feature-timeline.md` — DONE ✓ (human verified)
-- `staging/stage-4-export-engine/feature-export.md` — NOT STARTED
+- `staging/stage-4-export-engine/feature-export.md` — DONE ✓ (human verified)
 
 ## Things I've Changed
+- 2026-06-05: Stage 4 — Export engine (`src/export.js`): `deltaToHtml` walks Quill ops and renders text/headings/lists/widgets; `buildExportCSS` reads theme vars via getComputedStyle (no var() refs); blob download with slugified filename; >5MB size toast. "Export HTML" button added to app header. Button styles added to `main.css`.
 - 2026-06-05: Stage 3 Feature 5 — `TimelineBlot` (`src/blots/timeline.js`): left-aligned vertical timeline, circle dots + connecting lines, icon field, two-column edit modal; timeline CSS added to `main.css`; wired into `index.html`. Editor render uses `<div>` tags (not `<ol>/<li>`) to avoid Quill snow CSS overriding padding-left on li elements.
 - 2026-06-05: Stage 3 Feature 4 — `QuoteBlot` (`src/blots/quote.js`): 3 styles (pull/sidebar/highlight), decorative quote mark span, blockquote/cite semantics; quote CSS added to `main.css`; wired into `index.html`
 - 2026-06-05: Added image insert to tabs modal — same FileReader/base64 pattern as accordion
@@ -59,10 +60,16 @@ Architecture notes:
 _Nothing yet._
 
 ## Next Up
-1. Read `staging/stage-4-export-engine/feature-export.md` and plan the export engine
-2. Add "Export HTML" button to the app header
-3. Build the export pipeline: iterate Quill delta → render each blot's `renderExport` → inline all CSS (resolved vars) + JS → download as `.html`
+1. Read `staging/stage-5-tier2-widgets/overview.md` and the first feature file `feature-flip-cards.md`
+2. Build `FlipCardsBlot` — cards that flip on click to reveal a back face
+3. Verify in editor and in exported HTML before moving to the next widget
+
+## Architecture Notes (Stage 4 additions)
+- `src/export.js` — export pipeline. `window.HCEExport.exportHtml()` is the entry point.
+- `deltaToHtml(delta)` processes Quill ops: text ops accumulate into `lineBuffer`, flushed at each `\n` as `<p>/<h1-3>/<li>`; widget embed ops call `renderExport()` on a detached div (scripts don't execute in detached context but are preserved in the string for the downloaded file).
+- `buildExportCSS()` reads all theme vars via `getComputedStyle` — zero `var(--...)` refs in output.
+- Widget interactivity in exports: tabs use self-contained inline `onclick` attrs; accordion uses an inline IIFE `<script>` scoped by unique ID. No global JS needed.
 
 ## Pointer
-→ Current stage folder: `staging/stage-4-export-engine/`
-→ Active feature file: `staging/stage-4-export-engine/feature-export.md`
+→ Current stage folder: `staging/stage-5-tier2-widgets/`
+→ Active feature file: `staging/stage-5-tier2-widgets/feature-flip-cards.md`

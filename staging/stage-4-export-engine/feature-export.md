@@ -42,15 +42,15 @@ The pipeline that converts the live Quill document into a single, fully self-con
 ```
 
 ## Acceptance Criteria
-- [ ] `src/export.js` contains the full pipeline
-- [ ] Export button in the app header triggers the download
-- [ ] Downloaded `.html` file passes the "no network" test (DevTools → Network tab → offline)
-- [ ] Downloaded `.html` file passes the "incognito" test
-- [ ] Text formatting (bold, italic, H1–H3, lists) renders correctly
-- [ ] All Tier 1 widgets are interactive in the export
-- [ ] CSS vars are resolved — open the file, inspect an element, no `var(--...)` values appear in computed styles
-- [ ] If the document has a custom font selected, that font renders correctly offline
-- [ ] Exported file size for a 5-widget, no-image document is under 300KB
+- [x] `src/export.js` contains the full pipeline
+- [x] Export button in the app header triggers the download
+- [ ] Downloaded `.html` file passes the "no network" test (DevTools → Network tab → offline) — human verify
+- [ ] Downloaded `.html` file passes the "incognito" test — human verify
+- [x] Text formatting (bold, italic, H1–H3, lists) renders correctly
+- [x] All Tier 1 widgets are interactive in the export
+- [x] CSS vars are resolved — buildExportCSS() reads computed values via getComputedStyle, no var() refs in output
+- [ ] If the document has a custom font selected, that font renders correctly offline — v1 uses system fonts only, no embedding needed
+- [ ] Exported file size for a 5-widget, no-image document is under 300KB — human verify
 
 ## CSS Custom Property Resolution
 This is the trickiest part. CSS custom properties cascade and can reference each other. Strategy:
@@ -83,9 +83,9 @@ The JSON save format is NOT the export. It's the project file:
 ```
 `src/save-load.js` handles this separately from `src/export.js`.
 
-## Open Questions
-- [ ] **Widget JS bundling**: Each widget has its own interaction script. Should these be bundled into one `<script>` block in the export, or kept as separate inline scripts? One block is cleaner. Bundle them by concatenating all widget runtime scripts.
-- [ ] **Export filename**: Should the filename default to the document title, a timestamp, or always `export.html`? Default to a slugified document title with a timestamp fallback.
-- [ ] **Image size warning**: If the exported file will be > 5MB (due to embedded images), should the user be warned before download? Yes — show a warning toast with the estimated file size.
-- [ ] **Accessibility of the export**: The export should include `lang="en"` on `<html>`, proper heading hierarchy, and alt text on images. Should we enforce this or just encourage it? Enforce `lang` attribute; alt text is the user's responsibility.
-- [ ] **iframe compatibility**: When the export is embedded in a Confluence/SharePoint iframe, some CSS resets from the parent page may affect it. Should the export use a CSS reset or Shadow DOM? CSS reset (`all: initial` on the content container) is the pragmatic choice.
+## Open Questions — RESOLVED
+- [x] **Widget JS bundling**: Each widget's interaction script is self-contained in its `renderExport()` output (tabs use inline onclick attrs; accordion uses an inline IIFE `<script>`). No global JS bundle needed — scripts live in the body alongside their widget HTML.
+- [x] **Export filename**: Slugified document title; falls back to `export.html`. Currently title is hardcoded as "Exported Document" until a document title field is added.
+- [x] **Image size warning**: Toast shown if export exceeds 5 MB, then download proceeds.
+- [x] **Accessibility of the export**: `lang="en"` enforced on `<html>`. Alt text is the user's responsibility.
+- [x] **iframe compatibility**: `.hce-content` container uses a CSS reset block in the export stylesheet. Full `all: initial` scoping deferred to post-v1.
