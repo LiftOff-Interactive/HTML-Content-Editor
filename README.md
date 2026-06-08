@@ -12,7 +12,7 @@ A free, self-hosted WYSIWYG authoring tool for instructional designers. Build ri
 
 ![The editor with theme panel and widget palette](docs/screenshots/editor.png)
 
-![An exported self-contained HTML page](docs/screenshots/export.png)
+![An exported self-contained HTML page](docs/screenshots/exported_doc.png)
 
 ---
 
