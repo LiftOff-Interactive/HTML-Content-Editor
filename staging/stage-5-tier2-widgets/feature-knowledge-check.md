@@ -29,17 +29,17 @@ A simple, ungraded self-assessment question. The learner selects an answer and g
 - No progress bar, no score, no next button
 
 ## Acceptance Criteria
-- [ ] Widget inserts via slash command (`/quiz` or `/knowledgecheck`) and toolbar dropdown
-- [ ] Edit modal: question type selector, question text, add/edit/delete options, mark correct answer, add per-option feedback, hint text, allow retry toggle
-- [ ] True/false variant auto-creates two options (True, False) with the correct one selectable
-- [ ] "Submit" button reveals feedback in both editor preview and exported HTML
-- [ ] "Try Again" button resets the question state
-- [ ] Correct answer is NOT visually revealed before submission (options look identical before the learner submits)
-- [ ] Correct answer is not trivially discoverable in the exported HTML source (no `data-correct="true"` attribute in plaintext — store answers obfuscated or just accept that a determined learner can inspect source; this is self-assessment, not a test)
-- [ ] Accessible: form uses proper `<fieldset>`/`<legend>` structure, radio inputs are labeled
+- [x] Widget inserts via slash command (`/quiz` or `/knowledgecheck`) and toolbar dropdown
+- [x] Edit modal: question type selector, question text, add/edit/delete options, mark correct answer, add per-option feedback, hint text, allow retry toggle
+- [x] True/false variant auto-creates two options (True, False) with the correct one selectable
+- [x] "Submit" button reveals feedback in both editor preview and exported HTML
+- [x] "Try Again" button resets the question state
+- [x] Correct answer is NOT visually revealed before submission (options look identical before the learner submits)
+- [x] Correct answer is not trivially discoverable in the exported HTML source — correct indices are base64-encoded as `atob(...)` in the inline script
+- [x] Accessible: form uses proper `<fieldset>`/`<legend>` structure, radio inputs are labeled
 
 ## Open Questions
-- [ ] **Answer obfuscation**: Since this is self-assessment (not graded), is it worth obfuscating the correct answer in the HTML source? Simple base64 encoding of the answer key is enough to stop casual inspection without adding real security. Decide before implementation.
-- [ ] **Multiple correct answers**: "Select all that apply" is a common variant. Out of scope for v1 — single correct answer only.
-- [ ] **Feedback display**: Should feedback appear inline below each option or in a summary block at the bottom? Inline (per option) is more instructive and common in eLearning tools.
-- [ ] **Hint**: If a hint is set, should it appear as a "Show Hint" button before submission? Yes — same pattern as click-reveal.
+- [x] **Answer obfuscation**: base64 encoding used — stops casual inspection, appropriate for self-assessment.
+- [x] **Multiple correct answers**: Out of scope for v1 — single correct answer only.
+- [x] **Feedback display**: Inline below each option (confirmed).
+- [x] **Hint**: "Show Hint" toggle button pre-submission (confirmed).

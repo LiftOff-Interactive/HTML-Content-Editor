@@ -1345,3 +1345,215 @@ body {
   line-height: 1.5;
   margin: 0;
 }
+
+/* ============================================================
+   Knowledge Check Widget
+   ============================================================ */
+.kc-widget {
+  border: 1px solid var(--color-border);
+  border-radius: var(--widget-border-radius);
+  overflow: hidden;
+  margin: 4px 0;
+}
+
+.kc-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.kc-bar-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  font-family: var(--font-family-ui);
+}
+
+.kc-edit-btn {
+  font-size: 11px;
+  font-family: var(--font-family-ui);
+  color: var(--color-primary);
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  cursor: pointer;
+  padding: 3px 8px;
+}
+
+.kc-edit-btn:hover {
+  background: var(--color-bg);
+}
+
+.kc-body {
+  padding: 20px 24px;
+  background: var(--color-surface);
+}
+
+.kc-fieldset {
+  border: none;
+  padding: 0;
+  margin: 0;
+}
+
+.kc-question {
+  font-family: var(--font-family-body);
+  font-size: 1.05em;
+  font-weight: 600;
+  color: var(--color-text);
+  line-height: 1.4;
+  margin-bottom: 16px;
+  display: block;
+  padding: 0;
+  border: none;
+  width: 100%;
+}
+
+.kc-options {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.kc-opt {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 14px;
+  border: 2px solid var(--color-border);
+  border-radius: var(--widget-border-radius);
+  cursor: pointer;
+  font-family: var(--font-family-body);
+  font-size: 1em;
+  color: var(--color-text);
+  background: var(--color-surface);
+  transition: border-color 0.15s;
+}
+
+.kc-opt input[type="radio"] {
+  margin-top: 3px;
+  flex-shrink: 0;
+  accent-color: var(--color-primary);
+}
+
+.kc-opt-text {
+  flex: 1;
+}
+
+.kc-opt--correct {
+  border-color: #16a34a !important;
+  background: #dcfce7 !important;
+}
+
+.kc-opt--incorrect {
+  border-color: #dc2626 !important;
+  background: #fee2e2 !important;
+}
+
+.kc-opt-feedback {
+  margin-top: 6px;
+  padding-left: 20px;
+  font-size: 0.875em;
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+.kc-tf-btn {
+  display: block;
+  width: 100%;
+  padding: 12px 18px;
+  font-family: var(--font-family-body);
+  font-size: 1em;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 2px solid var(--color-border);
+  border-radius: var(--widget-border-radius);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.kc-tf-btn.is-selected {
+  border-color: var(--color-primary);
+  background: #eff6ff;
+}
+
+.kc-tf-btn.kc-opt--correct {
+  cursor: default;
+}
+
+.kc-tf-btn.kc-opt--incorrect {
+  cursor: default;
+}
+
+.kc-hint-row {
+  margin-bottom: 14px;
+}
+
+.kc-hint-btn {
+  font-family: var(--font-family-ui);
+  font-size: 13px;
+  color: var(--color-primary);
+  background: none;
+  border: 1px solid var(--color-primary);
+  border-radius: 4px;
+  cursor: pointer;
+  padding: 4px 10px;
+}
+
+.kc-hint-btn:hover {
+  background: #eff6ff;
+}
+
+.kc-hint {
+  margin-top: 8px;
+  padding: 10px 14px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--widget-border-radius);
+  font-family: var(--font-family-body);
+  font-size: 0.9em;
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+.kc-actions {
+  margin-top: 16px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.kc-submit-btn {
+  font-family: var(--font-family-ui);
+  font-size: 14px;
+  font-weight: 600;
+  background: var(--color-primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--widget-border-radius);
+  cursor: pointer;
+  padding: 10px 24px;
+}
+
+.kc-submit-btn:hover {
+  opacity: 0.9;
+}
+
+.kc-retry-btn {
+  font-family: var(--font-family-ui);
+  font-size: 14px;
+  background: transparent;
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+  border-radius: var(--widget-border-radius);
+  cursor: pointer;
+  padding: 10px 20px;
+}
+
+.kc-retry-btn:hover {
+  background: var(--color-bg);
+}

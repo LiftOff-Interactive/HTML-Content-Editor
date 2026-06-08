@@ -1,5 +1,5 @@
 # Handoff — HTML Content Editor
-_Last updated: 2026-06-07 · Current stage: Stage 5 — Tier 2 Widgets (1 of 5 remaining)_
+_Last updated: 2026-06-07 · Current stage: Stage 5 — Tier 2 Widgets (awaiting human verification)_
 
 ## Goals
 Build the five Tier 2 widgets (Flip Cards, Click Reveal, Carousel, Hotspot, Knowledge Check). The export engine from Stage 4 is complete and working, so each new widget can be built and immediately verified in both the editor and exported HTML.
@@ -47,8 +47,10 @@ Architecture notes:
 - `staging/stage-5-tier2-widgets/feature-click-reveal.md` — DONE ✓ (human verified)
 - `staging/stage-5-tier2-widgets/feature-carousel.md` — DONE ✓ (human verified)
 - `staging/stage-5-tier2-widgets/feature-hotspot.md` — DONE ✓ (human verified)
+- `staging/stage-5-tier2-widgets/feature-knowledge-check.md` — built, awaiting human verification
 
 ## Things I've Changed
+- 2026-06-07: Stage 5 Feature 5 — `KnowledgeCheckBlot` (`src/blots/knowledge-check.js`): multiple-choice / true-false self-assessment, per-option feedback inline after submit, "Show Hint" toggle pre-submit, "↺ Try Again" reset, correct/incorrect option highlight (green/red), correct indices base64-obfuscated in export script (`atob(...)`), `<fieldset>`/`<legend>` ARIA, two-column edit modal (option list with ▲▼ reorder + delete + mark-correct + add, min 2 / max 8), question type switch True/False auto-normalises to 2 options; CSS added to `main.css`; wired into `index.html`.
 - 2026-06-07: Stage 5 Feature 4 — `HotspotBlot` (`src/blots/hotspot.js`): image with percentage-based pin markers, pulsing CSS ring animation, click-to-show tooltip (one at a time, above/below based on y position), crosshair click-to-place pin UI in edit modal, pin list with label editing, `aria-expanded`/`aria-hidden` ARIA, export scoped via `[data-hs]` + index-based onclick; CSS added to `main.css`; wired into `index.html`. ✓ human verified
 - 2026-06-07: Stage 5 Feature 3 — `CarouselBlot` (`src/blots/carousel.js`): image/content slider with prev/next arrows, dot indicators, optional autoplay, 16:9/4:3/1:1 aspect ratio selector, text-only slide support, per-slide image upload (base64), reorder slides; CSS added to `main.css`; wired into `index.html`. ✓ human verified
 - 2026-06-05: Stage 5 Feature 2 — `ClickRevealBlot` (`src/blots/click-reveal.js`): 3 trigger styles (button/label/card), slide-down max-height+opacity animation, multiple items revealable simultaneously, HTML content + image insert, `aria-expanded`/`aria-hidden` ARIA, export scoped via data attributes; CSS added to `main.css`; wired into `index.html`.
@@ -68,10 +70,9 @@ Architecture notes:
 _Nothing yet._
 
 ## Next Up
-1. Read `staging/stage-5-tier2-widgets/feature-knowledge-check.md`
-2. Resolve open questions before building (answer obfuscation decision, feedback display style, hint button)
-3. Build `KnowledgeCheckBlot` — multiple-choice / true-false self-assessment widget
-4. Verify in editor and exported HTML, then Stage 5 is complete → merge to main
+1. Human-verify `KnowledgeCheckBlot` — test multiple-choice and true-false, submit/retry, hint, feedback, and export
+2. Once verified: Stage 5 complete → merge `stage-2-widget-system` branch to `main`
+3. Begin Stage 6 — polish and release
 
 ## Architecture Notes (Stage 5 additions)
 - Tier 2 widgets that have interactive elements (flip, reveal triggers) use a "✎ Edit" bar at the top of the widget. Card/trigger clicks stopPropagation to prevent bubbling to the base-class domNode click-to-edit handler. Edit bar button also stopPropagates and calls `self.edit()` directly.
@@ -88,4 +89,4 @@ _Nothing yet._
 
 ## Pointer
 → Current stage folder: `staging/stage-5-tier2-widgets/`
-→ Active feature file: `staging/stage-5-tier2-widgets/feature-knowledge-check.md`
+→ Active feature file: `staging/stage-5-tier2-widgets/feature-knowledge-check.md` (built — verify then merge)
