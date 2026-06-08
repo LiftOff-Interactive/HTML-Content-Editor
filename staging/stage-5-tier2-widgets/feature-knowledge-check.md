@@ -43,3 +43,6 @@ A simple, ungraded self-assessment question. The learner selects an answer and g
 - [x] **Multiple correct answers**: Out of scope for v1 — single correct answer only.
 - [x] **Feedback display**: Inline below each option (confirmed).
 - [x] **Hint**: "Show Hint" toggle button pre-submission (confirmed).
+
+## Bug Fixed
+- **Export: Try Again visible on load** — hardcoded `"Segoe UI"` (double quotes) in the `ui` font-family string broke the `style="..."` HTML attribute, silently dropping `display:none` from the retry button. Fixed by reading `--font-family-ui` from `getComputedStyle` instead, which returns the single-quoted form (`'Segoe UI'`) safe for HTML attribute values.

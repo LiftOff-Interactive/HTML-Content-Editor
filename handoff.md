@@ -50,6 +50,7 @@ Architecture notes:
 - `staging/stage-5-tier2-widgets/feature-knowledge-check.md` — built, awaiting human verification
 
 ## Things I've Changed
+- 2026-06-07: Fix — `KnowledgeCheckBlot` export: hardcoded `ui` font-family string used double-quoted `"Segoe UI"` which broke the HTML `style="..."` attribute, silently discarding all inline styles including `display:none` on the Try Again button. Fixed by reading `--font-family-ui` via `getComputedStyle` instead (CSS variable stores single-quoted `'Segoe UI'`, safe inside double-quoted HTML attributes).
 - 2026-06-07: Stage 5 Feature 5 — `KnowledgeCheckBlot` (`src/blots/knowledge-check.js`): multiple-choice / true-false self-assessment, per-option feedback inline after submit, "Show Hint" toggle pre-submit, "↺ Try Again" reset, correct/incorrect option highlight (green/red), correct indices base64-obfuscated in export script (`atob(...)`), `<fieldset>`/`<legend>` ARIA, two-column edit modal (option list with ▲▼ reorder + delete + mark-correct + add, min 2 / max 8), question type switch True/False auto-normalises to 2 options; CSS added to `main.css`; wired into `index.html`.
 - 2026-06-07: Stage 5 Feature 4 — `HotspotBlot` (`src/blots/hotspot.js`): image with percentage-based pin markers, pulsing CSS ring animation, click-to-show tooltip (one at a time, above/below based on y position), crosshair click-to-place pin UI in edit modal, pin list with label editing, `aria-expanded`/`aria-hidden` ARIA, export scoped via `[data-hs]` + index-based onclick; CSS added to `main.css`; wired into `index.html`. ✓ human verified
 - 2026-06-07: Stage 5 Feature 3 — `CarouselBlot` (`src/blots/carousel.js`): image/content slider with prev/next arrows, dot indicators, optional autoplay, 16:9/4:3/1:1 aspect ratio selector, text-only slide support, per-slide image upload (base64), reorder slides; CSS added to `main.css`; wired into `index.html`. ✓ human verified
@@ -67,7 +68,7 @@ Architecture notes:
 - 2026-06-05: Stage 1 complete ✓ — editor shell, theme panel
 
 ## Tried But Failed
-_Nothing yet._
+- **Hardcoded `"Segoe UI"` in export inline style** — double quotes inside a `style="..."` attribute silently truncate the attribute at the first `"`, dropping all subsequent CSS including `display:none`. Always read font-family values from `getComputedStyle('--font-family-ui')` or use single-quoted font names in JS strings. Fixed in `KnowledgeCheckBlot`.
 
 ## Next Up
 1. Human-verify `KnowledgeCheckBlot` — test multiple-choice and true-false, submit/retry, hint, feedback, and export
@@ -80,6 +81,7 @@ _Nothing yet._
 - Export interactivity pattern for Tier 2: inline `onclick` + `onkeydown` attrs scoped to each item via `data-*` attributes (not global IDs). `closest('[data-x]')` to find item container from within child button. Avoids global JS and works safely with multiple widget instances per page.
 - `<style>` blocks emitted per widget instance in export body (same approach as `<script>` IIFEs in accordion). Duplicate rules across multiple instances of the same widget type are harmless.
 - `prefers-reduced-motion` handled in both editor CSS (via media query) and export `<style>` blocks.
+- **Font-family in export inline styles**: never hardcode double-quoted font names (e.g. `"Segoe UI"`) in a JS string that gets embedded into a `style="..."` attribute — the `"` breaks the HTML attribute and silently drops all subsequent CSS. Always read from `getComputedStyle` or use single-quoted font names (`'Segoe UI'`).
 
 ## Architecture Notes (Stage 4 additions)
 - `src/export.js` — export pipeline. `window.HCEExport.exportHtml()` is the entry point.

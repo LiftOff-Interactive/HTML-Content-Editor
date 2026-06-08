@@ -200,7 +200,7 @@
       const muted   = cs.getPropertyValue('--color-text-muted').trim()     || '#64748b';
       const font    = cs.getPropertyValue('--font-family-body').trim()     || 'Georgia, serif';
       const radius  = cs.getPropertyValue('--widget-border-radius').trim() || '0.5rem';
-      const ui      = '-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif';
+      const ui      = cs.getPropertyValue('--font-family-ui').trim() || 'system-ui,sans-serif';
 
       const uid  = this._uid || ('kc' + (++_instanceCount));
       const opts = data.options || [];
