@@ -14,13 +14,13 @@ The `README.md` must contain:
 - [ ] Link to live GitHub Pages demo
 
 ## UX Polish Checklist
-- [ ] New document state: if the editor is empty, show a welcome message or placeholder prompt ("Start writing, or press / to insert a widget")
-- [ ] Toolbar button tooltips (title attributes at minimum)
-- [ ] Save/load: confirmation message after save ("Document saved")
-- [ ] Export: loading indicator for large documents (base64 encoding can take a moment)
-- [ ] Widget placeholders in editor: if a widget has no content yet (just inserted), show a clear "click to edit" prompt inside the blot
-- [ ] Error handling: if a widget's data is malformed, show a "widget error" state rather than crashing
-- [ ] Browser tab title reflects the document (use the first H1 or a default title)
+- [x] New document state: editor shows placeholder "Start writing, or press / to insert a widget"
+- [x] Toolbar button tooltips — `title` attributes on Save, Load, Export HTML, and Insert Widget buttons
+- [x] Save/load: Save and Load buttons in header; "Saved ✓" confirmation flashes green for 3s; "unsaved" state tracked after user edits
+- [x] Export: button shows "Exporting…" + disabled during export; restores on completion; error toast on failure
+- [x] Widget placeholders in editor: base class default `renderEditor` already shows icon + label placeholder for unimplemented blots
+- [x] Error handling: `renderEditor` wrapped in try/catch in `attach()` and `updateData()`; shows `.widget-error` red panel on malformed data; click still opens edit modal
+- [x] Browser tab title reflects the document — updates live from the first H1; falls back to "Content Editor"
 
 ## Cross-Browser Test Matrix
 For each: editor loads, text editing works, all widgets insert, all widgets export correctly.
@@ -30,20 +30,34 @@ For each: editor loads, text editing works, all widgets insert, all widgets expo
 - [ ] Edge (latest)
 
 ## Release Steps
-1. [ ] Final cross-browser pass
-2. [ ] Create demo document with all 10 widgets
+1. [ ] Human-verify UX polish in browser (Save/Load, tab title, export loading state, "Saved ✓" flash)
+2. [ ] Create demo document with all 10 widgets populated with real content
 3. [ ] Export demo as `demo/demo-export.html` in the repo
-4. [ ] Screenshot the editor with the demo content open
-5. [ ] Screenshot the exported demo file in the browser
+4. [ ] Screenshot the editor with the demo content open → `docs/screenshots/editor.png`
+5. [ ] Screenshot the exported demo file in the browser → `docs/screenshots/export.png`
 6. [ ] Write the README with those screenshots
 7. [ ] Add MIT license (`LICENSE` file)
-8. [ ] Create GitHub repository (see `help.md`)
-9. [ ] Push all code to `main`
-10. [ ] Enable GitHub Pages (see `help.md`)
-11. [ ] Tag the release: `git tag v1.0.0` + `git push origin v1.0.0`
-12. [ ] Create a GitHub Release from the tag with a changelog
+8. [ ] Add `CONTRIBUTING.md` with "how to add a widget" tutorial and code template
+9. [ ] Create GitHub repository (see `help.md`)
+10. [ ] Push all code to `main`
+11. [ ] Enable GitHub Pages (see `help.md`)
+12. [ ] Tag the release: `git tag v1.0.0` + `git push origin v1.0.0`
+13. [ ] Create a GitHub Release from the tag with a changelog
 
 ## Open Questions
-- [ ] **License**: MIT is the standard choice for a free open tool. Any reason to choose something else (GPL, Apache 2.0)? MIT unless there's a specific reason.
-- [ ] **Contributing guide**: Should there be a `CONTRIBUTING.md` separate from the README? Separate file is cleaner for a public repo. Include a "how to add a widget" tutorial with a code template.
-- [ ] **Issues template**: GitHub issue templates for bug reports and feature requests (new widget requests) would make the repo more welcoming to contributors. Worth adding before going public.
+- [x] **License**: MIT — no reason to choose otherwise.
+- [ ] **Contributing guide**: Separate `CONTRIBUTING.md` with a "how to add a widget" code template. Include the 4-step pattern: extend `BaseWidgetBlot`, implement `renderEditor` + `renderExport` + `edit`, set static metadata fields, call `WidgetRegistry.register(MyBlot)`.
+- [ ] **Issues template**: GitHub issue templates for bug reports and feature requests (new widget requests). Worth adding before going public.
+
+## Save/Load File Format (implemented)
+```json
+{
+  "version": 1,
+  "content": { "ops": [...] },
+  "theme": {
+    "--color-primary": "#2563eb",
+    "--font-family-body": "Georgia, 'Times New Roman', serif"
+  }
+}
+```
+Filename is slugified from the first H1 (e.g. `my-course.json`). Version `1` guard on load — mismatches show a toast rather than silently loading corrupt data.

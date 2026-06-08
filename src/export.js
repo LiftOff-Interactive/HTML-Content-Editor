@@ -34,15 +34,13 @@
 
   function deltaToHtml(delta) {
     const ops = (delta && delta.ops) || [];
-    let html = '';
-    let lineBuffer = '';
+    let html        = '';
+    let lineBuffer  = '';
     let currentList = null;
 
     function openList(type) {
       if (currentList === type) return;
-      if (currentList) {
-        html += currentList === 'ordered' ? '</ol>' : '</ul>';
-      }
+      if (currentList) html += currentList === 'ordered' ? '</ol>' : '</ul>';
       currentList = type;
       html += type === 'ordered' ? '<ol>' : '<ul>';
     }
@@ -84,7 +82,15 @@
         if (Blot) {
           const container = document.createElement('div');
           const instance  = Object.create(Blot.prototype);
-          instance.renderExport(container, data);
+          try {
+            instance.renderExport(container, data);
+          } catch (err) {
+            console.warn('[HCEExport] renderExport failed for', blotName, err);
+            container.innerHTML =
+              '<div style="padding:1em;background:#fef2f2;border:1px solid #fecaca;' +
+              'border-radius:0.5rem;color:#dc2626;font-family:system-ui,sans-serif;' +
+              'font-size:0.875rem;">⚠ Widget could not be exported (' + blotName + ')</div>';
+          }
           html += container.innerHTML;
         }
         lineBuffer = '';
@@ -98,13 +104,8 @@
       const parts = text.split('\n');
 
       for (let j = 0; j < parts.length; j++) {
-        if (parts[j]) {
-          lineBuffer += applyInlineFormats(parts[j], attrs);
-        }
-        // Every index before the last is a line-end boundary
-        if (j < parts.length - 1) {
-          flushLine(attrs);
-        }
+        if (parts[j]) lineBuffer += applyInlineFormats(parts[j], attrs);
+        if (j < parts.length - 1) flushLine(attrs);
       }
     }
 
@@ -203,6 +204,29 @@
   // ── Main export pipeline ──────────────────────────────────────────────────
 
   function exportHtml() {
+    const btn = document.getElementById('export-btn');
+    if (btn) {
+      btn.disabled    = true;
+      btn.textContent = 'Exporting…';
+    }
+
+    // Yield to the browser so the button state repaints before synchronous work.
+    setTimeout(function () {
+      try {
+        _runExport();
+      } catch (err) {
+        showToast('Export failed — check the console for details.');
+        console.error('[HCEExport]', err);
+      } finally {
+        if (btn) {
+          btn.disabled    = false;
+          btn.textContent = 'Export HTML';
+        }
+      }
+    }, 20);
+  }
+
+  function _runExport() {
     const editor = window.contentEditor;
     if (!editor || !editor.quill) {
       console.error('[HCEExport] contentEditor not ready');
@@ -212,7 +236,7 @@
     const delta    = editor.quill.getContents();
     const bodyHtml = deltaToHtml(delta);
     const css      = buildExportCSS();
-    const title    = 'Exported Document';
+    const title    = (editor.getDocumentTitle && editor.getDocumentTitle()) || 'Exported Document';
 
     const html = [
       '<!DOCTYPE html>',

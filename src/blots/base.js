@@ -3,13 +3,13 @@
  *
  * Subclass contract:
  *   Static fields (required):
- *     blotName        {string}  unique Quill format name, e.g. 'callout'
- *     tagName         {string}  host element tag, usually 'div'
- *     widgetName      {string}  machine name matching blotName
- *     widgetLabel     {string}  human label shown in palettes, e.g. 'Callout'
- *     widgetIcon      {string}  emoji or short string icon
- *     widgetDescription {string} one-line description for the command palette
- *     defaultData     {object}  plain object with sensible defaults for new instances
+ *     blotName          {string}  unique Quill format name, e.g. 'callout'
+ *     tagName           {string}  host element tag, usually 'div'
+ *     widgetName        {string}  machine name matching blotName
+ *     widgetLabel       {string}  human label shown in palettes, e.g. 'Callout'
+ *     widgetIcon        {string}  emoji or short string icon
+ *     widgetDescription {string}  one-line description for the command palette
+ *     defaultData       {object}  plain object with sensible defaults for new instances
  *
  *   Instance methods to override:
  *     renderEditor(container, data)  — populate container for the in-editor view
@@ -29,7 +29,7 @@
     // ── Quill lifecycle ────────────────────────────────────────────────────
 
     static create(data) {
-      const node = super.create();
+      const node   = super.create();
       const merged = Object.assign({}, this.defaultData || {}, data || {});
       node.setAttribute('data-widget-data', JSON.stringify(merged));
       node.setAttribute('data-widget-type', this.blotName);
@@ -53,7 +53,11 @@
       this._ready = true;
 
       const data = this.constructor.value(this.domNode);
-      this.renderEditor(this.domNode, data);
+      try {
+        this.renderEditor(this.domNode, data);
+      } catch (err) {
+        this._renderError(this.domNode);
+      }
 
       this.domNode.addEventListener('click', () => {
         this.edit(this.constructor.value(this.domNode));
@@ -67,7 +71,11 @@
     updateData(newData) {
       this.domNode.setAttribute('data-widget-data', JSON.stringify(newData));
       this.domNode.innerHTML = '';
-      this.renderEditor(this.domNode, newData);
+      try {
+        this.renderEditor(this.domNode, newData);
+      } catch (err) {
+        this._renderError(this.domNode);
+      }
 
       this.domNode.dispatchEvent(new CustomEvent('widget-updated', {
         bubbles: true,
@@ -93,6 +101,19 @@
 
     edit(data) {
       alert('Edit: ' + (this.constructor.widgetLabel || 'Widget'));
+    }
+
+    // ── Error state ───────────────────────────────────────────────────────
+
+    // Called when renderEditor throws — shows a recoverable error UI.
+    // Clicking the error state still opens the edit modal so the user can fix data.
+    _renderError(container) {
+      const label = this.constructor.widgetLabel || 'Widget';
+      container.innerHTML =
+        '<div class="widget-error">' +
+          '<span class="widget-error-icon">⚠</span>' +
+          '<span class="widget-error-label">' + label + ' — data error · click to edit</span>' +
+        '</div>';
     }
   }
 
