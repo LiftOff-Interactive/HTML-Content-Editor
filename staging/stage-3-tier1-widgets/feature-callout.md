@@ -24,16 +24,16 @@ Each type has a different icon and accent color derived from the theme.
 - Background: light tint of the type's color or `--color-surface`
 
 ## Acceptance Criteria
-- [ ] Widget inserts via slash command (`/callout`) and toolbar dropdown
-- [ ] Edit modal has: type selector (4 options), title field, body textarea
-- [ ] Changes in the modal update the widget on "Save" click
-- [ ] "Cancel" closes without changes
-- [ ] Renders correctly in the editor with all 4 types visually distinct
-- [ ] Renders correctly in exported HTML with inline styles (no external CSS dependency)
-- [ ] Colors use CSS custom properties in editor; resolved inline values in export
-- [ ] Accessible: has `role="alert"` or `role="note"` as appropriate
+- [x] Widget inserts via slash command (`/callout`) and toolbar dropdown — registry + slash command already wired
+- [x] Edit modal has: type selector (4 options), title field, body textarea
+- [x] Changes in the modal update the widget on "Save" click — via `updateData()`
+- [x] "Cancel" closes without changes — modal resolves `null` on cancel
+- [ ] Renders correctly in the editor with all 4 types visually distinct — **needs human verification**
+- [ ] Renders correctly in exported HTML with inline styles (no external CSS dependency) — **needs human verification**
+- [x] Colors use CSS custom properties in editor; resolved inline values in export — CSS classes in editor, `getComputedStyle` in export
+- [x] Accessible: has `role="alert"` (danger) or `role="note"` (others) on the host element
 
-## Open Questions
-- [ ] Should the body support rich text (bold, italic, links) or plain text only? Rich text is more useful but adds complexity to the edit UI. Suggest: plain text for v1, rich text in a later pass.
-- [ ] Should the icon be an emoji (zero dependency, works everywhere) or an SVG icon set? SVG looks better but requires an icon library or hand-coding each. Suggest: emoji for v1 as they inline naturally.
-- [ ] Should the user be able to customize the label text (e.g., "Pro Tip" instead of "Note")? Yes — make the title field editable rather than auto-populated from type.
+## Open Questions (resolved)
+- [x] Body: plain text for v1 — HTML-escaped before rendering
+- [x] Icons: emoji (zero dependency) — ℹ️ / ⚠️ / ✅ / 🚨
+- [x] Title: editable text field, not auto-populated from type

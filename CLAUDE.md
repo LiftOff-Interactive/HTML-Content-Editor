@@ -56,8 +56,22 @@ project-root/
 - No hardcoded colors, sizes, or font names outside the theme system
 
 ## How to Run
-Open `index.html` directly in a browser. No build step required for development.
-For production: `index.html` on GitHub Pages at the repo URL.
+**Development**: Serve over localhost — do NOT open `index.html` directly from the filesystem.
+Chrome blocks certain Quill internals (clipboard module) when running from `file://`.
+
+Quickest options (pick one):
+```
+# Python 3
+python -m http.server 8080
+
+# Node (no install needed)
+npx serve .
+```
+Then open `http://localhost:8080` in Chrome.
+
+Alternatively: VS Code **Live Server** extension → right-click `index.html` → Open with Live Server.
+
+**Production**: `index.html` on GitHub Pages at the repo URL.
 
 ## Branching & Commit Conventions
 - `main` — always shippable. Push only complete, working features.

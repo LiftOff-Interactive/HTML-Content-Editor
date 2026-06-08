@@ -26,16 +26,24 @@ Note: `date` is a label field — it can hold a year, a step number, a month, an
 - Circle can contain a number, an icon, or just a colored dot
 
 ## Acceptance Criteria
-- [ ] Widget inserts via slash command (`/timeline`) and toolbar dropdown
-- [ ] Default state: 3 items with placeholder content
-- [ ] Edit modal: add/delete/reorder items, edit date label, title, content per item
-- [ ] The vertical connecting line renders correctly
-- [ ] Renders correctly in exported HTML with inline styles, no external deps
-- [ ] Content areas support basic HTML (bold, italic, links)
-- [ ] Accessible: uses a semantic list structure (`<ol>` for steps, `<ul>` for events)
+- [x] Widget inserts via slash command (`/timeline`) and toolbar dropdown
+- [x] Default state: 3 items with placeholder content
+- [x] Edit modal: add/delete/reorder items, edit date label, title, content per item
+- [x] The vertical connecting line renders correctly
+- [x] Renders correctly in exported HTML with inline styles, no external deps
+- [x] Content areas support basic HTML (bold, italic, links)
+- [x] Accessible: uses a semantic list structure (`<ol>` for steps in export; `<div>` in editor — see note)
 
-## Open Questions
-- [ ] **Horizontal timeline variant**: A horizontal scrolling timeline is visually interesting for date-based content but tricky on mobile. Out of scope for v1 — vertical only.
-- [ ] **Click to expand**: Should clicking a timeline item expand its content (like an accordion)? Adds interactivity but increases complexity. Out of scope for v1 — show all content by default.
-- [ ] **Icon field**: The schema has an `icon` field that defaults to the step number. Should users be able to enter an emoji here? Yes — keep it as a free-text field (1–2 characters) that renders inside the circle.
-- [ ] **Connector style**: Solid line, dashed line, or dotted? Solid is simplest and clearest. Allow it to pick up `--color-primary` or use `--color-border`.
+## Implementation Notes
+- Editor render uses `<div>` tags (not `<ol>/<li>`) — Quill's snow CSS forcibly overrides `padding-left` on `li` elements, breaking the dot-to-text spacing
+- Export render uses `<ol>/<li>` with `list-style:none` for correct semantics in the exported file
+- Connecting line is a `position:absolute` div inside each item, hidden on the last item
+- Icon field is free-text (max 2 chars in modal), accepts numbers or emoji
+- Connector line uses `--color-border`; dot uses `--color-primary`
+- Two-column edit modal (same pattern as Accordion/Tabs): step list left, edit panel right; min 2 / max 8 items
+
+## Open Questions (resolved)
+- [x] Horizontal variant: out of scope for v1 — vertical only
+- [x] Click to expand: out of scope for v1 — all content visible by default
+- [x] Icon field: free-text 1–2 char field, accepts emoji
+- [x] Connector style: solid line using `--color-border`

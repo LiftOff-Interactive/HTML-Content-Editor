@@ -8,6 +8,8 @@
   <link rel="stylesheet" href="src/styles/main.css">
   <link rel="stylesheet" href="src/styles/theme-defaults.css">
   <link rel="stylesheet" href="src/styles/editor.css">
+  <link rel="stylesheet" href="src/styles/slash-command.css">
+  <link rel="stylesheet" href="src/styles/toolbar.css">
 </head>
 <body>
 
@@ -29,6 +31,7 @@
       </div>
       <div class="header-actions">
         <span class="header-status" id="save-status">unsaved</span>
+        <button class="header-btn" id="export-btn">Export HTML</button>
       </div>
     </header>
 
@@ -39,14 +42,6 @@
           <span class="sidebar-title">Theme</span>
         </div>
         <div class="sidebar-content" id="theme-panel">
-
-          <div class="theme-preview" aria-hidden="true">
-            <div class="tp-doc">
-              <div class="tp-heading">Heading Text</div>
-              <p class="tp-body">Body copy with a <span class="tp-link">primary link</span> inline.</p>
-              <div class="tp-btn">Button</div>
-            </div>
-          </div>
 
           <div class="theme-presets">
             <button class="preset-btn" data-preset="neutral">Neutral</button>
@@ -179,7 +174,23 @@
   </div>
 
   <script src="vendor/quill/dist/quill.js"></script>
+  <script src="src/ui/modal.js"></script>
+  <script src="src/registry.js"></script>
+  <script src="src/blots/base.js"></script>
+  <script src="src/blots/callout.js"></script>
+  <script src="src/blots/tabs.js"></script>
+  <script src="src/blots/accordion.js"></script>
+  <script src="src/blots/quote.js"></script>
+  <script src="src/blots/timeline.js"></script>
+  <script src="src/blots/flip-cards.js"></script>
+  <script src="src/blots/click-reveal.js"></script>
+  <script src="src/blots/carousel.js"></script>
+  <script src="src/blots/hotspot.js"></script>
+  <script src="src/blots/knowledge-check.js"></script>
   <script src="src/editor.js"></script>
+  <script src="src/slash-command.js"></script>
+  <script src="src/toolbar.js"></script>
   <script src="src/theme.js"></script>
+  <script src="src/export.js"></script>
 </body>
 </html>

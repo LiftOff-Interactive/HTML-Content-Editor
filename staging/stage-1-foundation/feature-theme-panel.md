@@ -18,7 +18,7 @@ A UI panel that lets the user set CSS custom properties (colors, fonts, spacing)
 - [x] The current theme state can be serialized to JSON — `ThemePanel.serialize()`
 - [x] The theme state can be restored from JSON — `ThemePanel.deserialize(json)`
 - [x] A "Reset to default" button restores the default theme
-- [x] Live preview thumbnail in the theme panel — shows heading, body text, link, and button using live theme vars
+- ~~Live preview thumbnail~~ — removed at user request; real editor canvas serves this purpose
 - [x] **HUMAN VERIFIED** — all of the above verified working in Chrome ✓ (2026-06-05)
 
 ## CSS Variables Exposed in the Panel

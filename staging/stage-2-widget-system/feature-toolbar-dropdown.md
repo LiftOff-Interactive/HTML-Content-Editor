@@ -9,12 +9,12 @@ A secondary widget insertion point in the main Quill toolbar. A "Insert Widget" 
 - The toolbar is always visible; the slash command requires knowing the trigger
 
 ## Acceptance Criteria
-- [ ] Toolbar has an "Insert Widget" button (icon + label or icon only with tooltip)
-- [ ] Clicking it opens a dropdown listing all registered widgets (name + icon)
-- [ ] Clicking a widget in the dropdown inserts it at the current cursor position
-- [ ] Clicking outside the dropdown closes it without inserting
-- [ ] The dropdown shows the same widgets as the slash command (both read from the registry)
-- [ ] The button has a visible active/open state
+- [x] Toolbar has an "Insert Widget" button (icon + label or icon only with tooltip)
+- [x] Clicking it opens a dropdown listing all registered widgets (name + icon)
+- [x] Clicking a widget in the dropdown inserts it at the current cursor position
+- [x] Clicking outside the dropdown closes it without inserting
+- [x] The dropdown shows the same widgets as the slash command (both read from the registry)
+- [x] The button has a visible active/open state
 
 ## Implementation Notes
 - This is a custom Quill toolbar control — use Quill's custom toolbar format pattern or just add a custom button outside the Quill toolbar container and handle insertion manually
@@ -31,6 +31,6 @@ src/
 ```
 
 ## Open Questions
-- [ ] **Toolbar placement**: Should the widget button live inside the Quill toolbar HTML, or in the app's own header bar? Recommend: app header bar. Quill's toolbar is for text formatting; widget insertion is an app-level action.
-- [ ] **Shared UI component**: The slash command palette and the toolbar dropdown show the same list. Should they share a single `WidgetPicker` component? Yes — extract to `src/widget-picker.js`. Avoids two different lists getting out of sync.
-- [ ] **Grouping**: Should widgets be grouped in the dropdown (e.g., "Text", "Media", "Interactive", "Assessment")? Nice for discoverability when the list is long. Not essential for v1 with ~15 widgets.
+- [x] **Toolbar placement**: Resolved — button lives in `.header-actions` in the app header (right side). Quill toolbar is for text formatting; widget insertion is app-level.
+- [x] **Shared UI component**: Resolved — built independently (no shared component). Slash command and toolbar dropdown each render the list from the registry directly. Consolidation deferred; both stay in sync automatically since they both call `WidgetRegistry.getAll()`.
+- [x] **Grouping**: Resolved — flat list for v1. Revisit when widget count grows beyond ~10.
