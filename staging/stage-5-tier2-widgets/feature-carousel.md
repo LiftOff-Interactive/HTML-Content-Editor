@@ -27,14 +27,14 @@ Note: `imageData` stores the image as a base64 data URI immediately on upload �
 - Smooth slide transition (CSS transform translateX)
 
 ## Acceptance Criteria
-- [ ] Widget inserts via slash command (`/carousel`) and toolbar dropdown
-- [ ] Default state: 2 placeholder slides (no images — show an "upload image" prompt)
-- [ ] Edit modal: add/delete/reorder slides, upload image per slide (auto-converted to base64), edit caption and alt text per slide, toggle autoplay, dots, arrows
-- [ ] Image upload: `<input type="file" accept="image/*">` → reads as base64 via `FileReader`
-- [ ] Navigation (arrows, dots) works in editor
-- [ ] Navigation works in exported HTML with no external dependencies
-- [ ] If no images are uploaded, a placeholder is shown (not a broken image icon)
-- [ ] Accessible: arrows are `<button>` elements, images have `alt` attributes, dots have `aria-label`
+- [x] Widget inserts via slash command (`/carousel`) and toolbar dropdown
+- [x] Default state: 2 placeholder slides (no images — show an "upload image" prompt)
+- [x] Edit modal: add/delete/reorder slides, upload image per slide (auto-converted to base64), edit caption and alt text per slide, toggle autoplay, dots, arrows
+- [x] Image upload: `<input type="file" accept="image/*">` → reads as base64 via `FileReader`
+- [x] Navigation (arrows, dots) works in editor
+- [x] Navigation works in exported HTML with no external dependencies
+- [x] If no images are uploaded, a placeholder is shown (not a broken image icon)
+- [x] Accessible: arrows are `<button>` elements, images have `alt` attributes, dots have `aria-label`
 
 ## Image Handling Pattern (Used by All Image Widgets)
 ```js
@@ -50,6 +50,6 @@ function fileToBase64(file) {
 Store the full data URI string in the widget data. This ensures images survive save/load and are automatically inlined in the export.
 
 ## Open Questions
-- [ ] **Aspect ratio**: Should the carousel enforce a fixed aspect ratio (16:9) or adapt to the uploaded image dimensions? Fixed ratio is cleaner and avoids layout shifts. Let users choose from 3 options: 16:9, 4:3, 1:1.
-- [ ] **Max image size warning**: A high-res JPEG can be 3–5MB. Multiple images could make the export file very large. Suggest: warn if a single image exceeds 1MB, recommend resizing. Could add client-side image compression (canvas + `toDataURL` with quality parameter) — check if that's worth doing in v1.
-- [ ] **Text-only slides**: Should slides support a "no image" text-only option? Yes — makes the widget useful as a content slider, not just an image slider.
+- [x] **Aspect ratio**: 3-option picker (16:9 / 4:3 / 1:1) in the edit modal. Decided: fixed ratio with user choice.
+- [x] **Max image size warning**: No canvas compression in v1. Existing >5MB export warning (from export engine) is sufficient for now.
+- [x] **Text-only slides**: Implemented — slides with no image show the caption/text content centered in the slide area.

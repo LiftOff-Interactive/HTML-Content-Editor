@@ -1187,3 +1187,161 @@ body {
     transition: none;
   }
 }
+
+/* ============================================================
+   Hotspot widget
+   ============================================================ */
+.hotspot-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.hotspot-bar-label {
+  font-size: 12px;
+  font-family: var(--font-family-ui);
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+
+.hotspot-edit-btn {
+  font-size: 12px;
+  font-family: var(--font-family-ui);
+  color: var(--color-primary);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+.hotspot-edit-btn:hover {
+  background: var(--color-border);
+}
+
+.hotspot-body {
+  position: relative;
+}
+
+.hotspot-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 24px;
+  margin: 8px;
+  background: var(--color-bg);
+  border: 2px dashed var(--color-border);
+  border-radius: var(--widget-border-radius);
+  font-family: var(--font-family-ui);
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+.hotspot-image-wrap {
+  position: relative;
+  line-height: 0;
+}
+
+.hotspot-image {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.hotspot-pin {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: #fff;
+  border: 2px solid #fff;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: var(--font-family-ui);
+  cursor: pointer;
+  z-index: 2;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hotspot-pin:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 3px;
+}
+
+.hotspot-pin::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 2px solid var(--color-primary);
+  opacity: 0;
+  pointer-events: none;
+  animation: hotspot-pulse 2s ease-in-out infinite;
+}
+
+.hotspot-pin.is-active {
+  box-shadow: 0 0 0 3px var(--color-primary), 0 0 0 5px rgba(255, 255, 255, 0.9), 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+.hotspot-pin.is-active::after {
+  animation: none;
+}
+
+@keyframes hotspot-pulse {
+  0%   { transform: scale(0.8); opacity: 0.8; }
+  100% { transform: scale(1.8); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hotspot-pin::after {
+    animation: none;
+  }
+}
+
+.hotspot-tooltip {
+  position: absolute;
+  transform: translateX(-50%) translateY(16px);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--widget-border-radius);
+  padding: 8px 12px;
+  max-width: 280px;
+  min-width: 120px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  z-index: 10;
+  font-family: var(--font-family-body);
+  display: none;
+  line-height: 1.4;
+  pointer-events: none;
+}
+
+.hotspot-tooltip.is-visible {
+  display: block;
+}
+
+.hotspot-tooltip--above {
+  transform: translateX(-50%) translateY(calc(-100% - 16px));
+}
+
+.hotspot-tooltip-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text);
+  margin-bottom: 3px;
+}
+
+.hotspot-tooltip-content {
+  font-size: 13px;
+  color: var(--color-text);
+  line-height: 1.5;
+  margin: 0;
+}

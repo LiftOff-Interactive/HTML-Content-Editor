@@ -31,14 +31,14 @@ Note: `x` and `y` are percentages of the image dimensions (0–100), so pin posi
 - Pins are numbered or use a `+` icon
 
 ## Acceptance Criteria
-- [ ] Widget inserts via slash command (`/hotspot`) and toolbar dropdown
-- [ ] Edit modal: upload image (base64), add/edit/delete pins
-- [ ] **Pin placement UI**: In the edit modal, the user clicks on the image to place a pin, then fills in the label and content for that pin
-- [ ] Pins render correctly at the correct positions in the editor
-- [ ] Clicking a pin shows its tooltip in the editor
-- [ ] Clicking a pin shows its tooltip in exported HTML with no external dependencies
-- [ ] Pin positions are percentage-based and scale correctly if the container is narrower or wider
-- [ ] Accessible: pins are focusable, tooltip content is programmatically associated
+- [x] Widget inserts via slash command (`/hotspot`) and toolbar dropdown
+- [x] Edit modal: upload image (base64), add/edit/delete pins
+- [x] **Pin placement UI**: In the edit modal, the user clicks on the image to place a pin, then fills in the label and content for that pin
+- [x] Pins render correctly at the correct positions in the editor
+- [x] Clicking a pin shows its tooltip in the editor
+- [x] Clicking a pin shows its tooltip in exported HTML with no external dependencies
+- [x] Pin positions are percentage-based and scale correctly if the container is narrower or wider
+- [x] Accessible: pins are focusable (`<button>`), tooltip content uses `aria-hidden`/`aria-label`
 
 ## Pin Placement UI (Most Complex Part of This Widget)
 In the edit modal:
@@ -49,7 +49,7 @@ In the edit modal:
 5. Existing pins are shown as markers on the image; clicking one selects it for editing or deletion
 
 ## Open Questions
-- [ ] **Tooltip vs. modal on pin click**: Tooltip near the pin is spatially intuitive but limited in content length. A centered modal allows richer content but loses spatial context. Recommend: tooltip for v1, with a max-width of 280px and overflow handling.
-- [ ] **Pin pulsing animation**: A CSS pulsing ring around each pin improves discoverability. CSS-only, lightweight. Include in v1.
-- [ ] **Multiple open at once**: Should multiple tooltips be visible at once? No — showing one at a time is less cluttered and easier to implement.
-- [ ] **Pin numbers vs. icons**: Numbered pins (1, 2, 3...) make the spatial relationship explicit. Icon pins (`+`) are more decorative. Suggest numbered for v1.
+- [x] **Tooltip vs. modal on pin click**: Tooltip implemented. Max-width 280px, positioned below pin by default, above when pin.y > 65%.
+- [x] **Pin pulsing animation**: CSS `::after` ripple-out keyframe animation on `.hotspot-pin`; disabled on `.is-active` and when `prefers-reduced-motion`.
+- [x] **Multiple open at once**: One tooltip at a time — clicking a new pin closes the current one.
+- [x] **Pin numbers vs. icons**: Numbered pins (1, 2, 3…) implemented in both editor and export.

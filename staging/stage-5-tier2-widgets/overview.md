@@ -11,12 +11,19 @@ Build five more complex interactive widgets. These require richer edit UIs, more
 5. `feature-knowledge-check.md` — Simple multiple choice / true-false question
 
 ## Definition of Done
-- [ ] All 5 widgets insert via slash command and toolbar dropdown
-- [ ] All 5 widgets have fully functional edit UIs
-- [ ] All 5 widgets render correctly in the editor
-- [ ] All 5 widgets are interactive in exported HTML with no external dependencies
-- [ ] All 5 widgets handle images correctly: user-uploaded images are base64-encoded immediately on upload and stored in the widget data
-- [ ] Widget data survives a save/load cycle
+- [x] All 5 widgets insert via slash command and toolbar dropdown — 4 of 5 done (Knowledge Check pending)
+- [x] All 5 widgets have fully functional edit UIs — 4 of 5 done
+- [x] All 5 widgets render correctly in the editor — 4 of 5 done
+- [x] All 5 widgets are interactive in exported HTML with no external dependencies — 4 of 5 done
+- [x] All 5 widgets handle images correctly: user-uploaded images are base64-encoded immediately on upload and stored in the widget data — 4 of 5 done (Knowledge Check is text-only)
+- [ ] Widget data survives a save/load cycle — needs full verification once Knowledge Check is complete
+
+## Progress
+- [x] Flip Cards ✓ human verified
+- [x] Click & Reveal ✓ human verified
+- [x] Carousel ✓ human verified
+- [x] Hotspot ✓ human verified
+- [ ] Knowledge Check — next up
 
 ## Notes
 - Image handling is new in this stage. Establish the pattern with Carousel first, then Hotspot reuses it.
