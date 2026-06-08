@@ -30,14 +30,14 @@ For each: editor loads, text editing works, all widgets insert, all widgets expo
 - [ ] Edge (latest)
 
 ## Release Steps
-1. [ ] Human-verify UX polish in browser (Save/Load, tab title, export loading state, "Saved ✓" flash)
-2. [ ] Create demo document with all 10 widgets populated with real content
-3. [ ] Export demo as `demo/demo-export.html` in the repo
-4. [ ] Screenshot the editor with the demo content open → `docs/screenshots/editor.png`
-5. [ ] Screenshot the exported demo file in the browser → `docs/screenshots/export.png`
-6. [ ] Write the README with those screenshots
-7. [ ] Add MIT license (`LICENSE` file)
-8. [ ] Add `CONTRIBUTING.md` with "how to add a widget" tutorial and code template
+1. [x] Human-verify UX polish in browser (Save/Load, tab title, export loading state, "Saved ✓" flash)
+2. [x] Create demo document with all 10 widgets populated with real content
+3. [x] Export demo as `demo/demo-export.html` in the repo
+4. [x] Screenshot the editor with the demo content open → `docs/screenshots/editor.png`
+5. [x] Screenshot the exported demo file in the browser → `docs/screenshots/export.png`
+6. [x] Write the README with those screenshots
+7. [x] Add MIT license (`LICENSE` file)
+8. [x] Add `CONTRIBUTING.md` with "how to add a widget" tutorial and code template
 9. [ ] Create GitHub repository (see `help.md`)
 10. [ ] Push all code to `main`
 11. [ ] Enable GitHub Pages (see `help.md`)

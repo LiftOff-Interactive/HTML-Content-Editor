@@ -44,19 +44,20 @@ What's built (all stages):
 - **Hardcoded `"Segoe UI"` in export inline style** — double quotes inside a `style="..."` attribute silently truncate the attribute. Always read font-family from `getComputedStyle`. Fixed in `KnowledgeCheckBlot`.
 
 ## Next Up
-**Remaining Stage 6 steps (from `feature-release.md`):**
-1. Human-verify UX polish: open the editor, test Save/Load, confirm tab title updates from H1, confirm "Exporting…" state appears, confirm "Saved ✓" flash
-2. Create a demo document with all 10 widgets visible and populated with real content
-3. Export demo as `demo/demo-export.html`
-4. Screenshot the editor with demo content open → save as `docs/screenshots/editor.png`
-5. Screenshot the exported demo in the browser → save as `docs/screenshots/export.png`
-6. Write `README.md` (description, screenshots, feature list, widget gallery, usage, how to run, how to contribute)
-7. Add `LICENSE` (MIT)
-8. Add `CONTRIBUTING.md` with "how to add a widget" code template
-9. Create GitHub repository (see `help.md` — `gh repo create`)
-10. Push `main` + `stage-6-polish-release` to GitHub, enable GitHub Pages
-11. Merge `stage-6-polish-release` to `main`
-12. Tag `v1.0.0` + create GitHub Release with changelog
+**Remaining Stage 6 steps — only GitHub release actions remain:**
+1. ~~Human-verify UX polish~~ ✓
+2. ~~Create demo document~~ ✓
+3. ~~Export demo~~ ✓
+4. ~~Screenshots~~ ✓ (save as `docs/screenshots/editor.png` + `docs/screenshots/export.png`)
+5. ~~README~~ ✓
+6. ~~LICENSE~~ ✓
+7. ~~CONTRIBUTING.md~~ ✓
+8. Create GitHub repository (see `help.md` — `gh repo create`)
+9. Push `main` + `stage-6-polish-release` to GitHub, enable GitHub Pages
+10. Merge `stage-6-polish-release` to `main`
+11. Tag `v1.0.0` + create GitHub Release with changelog
+
+**Before committing:** save the two screenshots to `docs/screenshots/editor.png` and `docs/screenshots/export.png`.
 
 ## Architecture Notes (Stage 6 additions)
 - `window.contentEditor.getDocumentTitle()` — parses the Quill delta for the first H1 text. Shared by tab title updates (editor.js), save filename (save-load.js), and export title/filename (export.js).
