@@ -1,8 +1,8 @@
 # Handoff — HTML Content Editor
-_Last updated: 2026-06-07 · Current stage: Stage 6 — Polish + Release_
+_Last updated: 2026-06-07 · Current stage: **SHIPPED — v1.0.0**_
 
 ## Goals
-Get the project to a public v1 release on GitHub. All 10 widgets are built and verified. UX polish pass is complete. What remains is the demo document, README, LICENSE, CONTRIBUTING.md, and the GitHub release steps.
+~~Get the project to a public v1 release on GitHub.~~ **Done.** v1.0.0 is live at https://github.com/Frankyface/HTML-Content-Editor/releases/tag/v1.0.0 with GitHub Pages at https://frankyface.github.io/HTML-Content-Editor/
 
 ## Current State
 Stage 1–5 done. Stage 6 in progress — UX polish pass complete. On branch `stage-6-polish-release`.
@@ -44,20 +44,11 @@ What's built (all stages):
 - **Hardcoded `"Segoe UI"` in export inline style** — double quotes inside a `style="..."` attribute silently truncate the attribute. Always read font-family from `getComputedStyle`. Fixed in `KnowledgeCheckBlot`.
 
 ## Next Up
-**Remaining Stage 6 steps — only GitHub release actions remain:**
-1. ~~Human-verify UX polish~~ ✓
-2. ~~Create demo document~~ ✓
-3. ~~Export demo~~ ✓
-4. ~~Screenshots~~ ✓ (save as `docs/screenshots/editor.png` + `docs/screenshots/export.png`)
-5. ~~README~~ ✓
-6. ~~LICENSE~~ ✓
-7. ~~CONTRIBUTING.md~~ ✓
-8. Create GitHub repository (see `help.md` — `gh repo create`)
-9. Push `main` + `stage-6-polish-release` to GitHub, enable GitHub Pages
-10. Merge `stage-6-polish-release` to `main`
-11. Tag `v1.0.0` + create GitHub Release with changelog
+**v1.0.0 is shipped. All Stage 6 steps complete.**
 
-**Before committing:** save the two screenshots to `docs/screenshots/editor.png` and `docs/screenshots/export.png`.
+Optional polish (no blocking work):
+- Add `docs/screenshots/editor.png` + `docs/screenshots/export.png` so the README images render on GitHub
+- Post-v1 widget ideas in `docs/master_plan.md` → scenario/branching, image comparison, video embed, etc.
 
 ## Architecture Notes (Stage 6 additions)
 - `window.contentEditor.getDocumentTitle()` — parses the Quill delta for the first H1 text. Shared by tab title updates (editor.js), save filename (save-load.js), and export title/filename (export.js).

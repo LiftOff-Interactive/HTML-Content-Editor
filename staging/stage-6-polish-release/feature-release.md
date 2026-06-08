@@ -38,11 +38,11 @@ For each: editor loads, text editing works, all widgets insert, all widgets expo
 6. [x] Write the README with those screenshots
 7. [x] Add MIT license (`LICENSE` file)
 8. [x] Add `CONTRIBUTING.md` with "how to add a widget" tutorial and code template
-9. [ ] Create GitHub repository (see `help.md`)
-10. [ ] Push all code to `main`
-11. [ ] Enable GitHub Pages (see `help.md`)
-12. [ ] Tag the release: `git tag v1.0.0` + `git push origin v1.0.0`
-13. [ ] Create a GitHub Release from the tag with a changelog
+9. [x] Create GitHub repository — https://github.com/Frankyface/HTML-Content-Editor
+10. [x] Push all code to `main`
+11. [x] Enable GitHub Pages — https://frankyface.github.io/HTML-Content-Editor/
+12. [x] Tag the release: `git tag v1.0.0` + `git push origin v1.0.0`
+13. [x] Create a GitHub Release from the tag with a changelog — https://github.com/Frankyface/HTML-Content-Editor/releases/tag/v1.0.0
 
 ## Open Questions
 - [x] **License**: MIT — no reason to choose otherwise.
