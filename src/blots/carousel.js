@@ -1,0 +1,673 @@
+(function () {
+  'use strict';
+
+  let _instanceCount = 0;
+
+  function esc(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  const IMAGE_WARN_BYTES = 1048576; // 1 MB
+
+  class CarouselBlot extends BaseWidgetBlot {
+    static blotName          = 'carousel';
+    static tagName           = 'div';
+    static widgetName        = 'carousel';
+    static widgetLabel       = 'Carousel';
+    static widgetIcon        = '🎠';
+    static widgetDescription = 'Image or content slider with prev/next navigation';
+    static defaultData       = {
+      _v: 1,
+      slides: [
+        { id: 'slide-1', imageData: null, altText: '', caption: '', textContent: '<p>Slide 1 — click ✎ Edit to add an image or write content.</p>' },
+        { id: 'slide-2', imageData: null, altText: '', caption: '', textContent: '<p>Slide 2 — click ✎ Edit to add an image or write content.</p>' },
+      ],
+      autoplay:   false,
+      showDots:   true,
+      showArrows: true,
+    };
+
+    attach() {
+      super.attach();
+      if (!this._uid) this._uid = 'car' + (++_instanceCount);
+      if (this._currentSlide === undefined) this._currentSlide = 0;
+    }
+
+    renderEditor(container, data) {
+      const self   = this;
+      const slides = data.slides || [];
+      const count  = slides.length;
+      if (count === 0) return;
+
+      const idx  = Math.max(0, Math.min(self._currentSlide || 0, count - 1));
+      self._currentSlide = idx;
+      const slide = slides[idx];
+
+      let mediaHtml;
+      if (slide.imageData) {
+        mediaHtml =
+          '<img class="carousel-slide-img" src="' + slide.imageData +
+              '" alt="' + esc(slide.altText) + '">';
+      } else {
+        const txt = slide.textContent || '';
+        mediaHtml =
+          '<div class="carousel-slide-text">' +
+            (txt || '<p class="carousel-placeholder">Upload an image or add text content via ✎ Edit.</p>') +
+          '</div>';
+      }
+
+      const captionHtml = (slide.imageData && slide.caption)
+        ? '<div class="carousel-caption">' + esc(slide.caption) + '</div>'
+        : '';
+
+      let dotsHtml = '';
+      if (data.showDots && count > 1) {
+        let inner = '';
+        for (let i = 0; i < count; i++) {
+          inner +=
+            '<button class="carousel-dot' + (i === idx ? ' is-active' : '') + '" ' +
+                'type="button" data-idx="' + i + '" ' +
+                'aria-label="Slide ' + (i + 1) + '" ' +
+                'aria-current="' + (i === idx) + '"></button>';
+        }
+        dotsHtml = '<div class="carousel-dots">' + inner + '</div>';
+      }
+
+      const showArrows = data.showArrows && count > 1;
+
+      container.innerHTML =
+        '<div class="carousel-bar">' +
+          '<span class="carousel-bar-label">🎠 Carousel (' + (idx + 1) + ' / ' + count + ')</span>' +
+          '<button class="carousel-edit-btn" type="button">✎ Edit</button>' +
+        '</div>' +
+        '<div class="carousel-viewport">' +
+          (showArrows
+            ? '<button class="carousel-arrow carousel-arrow--prev" type="button" aria-label="Previous slide">&#8249;</button>'
+            : '') +
+          '<div class="carousel-media">' + mediaHtml + '</div>' +
+          (showArrows
+            ? '<button class="carousel-arrow carousel-arrow--next" type="button" aria-label="Next slide">&#8250;</button>'
+            : '') +
+        '</div>' +
+        captionHtml +
+        dotsHtml;
+
+      if (showArrows) {
+        container.querySelector('.carousel-arrow--prev').addEventListener('click', function (e) {
+          e.stopPropagation();
+          self._currentSlide = (idx - 1 + count) % count;
+          self.renderEditor(container, self.constructor.value(self.domNode));
+        });
+        container.querySelector('.carousel-arrow--next').addEventListener('click', function (e) {
+          e.stopPropagation();
+          self._currentSlide = (idx + 1) % count;
+          self.renderEditor(container, self.constructor.value(self.domNode));
+        });
+      }
+
+      container.querySelectorAll('.carousel-dot').forEach(function (dot) {
+        dot.addEventListener('click', function (e) {
+          e.stopPropagation();
+          self._currentSlide = parseInt(dot.dataset.idx, 10);
+          self.renderEditor(container, self.constructor.value(self.domNode));
+        });
+      });
+
+      container.querySelector('.carousel-edit-btn').addEventListener('click', function (e) {
+        e.stopPropagation();
+        self.edit(self.constructor.value(self.domNode));
+      });
+    }
+
+    renderExport(container, data) {
+      const root    = getComputedStyle(document.documentElement);
+      const primary = root.getPropertyValue('--color-primary').trim()        || '#2563eb';
+      const border  = root.getPropertyValue('--color-border').trim()         || '#e2e8f0';
+      const surface = root.getPropertyValue('--color-surface').trim()        || '#f8fafc';
+      const text    = root.getPropertyValue('--color-text').trim()           || '#1e293b';
+      const muted   = root.getPropertyValue('--color-text-muted').trim()     || '#64748b';
+      const font    = root.getPropertyValue('--font-family-body').trim()     || 'Georgia, serif';
+      const radius  = root.getPropertyValue('--widget-border-radius').trim() || '0.5rem';
+
+      const uid    = this._uid || ('car' + (++_instanceCount));
+      const slides = data.slides || [];
+      const count  = slides.length;
+      if (count === 0) { container.innerHTML = ''; return; }
+
+      const showArrows = data.showArrows && count > 1;
+      const showDots   = data.showDots   && count > 1;
+
+      let slidesHtml = '';
+      slides.forEach(function (slide) {
+        let mediaHtml;
+        if (slide.imageData) {
+          mediaHtml =
+            '<img src="' + slide.imageData + '" alt="' + esc(slide.altText) + '" ' +
+                'style="width:100%;height:100%;object-fit:contain;display:block;">';
+        } else {
+          const txt = slide.textContent || '';
+          mediaHtml =
+            '<div style="width:100%;height:100%;display:flex;align-items:center;' +
+                'justify-content:center;padding:24px;font-family:' + font + ';' +
+                'color:' + text + ';line-height:1.6;overflow-y:auto;text-align:center;">' +
+              (txt || '<em style="color:' + muted + ';">No content</em>') +
+            '</div>';
+        }
+
+        const captionHtml = (slide.imageData && slide.caption)
+          ? '<div style="padding:8px 12px;font-family:' + font + ';font-size:13px;' +
+              'color:' + muted + ';text-align:center;border-top:1px solid ' + border + ';' +
+              'background:' + surface + ';">' + esc(slide.caption) + '</div>'
+          : '';
+
+        slidesHtml +=
+          '<div class="hce-car-slide" style="min-width:100%;flex-shrink:0;display:flex;flex-direction:column;">' +
+            '<div style="aspect-ratio:16/9;overflow:hidden;background:' + surface + ';">' +
+              mediaHtml +
+            '</div>' +
+            captionHtml +
+          '</div>';
+      });
+
+      const arrowBase =
+        'position:absolute;top:50%;transform:translateY(-50%);' +
+        'background:' + primary + ';color:#fff;border:none;border-radius:50%;' +
+        'width:36px;height:36px;font-size:24px;line-height:1;cursor:pointer;' +
+        'display:flex;align-items:center;justify-content:center;z-index:2;opacity:0.85;';
+
+      const prevArrow = showArrows
+        ? '<button class="hce-car-prev" aria-label="Previous slide" style="' + arrowBase + 'left:8px;">&#8249;</button>'
+        : '';
+      const nextArrow = showArrows
+        ? '<button class="hce-car-next" aria-label="Next slide" style="' + arrowBase + 'right:8px;">&#8250;</button>'
+        : '';
+
+      let dotsHtml = '';
+      if (showDots) {
+        let inner = '';
+        for (let i = 0; i < count; i++) {
+          inner +=
+            '<button class="hce-car-dot' + (i === 0 ? ' hce-car-dot--active' : '') + '" ' +
+                'aria-label="Slide ' + (i + 1) + '" aria-current="' + (i === 0) + '" ' +
+                'style="width:8px;height:8px;border-radius:50%;border:none;cursor:pointer;padding:0;' +
+                'background:' + (i === 0 ? primary : border) + ';transition:background 0.2s;"></button>';
+        }
+        dotsHtml =
+          '<div style="display:flex;justify-content:center;gap:6px;padding:10px 0 6px;background:' + surface + ';">' +
+            inner +
+          '</div>';
+      }
+
+      const script =
+        '(function(){' +
+          'var root=document.querySelector(\'[data-carousel="' + uid + '"]\');' +
+          'if(!root)return;' +
+          'var track=root.querySelector(".hce-car-track");' +
+          'var dots=root.querySelectorAll(".hce-car-dot");' +
+          'var total=' + count + ';' +
+          'var current=0;' +
+          'var cp="' + primary + '";' +
+          'var ci="' + border + '";' +
+          'function goto(n){' +
+            'current=((n%total)+total)%total;' +
+            'track.style.transform="translateX(-"+(current*100)+"%)";' +
+            'dots.forEach(function(d,i){' +
+              'd.style.background=i===current?cp:ci;' +
+              'd.setAttribute("aria-current",String(i===current));' +
+            '});' +
+          '}' +
+          'var prev=root.querySelector(".hce-car-prev");' +
+          'var next=root.querySelector(".hce-car-next");' +
+          'if(prev)prev.addEventListener("click",function(e){e.stopPropagation();goto(current-1);});' +
+          'if(next)next.addEventListener("click",function(e){e.stopPropagation();goto(current+1);});' +
+          'dots.forEach(function(d,i){d.addEventListener("click",function(e){e.stopPropagation();goto(i);});});' +
+          (data.autoplay ? 'setInterval(function(){goto(current+1);},3000);' : '') +
+        '})();';
+
+      container.innerHTML =
+        '<style>' +
+          '@media(prefers-reduced-motion:reduce){.hce-car-track{transition:none !important;}}' +
+        '</style>' +
+        '<div data-carousel="' + uid + '" ' +
+            'style="border:1px solid ' + border + ';border-radius:' + radius + ';overflow:hidden;margin:8px 0;">' +
+          '<div style="position:relative;overflow:hidden;">' +
+            '<div class="hce-car-track" ' +
+                'style="display:flex;transition:transform 0.4s ease;will-change:transform;">' +
+              slidesHtml +
+            '</div>' +
+            prevArrow +
+            nextArrow +
+          '</div>' +
+          dotsHtml +
+        '</div>' +
+        '<' + 'script>' + script + '</' + 'script>';
+    }
+
+    edit(data) {
+      this._openEditModal(data);
+    }
+
+    _openEditModal(data) {
+      const self    = this;
+      const working = JSON.parse(JSON.stringify(data));
+      let selectedIdx = 0;
+
+      const overlay = document.createElement('div');
+      overlay.className = 'widget-modal-overlay';
+
+      const dialog = document.createElement('div');
+      dialog.className = 'widget-modal';
+      dialog.setAttribute('role', 'dialog');
+      dialog.setAttribute('aria-modal', 'true');
+      dialog.setAttribute('aria-labelledby', 'car-edit-title');
+      dialog.style.width = '640px';
+
+      const header = document.createElement('div');
+      header.className = 'widget-modal-header';
+      const titleEl = document.createElement('span');
+      titleEl.id = 'car-edit-title';
+      titleEl.textContent = 'Edit Carousel';
+      const closeX = document.createElement('button');
+      closeX.className = 'widget-modal-close';
+      closeX.type = 'button';
+      closeX.setAttribute('aria-label', 'Close');
+      closeX.innerHTML = '&times;';
+      header.appendChild(titleEl);
+      header.appendChild(closeX);
+
+      const body = document.createElement('div');
+      body.style.cssText = 'display:flex;min-height:340px;';
+
+      const leftCol = document.createElement('div');
+      leftCol.style.cssText =
+        'width:170px;flex-shrink:0;border-right:1px solid var(--color-border);display:flex;flex-direction:column;';
+
+      const slideListEl = document.createElement('div');
+      slideListEl.style.cssText = 'flex:1;overflow-y:auto;';
+
+      const addSlideBtn = document.createElement('button');
+      addSlideBtn.type = 'button';
+      addSlideBtn.textContent = '+ Add Slide';
+      addSlideBtn.style.cssText =
+        'padding:8px 10px;font-size:12px;font-family:var(--font-family-ui);' +
+        'border:none;border-top:1px solid var(--color-border);' +
+        'background:transparent;cursor:pointer;color:var(--color-primary);text-align:left;';
+
+      const settingsWrap = document.createElement('div');
+      settingsWrap.style.cssText =
+        'padding:10px;border-top:1px solid var(--color-border);' +
+        'font-size:12px;font-family:var(--font-family-ui);display:flex;flex-direction:column;gap:6px;';
+
+      function makeToggle(label, key) {
+        const row = document.createElement('label');
+        row.style.cssText = 'display:flex;align-items:center;gap:6px;cursor:pointer;color:var(--color-text);';
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.checked = working[key];
+        cb.addEventListener('change', function () { working[key] = cb.checked; });
+        row.appendChild(cb);
+        row.appendChild(document.createTextNode(label));
+        return row;
+      }
+      settingsWrap.appendChild(makeToggle('Show arrows', 'showArrows'));
+      settingsWrap.appendChild(makeToggle('Show dots',   'showDots'));
+      settingsWrap.appendChild(makeToggle('Autoplay',    'autoplay'));
+
+      leftCol.appendChild(slideListEl);
+      leftCol.appendChild(addSlideBtn);
+      leftCol.appendChild(settingsWrap);
+
+      const rightCol = document.createElement('div');
+      rightCol.style.cssText =
+        'flex:1;padding:16px;display:flex;flex-direction:column;gap:12px;overflow-y:auto;';
+
+      body.appendChild(leftCol);
+      body.appendChild(rightCol);
+
+      const footer = document.createElement('div');
+      footer.className = 'widget-modal-footer';
+      const cancelBtn = document.createElement('button');
+      cancelBtn.className = 'widget-modal-btn widget-modal-btn--cancel';
+      cancelBtn.type = 'button';
+      cancelBtn.textContent = 'Cancel';
+      const saveBtn = document.createElement('button');
+      saveBtn.className = 'widget-modal-btn widget-modal-btn--save';
+      saveBtn.type = 'button';
+      saveBtn.textContent = 'Save';
+      footer.appendChild(cancelBtn);
+      footer.appendChild(saveBtn);
+
+      dialog.appendChild(header);
+      dialog.appendChild(body);
+      dialog.appendChild(footer);
+      overlay.appendChild(dialog);
+      document.body.appendChild(overlay);
+
+      function makeReorderBtn(symbol, isSel) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.textContent = symbol;
+        btn.style.cssText =
+          'background:none;border:none;cursor:pointer;font-size:9px;padding:0 1px;line-height:1;' +
+          'color:' + (isSel ? 'rgba(255,255,255,0.75)' : 'var(--color-text-muted)') + ';';
+        return btn;
+      }
+
+      function renderSlideList() {
+        slideListEl.innerHTML = '';
+        working.slides.forEach(function (slide, idx) {
+          const isSel = idx === selectedIdx;
+          const row = document.createElement('div');
+          row.style.cssText =
+            'display:flex;align-items:center;padding:7px 10px;cursor:pointer;gap:2px;' +
+            'font-size:12px;font-family:var(--font-family-ui);' +
+            (isSel ? 'background:var(--color-primary);color:#fff;' : 'color:var(--color-text);');
+
+          const label = document.createElement('span');
+          label.style.cssText = 'flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+          label.textContent = 'Slide ' + (idx + 1) + (slide.imageData ? ' 🖼' : '');
+
+          const upBtn   = makeReorderBtn('▲', isSel);
+          const downBtn = makeReorderBtn('▼', isSel);
+
+          upBtn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            if (idx === 0) return;
+            working.slides.splice(idx - 1, 0, working.slides.splice(idx, 1)[0]);
+            selectedIdx = idx - 1;
+            renderSlideList();
+            renderRight();
+          });
+          downBtn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            if (idx === working.slides.length - 1) return;
+            working.slides.splice(idx + 1, 0, working.slides.splice(idx, 1)[0]);
+            selectedIdx = idx + 1;
+            renderSlideList();
+            renderRight();
+          });
+
+          row.appendChild(label);
+          row.appendChild(upBtn);
+          row.appendChild(downBtn);
+
+          if (working.slides.length > 2) {
+            const delBtn = document.createElement('button');
+            delBtn.type = 'button';
+            delBtn.textContent = '✕';
+            delBtn.style.cssText =
+              'background:none;border:none;cursor:pointer;font-size:10px;padding:0 2px;' +
+              'color:' + (isSel ? 'rgba(255,255,255,0.75)' : 'var(--color-text-muted)') + ';';
+            delBtn.addEventListener('click', function (e) {
+              e.stopPropagation();
+              working.slides.splice(idx, 1);
+              if (selectedIdx >= working.slides.length) selectedIdx = working.slides.length - 1;
+              renderSlideList();
+              renderRight();
+            });
+            row.appendChild(delBtn);
+          }
+
+          row.addEventListener('click', function () {
+            selectedIdx = idx;
+            renderSlideList();
+            renderRight();
+          });
+          slideListEl.appendChild(row);
+        });
+
+        addSlideBtn.disabled = working.slides.length >= 12;
+        addSlideBtn.style.opacity = working.slides.length >= 12 ? '0.4' : '1';
+      }
+
+      function renderRight() {
+        rightCol.innerHTML = '';
+        const slide = working.slides[selectedIdx];
+        if (!slide) return;
+
+        // Image upload section
+        const imgSection = document.createElement('div');
+        imgSection.className = 'widget-modal-field';
+
+        const imgLabelRow = document.createElement('div');
+        imgLabelRow.style.cssText = 'display:flex;align-items:center;justify-content:space-between;';
+        const imgFieldLabel = document.createElement('label');
+        imgFieldLabel.className = 'widget-modal-label';
+        imgFieldLabel.textContent = 'Image (optional)';
+        const imgUploadBtn = document.createElement('button');
+        imgUploadBtn.type = 'button';
+        imgUploadBtn.textContent = slide.imageData ? '🔄 Replace' : '📷 Upload';
+        imgUploadBtn.style.cssText =
+          'font-size:11px;font-family:var(--font-family-ui);color:var(--color-primary);' +
+          'background:none;border:none;cursor:pointer;padding:0;';
+        imgLabelRow.appendChild(imgFieldLabel);
+        imgLabelRow.appendChild(imgUploadBtn);
+
+        const imgFileInput = document.createElement('input');
+        imgFileInput.type = 'file';
+        imgFileInput.accept = 'image/*';
+        imgFileInput.style.display = 'none';
+
+        const sizeWarn = document.createElement('div');
+        sizeWarn.style.cssText =
+          'display:none;margin-top:6px;padding:6px 8px;' +
+          'background:#fef9c3;border:1px solid #ca8a04;border-radius:4px;' +
+          'font-size:11px;font-family:var(--font-family-ui);color:#92400e;';
+
+        const imgPreview = document.createElement('div');
+        imgPreview.style.cssText = 'margin-top:6px;';
+
+        function renderImgPreview() {
+          imgPreview.innerHTML = '';
+          const current = working.slides[selectedIdx];
+          if (!current.imageData) return;
+          const thumb = document.createElement('div');
+          thumb.style.cssText = 'display:flex;align-items:center;gap:8px;';
+          const previewImg = document.createElement('img');
+          previewImg.src = current.imageData;
+          previewImg.style.cssText =
+            'height:48px;width:auto;border-radius:4px;object-fit:contain;' +
+            'border:1px solid var(--color-border);';
+          previewImg.alt = '';
+          const removeBtn = document.createElement('button');
+          removeBtn.type = 'button';
+          removeBtn.textContent = '✕ Remove';
+          removeBtn.style.cssText =
+            'font-size:11px;font-family:var(--font-family-ui);color:var(--color-text-muted);' +
+            'background:none;border:none;cursor:pointer;padding:0;';
+          removeBtn.addEventListener('click', function () {
+            working.slides[selectedIdx].imageData = null;
+            imgUploadBtn.textContent = '📷 Upload';
+            sizeWarn.style.display = 'none';
+            renderImgPreview();
+            renderSlideList();
+            updateImageFields();
+          });
+          thumb.appendChild(previewImg);
+          thumb.appendChild(removeBtn);
+          imgPreview.appendChild(thumb);
+        }
+
+        imgUploadBtn.addEventListener('click', function () { imgFileInput.click(); });
+        imgFileInput.addEventListener('change', function () {
+          const file = imgFileInput.files[0];
+          if (!file) return;
+          if (file.size > IMAGE_WARN_BYTES) {
+            sizeWarn.textContent =
+              '⚠ This image is ' + (file.size / 1048576).toFixed(1) +
+              ' MB. Large images increase export file size — consider compressing it first.';
+            sizeWarn.style.display = 'block';
+          } else {
+            sizeWarn.style.display = 'none';
+          }
+          const reader = new FileReader();
+          reader.onload = function (ev) {
+            working.slides[selectedIdx].imageData = ev.target.result;
+            imgUploadBtn.textContent = '🔄 Replace';
+            renderImgPreview();
+            renderSlideList();
+            updateImageFields();
+          };
+          reader.readAsDataURL(file);
+          imgFileInput.value = '';
+        });
+
+        imgSection.appendChild(imgLabelRow);
+        imgSection.appendChild(imgFileInput);
+        imgSection.appendChild(sizeWarn);
+        imgSection.appendChild(imgPreview);
+
+        // Alt text (image only)
+        const altWrap = document.createElement('div');
+        altWrap.className = 'widget-modal-field';
+        const altLabel = document.createElement('label');
+        altLabel.className = 'widget-modal-label';
+        altLabel.textContent = 'Alt text';
+        const altInput = document.createElement('input');
+        altInput.className = 'widget-modal-input';
+        altInput.type = 'text';
+        altInput.value = slide.altText || '';
+        altInput.placeholder = 'Describe the image for screen readers';
+        altInput.addEventListener('input', function () {
+          working.slides[selectedIdx].altText = altInput.value;
+        });
+        altWrap.appendChild(altLabel);
+        altWrap.appendChild(altInput);
+
+        // Caption (image only)
+        const captionWrap = document.createElement('div');
+        captionWrap.className = 'widget-modal-field';
+        const captionLabel = document.createElement('label');
+        captionLabel.className = 'widget-modal-label';
+        captionLabel.textContent = 'Caption (optional)';
+        const captionInput = document.createElement('input');
+        captionInput.className = 'widget-modal-input';
+        captionInput.type = 'text';
+        captionInput.value = slide.caption || '';
+        captionInput.placeholder = 'Shown below the image';
+        captionInput.addEventListener('input', function () {
+          working.slides[selectedIdx].caption = captionInput.value;
+        });
+        captionWrap.appendChild(captionLabel);
+        captionWrap.appendChild(captionInput);
+
+        // Text content (text-only slides)
+        const textWrap = document.createElement('div');
+        textWrap.className = 'widget-modal-field';
+        textWrap.style.flex = '1';
+
+        const textLabelRow = document.createElement('div');
+        textLabelRow.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:8px;';
+        const textLabel = document.createElement('label');
+        textLabel.className = 'widget-modal-label';
+        textLabel.textContent = 'Text content';
+        const textHint = document.createElement('span');
+        textHint.style.cssText = 'font-size:10px;color:var(--color-text-muted);font-family:var(--font-family-ui);white-space:nowrap;';
+        textHint.textContent = 'shown when no image';
+        const txtImgBtn = document.createElement('button');
+        txtImgBtn.type = 'button';
+        txtImgBtn.textContent = '📷 Insert image';
+        txtImgBtn.style.cssText =
+          'font-size:11px;font-family:var(--font-family-ui);color:var(--color-primary);' +
+          'background:none;border:none;cursor:pointer;padding:0;white-space:nowrap;';
+        textLabelRow.appendChild(textLabel);
+        textLabelRow.appendChild(textHint);
+        textLabelRow.appendChild(txtImgBtn);
+
+        const txtImgInput = document.createElement('input');
+        txtImgInput.type = 'file';
+        txtImgInput.accept = 'image/*';
+        txtImgInput.style.display = 'none';
+
+        const textArea = document.createElement('textarea');
+        textArea.className = 'widget-modal-textarea';
+        textArea.style.minHeight = '120px';
+        textArea.value = slide.textContent || '';
+        textArea.placeholder = '<p>Your text content here. HTML is supported.</p>';
+        textArea.addEventListener('input', function () {
+          working.slides[selectedIdx].textContent = textArea.value;
+        });
+
+        txtImgBtn.addEventListener('click', function () { txtImgInput.click(); });
+        txtImgInput.addEventListener('change', function () {
+          const file = txtImgInput.files[0];
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = function (ev) {
+            const tag = '<img src="' + ev.target.result + '" style="max-width:100%;height:auto;">';
+            const start = textArea.selectionStart;
+            const end   = textArea.selectionEnd;
+            textArea.value =
+              textArea.value.substring(0, start) + tag + textArea.value.substring(end);
+            working.slides[selectedIdx].textContent = textArea.value;
+            textArea.setSelectionRange(start + tag.length, start + tag.length);
+            textArea.focus();
+          };
+          reader.readAsDataURL(file);
+          txtImgInput.value = '';
+        });
+
+        textWrap.appendChild(textLabelRow);
+        textWrap.appendChild(txtImgInput);
+        textWrap.appendChild(textArea);
+
+        function updateImageFields() {
+          const hasImg = !!working.slides[selectedIdx].imageData;
+          altWrap.style.display     = hasImg ? '' : 'none';
+          captionWrap.style.display = hasImg ? '' : 'none';
+        }
+
+        rightCol.appendChild(imgSection);
+        rightCol.appendChild(altWrap);
+        rightCol.appendChild(captionWrap);
+        rightCol.appendChild(textWrap);
+
+        renderImgPreview();
+        updateImageFields();
+      }
+
+      addSlideBtn.addEventListener('click', function () {
+        if (working.slides.length >= 12) return;
+        working.slides.push({
+          id:          'slide-' + Date.now(),
+          imageData:   null,
+          altText:     '',
+          caption:     '',
+          textContent: '',
+        });
+        selectedIdx = working.slides.length - 1;
+        renderSlideList();
+        renderRight();
+      });
+
+      function close(save) {
+        document.removeEventListener('keydown', onKey);
+        if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+        if (!save) return;
+        self._currentSlide = Math.min(self._currentSlide || 0, working.slides.length - 1);
+        self.updateData(working);
+      }
+
+      function onKey(e) {
+        if (e.key === 'Escape') { e.preventDefault(); close(false); }
+      }
+
+      closeX.addEventListener('click',   function () { close(false); });
+      cancelBtn.addEventListener('click', function () { close(false); });
+      saveBtn.addEventListener('click',   function () { close(true); });
+      overlay.addEventListener('click', function (e) {
+        if (e.target === overlay) close(false);
+      });
+      document.addEventListener('keydown', onKey);
+
+      renderSlideList();
+      renderRight();
+    }
+  }
+
+  WidgetRegistry.register(CarouselBlot);
+})();

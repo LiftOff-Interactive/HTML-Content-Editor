@@ -909,3 +909,281 @@ body {
   font-family: var(--font-family-body);
   line-height: 1.5;
 }
+
+/* ============================================================
+   Click & Reveal widget
+   ============================================================ */
+.click-reveal-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.click-reveal-bar-label {
+  font-size: 12px;
+  font-family: var(--font-family-ui);
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+
+.click-reveal-edit-btn {
+  font-size: 12px;
+  font-family: var(--font-family-ui);
+  color: var(--color-primary);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+.click-reveal-edit-btn:hover {
+  background: var(--color-border);
+}
+
+.click-reveal-items {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.reveal-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.reveal-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  font-family: var(--font-family-body);
+  font-size: 15px;
+}
+
+.reveal-trigger--button {
+  padding: 12px 16px;
+  background: var(--color-primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--widget-border-radius);
+  font-weight: 600;
+}
+
+.reveal-trigger--button:hover {
+  opacity: 0.9;
+}
+
+.reveal-trigger--label {
+  padding: 10px 4px;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-primary);
+  text-decoration: underline;
+}
+
+.reveal-trigger--card {
+  padding: 14px 16px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--widget-border-radius);
+  color: var(--color-text);
+}
+
+.reveal-trigger--card:hover {
+  background: var(--color-border);
+}
+
+.reveal-arrow {
+  display: inline-block;
+  font-size: 12px;
+  margin-left: 8px;
+  flex-shrink: 0;
+  transition: transform var(--duration-fast) var(--ease);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal-arrow {
+    transition: none;
+  }
+}
+
+.reveal-item.is-revealed .reveal-arrow {
+  transform: rotate(180deg);
+}
+
+.reveal-content {
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: max-height 0.35s ease, opacity 0.25s ease;
+  font-family: var(--font-family-body);
+  font-size: 15px;
+  color: var(--color-text);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal-content {
+    transition: none;
+  }
+}
+
+.reveal-item.is-revealed .reveal-content {
+  max-height: 800px;
+  opacity: 1;
+}
+
+.reveal-content-inner {
+  padding: 12px 4px 4px;
+  line-height: 1.6;
+}
+
+/* ============================================================
+   Carousel widget
+   ============================================================ */
+.carousel-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.carousel-bar-label {
+  font-size: 12px;
+  font-family: var(--font-family-ui);
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+
+.carousel-edit-btn {
+  font-size: 12px;
+  font-family: var(--font-family-ui);
+  color: var(--color-primary);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+.carousel-edit-btn:hover {
+  background: var(--color-border);
+}
+
+.carousel-viewport {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px;
+  background: var(--color-bg);
+}
+
+.carousel-media {
+  flex: 1;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: var(--color-surface);
+  border-radius: calc(var(--widget-border-radius) / 2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.carousel-slide-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.carousel-slide-text {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  font-family: var(--font-family-body);
+  color: var(--color-text);
+  line-height: 1.6;
+  overflow-y: auto;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.carousel-placeholder {
+  color: var(--color-text-muted);
+  font-style: italic;
+  font-size: 13px;
+}
+
+.carousel-arrow {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: var(--color-primary);
+  color: #fff;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.85;
+  transition: opacity var(--duration-fast);
+}
+
+.carousel-arrow:hover {
+  opacity: 1;
+}
+
+.carousel-caption {
+  padding: 8px 12px;
+  font-family: var(--font-family-body);
+  font-size: 13px;
+  color: var(--color-text-muted);
+  text-align: center;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.carousel-dots {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 0 8px;
+  background: var(--color-surface);
+}
+
+.carousel-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: none;
+  background: var(--color-border);
+  cursor: pointer;
+  padding: 0;
+  transition: background var(--duration-fast);
+}
+
+.carousel-dot.is-active {
+  background: var(--color-primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .carousel-arrow,
+  .carousel-dot {
+    transition: none;
+  }
+}

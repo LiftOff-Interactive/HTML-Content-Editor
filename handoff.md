@@ -1,5 +1,5 @@
 # Handoff — HTML Content Editor
-_Last updated: 2026-06-05 · Current stage: Stage 5 — Tier 2 Widgets_
+_Last updated: 2026-06-05 · Current stage: Stage 5 — Tier 2 Widgets (3 of 5 remaining)_
 
 ## Goals
 Build the five Tier 2 widgets (Flip Cards, Click Reveal, Carousel, Hotspot, Knowledge Check). The export engine from Stage 4 is complete and working, so each new widget can be built and immediately verified in both the editor and exported HTML.
@@ -43,8 +43,12 @@ Architecture notes:
 - `staging/stage-3-tier1-widgets/feature-quote.md` — DONE ✓ (human verified)
 - `staging/stage-3-tier1-widgets/feature-timeline.md` — DONE ✓ (human verified)
 - `staging/stage-4-export-engine/feature-export.md` — DONE ✓ (human verified)
+- `staging/stage-5-tier2-widgets/feature-flip-cards.md` — DONE ✓ (human verified)
+- `staging/stage-5-tier2-widgets/feature-click-reveal.md` — DONE ✓ (human verified)
 
 ## Things I've Changed
+- 2026-06-05: Stage 5 Feature 2 — `ClickRevealBlot` (`src/blots/click-reveal.js`): 3 trigger styles (button/label/card), slide-down max-height+opacity animation, multiple items revealable simultaneously, HTML content + image insert, `aria-expanded`/`aria-hidden` ARIA, export scoped via data attributes; CSS added to `main.css`; wired into `index.html`.
+- 2026-06-05: Stage 5 Feature 1 — `FlipCardsBlot` (`src/blots/flip-cards.js`): 3D CSS flip, optional `frontImage` per card (upload/replace/remove), 2/3/4 column grid, 200px fixed height + scrollable overflow, edit bar + modal with card list reorder; CSS added to `main.css`; wired into `index.html`.
 - 2026-06-05: Stage 4 — Export engine (`src/export.js`): `deltaToHtml` walks Quill ops and renders text/headings/lists/widgets; `buildExportCSS` reads theme vars via getComputedStyle (no var() refs); blob download with slugified filename; >5MB size toast. "Export HTML" button added to app header. Button styles added to `main.css`.
 - 2026-06-05: Stage 3 Feature 5 — `TimelineBlot` (`src/blots/timeline.js`): left-aligned vertical timeline, circle dots + connecting lines, icon field, two-column edit modal; timeline CSS added to `main.css`; wired into `index.html`. Editor render uses `<div>` tags (not `<ol>/<li>`) to avoid Quill snow CSS overriding padding-left on li elements.
 - 2026-06-05: Stage 3 Feature 4 — `QuoteBlot` (`src/blots/quote.js`): 3 styles (pull/sidebar/highlight), decorative quote mark span, blockquote/cite semantics; quote CSS added to `main.css`; wired into `index.html`
@@ -60,9 +64,16 @@ Architecture notes:
 _Nothing yet._
 
 ## Next Up
-1. Read `staging/stage-5-tier2-widgets/overview.md` and the first feature file `feature-flip-cards.md`
-2. Build `FlipCardsBlot` — cards that flip on click to reveal a back face
+1. Read `staging/stage-5-tier2-widgets/feature-carousel.md`
+2. Build `CarouselBlot` — image/content slider with prev/next navigation
 3. Verify in editor and in exported HTML before moving to the next widget
+
+## Architecture Notes (Stage 5 additions)
+- Tier 2 widgets that have interactive elements (flip, reveal triggers) use a "✎ Edit" bar at the top of the widget. Card/trigger clicks stopPropagation to prevent bubbling to the base-class domNode click-to-edit handler. Edit bar button also stopPropagates and calls `self.edit()` directly.
+- Revealed/flipped state is NOT stored in widget data — it's ephemeral DOM state (CSS class toggling). This means exports always start in the default (hidden/unflipped) state regardless of what the user left in the editor.
+- Export interactivity pattern for Tier 2: inline `onclick` + `onkeydown` attrs scoped to each item via `data-*` attributes (not global IDs). `closest('[data-x]')` to find item container from within child button. Avoids global JS and works safely with multiple widget instances per page.
+- `<style>` blocks emitted per widget instance in export body (same approach as `<script>` IIFEs in accordion). Duplicate rules across multiple instances of the same widget type are harmless.
+- `prefers-reduced-motion` handled in both editor CSS (via media query) and export `<style>` blocks.
 
 ## Architecture Notes (Stage 4 additions)
 - `src/export.js` — export pipeline. `window.HCEExport.exportHtml()` is the entry point.
@@ -72,4 +83,4 @@ _Nothing yet._
 
 ## Pointer
 → Current stage folder: `staging/stage-5-tier2-widgets/`
-→ Active feature file: `staging/stage-5-tier2-widgets/feature-flip-cards.md`
+→ Active feature file: `staging/stage-5-tier2-widgets/feature-carousel.md`
