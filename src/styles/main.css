@@ -1610,3 +1610,38 @@ body {
 .widget-error-label {
   line-height: 1.4;
 }
+
+/* ── Resizable image blot ────────────────────────────────────────────────── */
+
+.hce-image-wrapper {
+  position: relative;
+  display: inline-block;
+  line-height: 0;
+  max-width: 100%;
+  margin: 4px 0;
+}
+
+.hce-image-wrapper img {
+  display: block;
+  height: auto;
+  max-width: 100%;
+}
+
+.hce-image-resize-handle {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 14px;
+  height: 14px;
+  background: var(--color-primary, #2563eb);
+  cursor: se-resize;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 1;
+  border-radius: 2px 0 2px 0;
+}
+
+.hce-image-wrapper:hover .hce-image-resize-handle,
+.hce-image-wrapper.is-resizing .hce-image-resize-handle {
+  opacity: 1;
+}

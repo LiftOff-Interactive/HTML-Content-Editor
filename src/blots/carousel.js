@@ -11,8 +11,6 @@
       .replace(/"/g, '&quot;');
   }
 
-  const IMAGE_WARN_BYTES = 1048576; // 1 MB
-
   class CarouselBlot extends BaseWidgetBlot {
     static blotName          = 'carousel';
     static tagName           = 'div';
@@ -23,8 +21,8 @@
     static defaultData       = {
       _v: 1,
       slides: [
-        { id: 'slide-1', imageData: null, altText: '', caption: '', textContent: '<p>Slide 1 — click ✎ Edit to add an image or write content.</p>' },
-        { id: 'slide-2', imageData: null, altText: '', caption: '', textContent: '<p>Slide 2 — click ✎ Edit to add an image or write content.</p>' },
+        { id: 'slide-1', imageData: null, imageWidth: '100%', altText: '', caption: '', textContent: '<p>Slide 1 — click ✎ Edit to add an image or write content.</p>' },
+        { id: 'slide-2', imageData: null, imageWidth: '100%', altText: '', caption: '', textContent: '<p>Slide 2 — click ✎ Edit to add an image or write content.</p>' },
       ],
       autoplay:   false,
       showDots:   true,
@@ -49,9 +47,12 @@
 
       let mediaHtml;
       if (slide.imageData) {
+        const imgW = slide.imageWidth && slide.imageWidth !== '100%'
+          ? 'width:' + slide.imageWidth + ';max-width:100%;height:auto;display:block;margin:auto;'
+          : 'width:100%;height:auto;display:block;';
         mediaHtml =
           '<img class="carousel-slide-img" src="' + slide.imageData +
-              '" alt="' + esc(slide.altText) + '">';
+              '" alt="' + esc(slide.altText) + '" style="' + imgW + '">';
       } else {
         const txt = slide.textContent || '';
         mediaHtml =
@@ -81,7 +82,7 @@
 
       container.innerHTML =
         '<div class="carousel-bar">' +
-          '<span class="carousel-bar-label">🎠 Carousel (' + (idx + 1) + ' / ' + count + ')</span>' +
+          '<span class="carousel-bar-label">🎠 Carousel (' + (idx + 1) + ' / ' + count + ')</span>' +
           '<button class="carousel-edit-btn" type="button">✎ Edit</button>' +
         '</div>' +
         '<div class="carousel-viewport">' +
@@ -145,9 +146,12 @@
       slides.forEach(function (slide) {
         let mediaHtml;
         if (slide.imageData) {
+          const expW = slide.imageWidth && slide.imageWidth !== '100%'
+            ? 'width:' + slide.imageWidth + ';max-width:100%;height:auto;object-fit:contain;display:block;margin:auto;'
+            : 'width:100%;height:auto;object-fit:contain;display:block;';
           mediaHtml =
             '<img src="' + slide.imageData + '" alt="' + esc(slide.altText) + '" ' +
-                'style="width:100%;height:100%;object-fit:contain;display:block;">';
+                'style="' + expW + '">';
         } else {
           const txt = slide.textContent || '';
           mediaHtml =
@@ -255,6 +259,24 @@
       const self    = this;
       const working = JSON.parse(JSON.stringify(data));
       let selectedIdx = 0;
+
+      // Track the active ImageUploadField so it can be flushed before slide
+      // switches and on modal close.
+      let currentImgField      = null;
+      let currentImgFieldSlice = -1;
+
+      function saveCurrentImgField() {
+        if (!currentImgField || currentImgFieldSlice < 0) return;
+        const slide = working.slides[currentImgFieldSlice];
+        if (slide) {
+          const v = currentImgField.getValue();
+          slide.imageData  = v.src;
+          slide.imageWidth = v.width;
+        }
+        currentImgField.destroy();
+        currentImgField      = null;
+        currentImgFieldSlice = -1;
+      }
 
       const overlay = document.createElement('div');
       overlay.className = 'widget-modal-overlay';
@@ -425,103 +447,36 @@
       }
 
       function renderRight() {
+        saveCurrentImgField();
         rightCol.innerHTML = '';
         const slide = working.slides[selectedIdx];
         if (!slide) return;
 
-        // Image upload section
+        currentImgFieldSlice = selectedIdx;
+
+        // ── Image field (ImageUploadField) ────────────────────────────────
         const imgSection = document.createElement('div');
         imgSection.className = 'widget-modal-field';
+        const imgLabel = document.createElement('label');
+        imgLabel.className = 'widget-modal-label';
+        imgLabel.textContent = 'Image (optional)';
+        imgSection.appendChild(imgLabel);
+        const imgMount = document.createElement('div');
+        imgSection.appendChild(imgMount);
 
-        const imgLabelRow = document.createElement('div');
-        imgLabelRow.style.cssText = 'display:flex;align-items:center;justify-content:space-between;';
-        const imgFieldLabel = document.createElement('label');
-        imgFieldLabel.className = 'widget-modal-label';
-        imgFieldLabel.textContent = 'Image (optional)';
-        const imgUploadBtn = document.createElement('button');
-        imgUploadBtn.type = 'button';
-        imgUploadBtn.textContent = slide.imageData ? '🔄 Replace' : '📷 Upload';
-        imgUploadBtn.style.cssText =
-          'font-size:11px;font-family:var(--font-family-ui);color:var(--color-primary);' +
-          'background:none;border:none;cursor:pointer;padding:0;';
-        imgLabelRow.appendChild(imgFieldLabel);
-        imgLabelRow.appendChild(imgUploadBtn);
-
-        const imgFileInput = document.createElement('input');
-        imgFileInput.type = 'file';
-        imgFileInput.accept = 'image/*';
-        imgFileInput.style.display = 'none';
-
-        const sizeWarn = document.createElement('div');
-        sizeWarn.style.cssText =
-          'display:none;margin-top:6px;padding:6px 8px;' +
-          'background:#fef9c3;border:1px solid #ca8a04;border-radius:4px;' +
-          'font-size:11px;font-family:var(--font-family-ui);color:#92400e;';
-
-        const imgPreview = document.createElement('div');
-        imgPreview.style.cssText = 'margin-top:6px;';
-
-        function renderImgPreview() {
-          imgPreview.innerHTML = '';
-          const current = working.slides[selectedIdx];
-          if (!current.imageData) return;
-          const thumb = document.createElement('div');
-          thumb.style.cssText = 'display:flex;align-items:center;gap:8px;';
-          const previewImg = document.createElement('img');
-          previewImg.src = current.imageData;
-          previewImg.style.cssText =
-            'height:48px;width:auto;border-radius:4px;object-fit:contain;' +
-            'border:1px solid var(--color-border);';
-          previewImg.alt = '';
-          const removeBtn = document.createElement('button');
-          removeBtn.type = 'button';
-          removeBtn.textContent = '✕ Remove';
-          removeBtn.style.cssText =
-            'font-size:11px;font-family:var(--font-family-ui);color:var(--color-text-muted);' +
-            'background:none;border:none;cursor:pointer;padding:0;';
-          removeBtn.addEventListener('click', function () {
-            working.slides[selectedIdx].imageData = null;
-            imgUploadBtn.textContent = '📷 Upload';
-            sizeWarn.style.display = 'none';
-            renderImgPreview();
-            renderSlideList();
-            updateImageFields();
-          });
-          thumb.appendChild(previewImg);
-          thumb.appendChild(removeBtn);
-          imgPreview.appendChild(thumb);
-        }
-
-        imgUploadBtn.addEventListener('click', function () { imgFileInput.click(); });
-        imgFileInput.addEventListener('change', function () {
-          const file = imgFileInput.files[0];
-          if (!file) return;
-          if (file.size > IMAGE_WARN_BYTES) {
-            sizeWarn.textContent =
-              '⚠ This image is ' + (file.size / 1048576).toFixed(1) +
-              ' MB. Large images increase export file size — consider compressing it first.';
-            sizeWarn.style.display = 'block';
-          } else {
-            sizeWarn.style.display = 'none';
-          }
-          const reader = new FileReader();
-          reader.onload = function (ev) {
-            working.slides[selectedIdx].imageData = ev.target.result;
-            imgUploadBtn.textContent = '🔄 Replace';
-            renderImgPreview();
-            renderSlideList();
-            updateImageFields();
-          };
-          reader.readAsDataURL(file);
-          imgFileInput.value = '';
+        currentImgField = new ImageUploadField(imgMount, {
+          src:   slide.imageData  || '',
+          width: slide.imageWidth || '100%',
+        }, function (value) {
+          const i = selectedIdx;
+          if (!working.slides[i]) return;
+          working.slides[i].imageData  = value.src;
+          working.slides[i].imageWidth = value.width;
+          renderSlideList();
+          updateImageFields();
         });
 
-        imgSection.appendChild(imgLabelRow);
-        imgSection.appendChild(imgFileInput);
-        imgSection.appendChild(sizeWarn);
-        imgSection.appendChild(imgPreview);
-
-        // Alt text (image only)
+        // ── Alt text ──────────────────────────────────────────────────────
         const altWrap = document.createElement('div');
         altWrap.className = 'widget-modal-field';
         const altLabel = document.createElement('label');
@@ -538,7 +493,7 @@
         altWrap.appendChild(altLabel);
         altWrap.appendChild(altInput);
 
-        // Caption (image only)
+        // ── Caption ───────────────────────────────────────────────────────
         const captionWrap = document.createElement('div');
         captionWrap.className = 'widget-modal-field';
         const captionLabel = document.createElement('label');
@@ -555,7 +510,7 @@
         captionWrap.appendChild(captionLabel);
         captionWrap.appendChild(captionInput);
 
-        // Text content (text-only slides)
+        // ── Text content ──────────────────────────────────────────────────
         const textWrap = document.createElement('div');
         textWrap.className = 'widget-modal-field';
         textWrap.style.flex = '1';
@@ -566,7 +521,8 @@
         textLabel.className = 'widget-modal-label';
         textLabel.textContent = 'Text content';
         const textHint = document.createElement('span');
-        textHint.style.cssText = 'font-size:10px;color:var(--color-text-muted);font-family:var(--font-family-ui);white-space:nowrap;';
+        textHint.style.cssText =
+          'font-size:10px;color:var(--color-text-muted);font-family:var(--font-family-ui);white-space:nowrap;';
         textHint.textContent = 'shown when no image';
         const txtImgBtn = document.createElement('button');
         txtImgBtn.type = 'button';
@@ -626,7 +582,6 @@
         rightCol.appendChild(captionWrap);
         rightCol.appendChild(textWrap);
 
-        renderImgPreview();
         updateImageFields();
       }
 
@@ -635,6 +590,7 @@
         working.slides.push({
           id:          'slide-' + Date.now(),
           imageData:   null,
+          imageWidth:  '100%',
           altText:     '',
           caption:     '',
           textContent: '',
@@ -645,6 +601,7 @@
       });
 
       function close(save) {
+        saveCurrentImgField();
         document.removeEventListener('keydown', onKey);
         if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
         if (!save) return;

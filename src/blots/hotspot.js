@@ -269,7 +269,7 @@
 
       // --- Left column: image controls + image area ---
       const imgControlsRow = document.createElement('div');
-      imgControlsRow.style.cssText = 'display:flex;align-items:center;gap:8px;flex-shrink:0;';
+      imgControlsRow.style.cssText = 'display:flex;align-items:center;gap:6px;flex-shrink:0;';
 
       const imgFileInput = document.createElement('input');
       imgFileInput.type = 'file';
@@ -282,7 +282,41 @@
         'font-size:12px;font-family:var(--font-family-ui);color:var(--color-primary);' +
         'background:none;border:1px solid var(--color-border);border-radius:4px;' +
         'cursor:pointer;padding:4px 10px;flex-shrink:0;white-space:nowrap;';
-      uploadBtn.textContent = working.imageData ? '🔄 Replace image' : '📷 Upload image';
+      uploadBtn.textContent = working.imageData ? '🔄 Replace' : '📷 Upload';
+
+      const orSpan = document.createElement('span');
+      orSpan.textContent = 'or';
+      orSpan.style.cssText =
+        'font-size:11px;color:var(--color-text-muted);font-family:var(--font-family-ui);flex-shrink:0;';
+
+      const urlInput = document.createElement('input');
+      urlInput.type        = 'url';
+      urlInput.placeholder = 'Paste image URL…';
+      urlInput.className   = 'widget-modal-input';
+      urlInput.style.flex      = '1';
+      urlInput.style.minWidth  = '0';
+      urlInput.style.fontSize  = '12px';
+      if (working.imageData && !working.imageData.startsWith('data:')) {
+        urlInput.value = working.imageData;
+      }
+
+      imgControlsRow.appendChild(uploadBtn);
+      imgControlsRow.appendChild(imgFileInput);
+      imgControlsRow.appendChild(orSpan);
+      imgControlsRow.appendChild(urlInput);
+
+      const urlWarnEl = document.createElement('div');
+      urlWarnEl.style.cssText =
+        'display:none;padding:3px 8px;' +
+        'background:#fffbeb;border:1px solid #d97706;border-radius:4px;' +
+        'font-size:11px;font-family:var(--font-family-ui);color:#92400e;flex-shrink:0;';
+      urlWarnEl.textContent = '⚠ URL images require internet connection in the exported file.';
+      if (working.imageData && !working.imageData.startsWith('data:')) {
+        urlWarnEl.style.display = 'block';
+      }
+
+      const altRow = document.createElement('div');
+      altRow.style.cssText = 'display:flex;align-items:center;flex-shrink:0;';
 
       const altInput = document.createElement('input');
       altInput.type = 'text';
@@ -291,10 +325,7 @@
       altInput.value = working.altText || '';
       altInput.style.flex = '1';
       altInput.addEventListener('input', function () { working.altText = altInput.value; });
-
-      imgControlsRow.appendChild(uploadBtn);
-      imgControlsRow.appendChild(imgFileInput);
-      imgControlsRow.appendChild(altInput);
+      altRow.appendChild(altInput);
 
       const imgArea = document.createElement('div');
       imgArea.style.cssText =
@@ -329,6 +360,8 @@
         : 'Upload an image first, then click to place pins.';
 
       leftCol.appendChild(imgControlsRow);
+      leftCol.appendChild(urlWarnEl);
+      leftCol.appendChild(altRow);
       leftCol.appendChild(imgArea);
       leftCol.appendChild(instrEl);
 
@@ -361,7 +394,9 @@
         reader.onload = function (ev) {
           working.imageData = ev.target.result;
           imgEl.src = working.imageData;
-          uploadBtn.textContent = '🔄 Replace image';
+          uploadBtn.textContent = '🔄 Replace';
+          urlInput.value = '';
+          urlWarnEl.style.display = 'none';
           instrEl.textContent = 'Click on the image to place a new pin.';
           if (imgArea.contains(noImgPlaceholder)) {
             imgArea.removeChild(noImgPlaceholder);
@@ -371,6 +406,30 @@
         };
         reader.readAsDataURL(file);
         imgFileInput.value = '';
+      });
+
+      urlInput.addEventListener('input', function () {
+        const url = urlInput.value.trim();
+        working.imageData = url || null;
+        urlWarnEl.style.display = url ? 'block' : 'none';
+        if (url) {
+          imgEl.src = url;
+          uploadBtn.textContent = '🔄 Replace';
+          instrEl.textContent = 'Click on the image to place a new pin.';
+          if (imgArea.contains(noImgPlaceholder)) {
+            imgArea.removeChild(noImgPlaceholder);
+            imgArea.appendChild(imgEl);
+          }
+        } else {
+          imgEl.src = '';
+          uploadBtn.textContent = '📷 Upload';
+          instrEl.textContent = 'Upload an image first, then click to place pins.';
+          if (!imgArea.contains(noImgPlaceholder)) {
+            if (imgArea.contains(imgEl)) imgArea.removeChild(imgEl);
+            imgArea.appendChild(noImgPlaceholder);
+          }
+        }
+        renderPins();
       });
 
       imgEl.addEventListener('click', function (e) {
