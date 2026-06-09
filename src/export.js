@@ -77,8 +77,21 @@
       if (typeof op.insert === 'object' && op.insert !== null) {
         const blotName = Object.keys(op.insert)[0];
         const data     = op.insert[blotName];
-        const Blot     = WidgetRegistry.get(blotName);
         closeList();
+
+        // ResizableImageBlot is registered directly with Quill, not WidgetRegistry.
+        if (blotName === 'resizable-image') {
+          html +=
+            '<div style="display:block;margin:8px 0;">' +
+              '<img src="' + esc(data.src || '') + '" ' +
+                  'alt="' + esc(data.alt || '') + '" ' +
+                  'style="width:' + (data.width || 480) + 'px;max-width:100%;height:auto;display:block;">' +
+            '</div>';
+          lineBuffer = '';
+          continue;
+        }
+
+        const Blot = WidgetRegistry.get(blotName);
         if (Blot) {
           const container = document.createElement('div');
           const instance  = Object.create(Blot.prototype);

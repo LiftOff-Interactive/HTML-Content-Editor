@@ -21,10 +21,10 @@
     static defaultData       = {
       _v: 1,
       cards: [
-        { id: 'card-1', front: 'What is HTML?',       back: 'HyperText Markup Language — the structure of web pages.',      frontImage: null },
-        { id: 'card-2', front: 'What is CSS?',        back: 'Cascading Style Sheets — controls presentation and layout.',   frontImage: null },
-        { id: 'card-3', front: 'What is JavaScript?', back: 'A scripting language that adds interactivity to web pages.',   frontImage: null },
-        { id: 'card-4', front: 'What is a Blot?',     back: 'A Quill content node — the building block of the editor.',    frontImage: null },
+        { id: 'card-1', front: 'What is HTML?',       back: 'HyperText Markup Language — the structure of web pages.',    frontImage: null, frontImageWidth: '100%' },
+        { id: 'card-2', front: 'What is CSS?',        back: 'Cascading Style Sheets — controls presentation and layout.', frontImage: null, frontImageWidth: '100%' },
+        { id: 'card-3', front: 'What is JavaScript?', back: 'A scripting language that adds interactivity to web pages.', frontImage: null, frontImageWidth: '100%' },
+        { id: 'card-4', front: 'What is a Blot?',     back: 'A Quill content node — the building block of the editor.',  frontImage: null, frontImageWidth: '100%' },
       ],
       columns: 3,
     };
@@ -40,9 +40,16 @@
 
       let cardsHtml = '';
       data.cards.forEach(function (card) {
-        const imgHtml = card.frontImage
-          ? '<img src="' + card.frontImage + '" class="flip-card-img" alt="">'
-          : '';
+        let imgHtml = '';
+        if (card.frontImage) {
+          const w = card.frontImageWidth && card.frontImageWidth !== '100%'
+            ? 'width:' + card.frontImageWidth + ';'
+            : 'width:100%;';
+          imgHtml =
+            '<img src="' + card.frontImage + '" class="flip-card-img" alt="" ' +
+                'style="' + w + 'height:auto;object-fit:contain;display:block;' +
+                'max-width:100%;margin:0 auto 4px;">';
+        }
         cardsHtml +=
           '<div class="flip-card-item" tabindex="0" role="button" ' +
               'aria-label="Front: ' + esc(card.front) + '" ' +
@@ -103,7 +110,6 @@
       const radius  = root.getPropertyValue('--widget-border-radius').trim() || '0.5rem';
       const cols    = data.columns || 3;
 
-      // Inline onclick toggles class + updates aria-label using data-front/data-back attrs
       const onClickHandler =
         '(function(el){' +
           'el.classList.toggle("is-flipped");' +
@@ -136,10 +142,16 @@
 
       let cardsHtml = '';
       data.cards.forEach(function (card) {
-        const imgHtml = card.frontImage
-          ? '<img src="' + card.frontImage + '" ' +
-              'style="max-width:100%;max-height:80px;object-fit:contain;margin-bottom:8px;" alt="">'
-          : '';
+        let imgHtml = '';
+        if (card.frontImage) {
+          const w = card.frontImageWidth && card.frontImageWidth !== '100%'
+            ? card.frontImageWidth
+            : '100%';
+          imgHtml =
+            '<img src="' + card.frontImage + '" ' +
+                'style="width:' + w + ';max-width:100%;max-height:80px;' +
+                'object-fit:contain;margin-bottom:8px;display:block;" alt="">';
+        }
 
         cardsHtml +=
           '<div class="hce-fc-card" ' +
@@ -187,9 +199,27 @@
     }
 
     _openEditModal(data) {
-      const self = this;
+      const self    = this;
       const working = JSON.parse(JSON.stringify(data));
       let selectedIdx = 0;
+
+      // Track the active ImageUploadField so it can be flushed before card
+      // switches and on modal close.
+      let currentImgField      = null;
+      let currentImgFieldSlice = -1;
+
+      function saveCurrentImgField() {
+        if (!currentImgField || currentImgFieldSlice < 0) return;
+        const card = working.cards[currentImgFieldSlice];
+        if (card) {
+          const v = currentImgField.getValue();
+          card.frontImage      = v.src   || null;
+          card.frontImageWidth = v.width || '100%';
+        }
+        currentImgField.destroy();
+        currentImgField      = null;
+        currentImgFieldSlice = -1;
+      }
 
       const overlay = document.createElement('div');
       overlay.className = 'widget-modal-overlay';
@@ -365,11 +395,14 @@
       }
 
       function renderRight() {
+        saveCurrentImgField();
         rightCol.innerHTML = '';
         const card = working.cards[selectedIdx];
         if (!card) return;
 
-        // Front text
+        currentImgFieldSlice = selectedIdx;
+
+        // ── Front text ────────────────────────────────────────────────────────
         const frontWrap = document.createElement('div');
         frontWrap.className = 'widget-modal-field';
         const frontLabel = document.createElement('label');
@@ -386,78 +419,27 @@
         frontWrap.appendChild(frontLabel);
         frontWrap.appendChild(frontInput);
 
-        // Front image
+        // ── Front image (ImageUploadField) ────────────────────────────────────
         const imgWrap = document.createElement('div');
         imgWrap.className = 'widget-modal-field';
-        const imgLabelRow = document.createElement('div');
-        imgLabelRow.style.cssText =
-          'display:flex;align-items:center;justify-content:space-between;';
-        const imgFieldLabel = document.createElement('label');
-        imgFieldLabel.className = 'widget-modal-label';
-        imgFieldLabel.textContent = 'Front image (optional)';
-        const imgUploadBtn = document.createElement('button');
-        imgUploadBtn.type = 'button';
-        imgUploadBtn.textContent = card.frontImage ? '🔄 Replace' : '📷 Upload';
-        imgUploadBtn.style.cssText =
-          'font-size:11px;font-family:var(--font-family-ui);color:var(--color-primary);' +
-          'background:none;border:none;cursor:pointer;padding:0;';
-        imgLabelRow.appendChild(imgFieldLabel);
-        imgLabelRow.appendChild(imgUploadBtn);
+        const imgLabel = document.createElement('label');
+        imgLabel.className = 'widget-modal-label';
+        imgLabel.textContent = 'Front image (optional)';
+        imgWrap.appendChild(imgLabel);
+        const imgMount = document.createElement('div');
+        imgWrap.appendChild(imgMount);
 
-        const imgFileInput = document.createElement('input');
-        imgFileInput.type = 'file';
-        imgFileInput.accept = 'image/*';
-        imgFileInput.style.display = 'none';
-
-        const imgPreviewWrap = document.createElement('div');
-        imgPreviewWrap.style.cssText = 'margin-top:6px;';
-
-        function renderImgPreview() {
-          imgPreviewWrap.innerHTML = '';
-          if (!working.cards[selectedIdx].frontImage) return;
-          const thumb = document.createElement('div');
-          thumb.style.cssText = 'display:flex;align-items:center;gap:8px;';
-          const previewImg = document.createElement('img');
-          previewImg.src = working.cards[selectedIdx].frontImage;
-          previewImg.style.cssText =
-            'height:48px;width:auto;border-radius:4px;' +
-            'border:1px solid var(--color-border);object-fit:contain;';
-          previewImg.alt = '';
-          const removeBtn = document.createElement('button');
-          removeBtn.type = 'button';
-          removeBtn.textContent = '✕ Remove';
-          removeBtn.style.cssText =
-            'font-size:11px;font-family:var(--font-family-ui);color:var(--color-text-muted);' +
-            'background:none;border:none;cursor:pointer;padding:0;';
-          removeBtn.addEventListener('click', function () {
-            working.cards[selectedIdx].frontImage = null;
-            imgUploadBtn.textContent = '📷 Upload';
-            renderImgPreview();
-          });
-          thumb.appendChild(previewImg);
-          thumb.appendChild(removeBtn);
-          imgPreviewWrap.appendChild(thumb);
-        }
-
-        imgUploadBtn.addEventListener('click', function () { imgFileInput.click(); });
-        imgFileInput.addEventListener('change', function () {
-          const file = imgFileInput.files[0];
-          if (!file) return;
-          const reader = new FileReader();
-          reader.onload = function (ev) {
-            working.cards[selectedIdx].frontImage = ev.target.result;
-            imgUploadBtn.textContent = '🔄 Replace';
-            renderImgPreview();
-          };
-          reader.readAsDataURL(file);
-          imgFileInput.value = '';
+        currentImgField = new ImageUploadField(imgMount, {
+          src:   card.frontImage      || '',
+          width: card.frontImageWidth || '100%',
+        }, function (value) {
+          const i = selectedIdx;
+          if (!working.cards[i]) return;
+          working.cards[i].frontImage      = value.src   || null;
+          working.cards[i].frontImageWidth = value.width || '100%';
         });
 
-        imgWrap.appendChild(imgLabelRow);
-        imgWrap.appendChild(imgFileInput);
-        imgWrap.appendChild(imgPreviewWrap);
-
-        // Back text
+        // ── Back text ─────────────────────────────────────────────────────────
         const backWrap = document.createElement('div');
         backWrap.className = 'widget-modal-field';
         const backLabel = document.createElement('label');
@@ -477,17 +459,17 @@
         rightCol.appendChild(imgWrap);
         rightCol.appendChild(backWrap);
 
-        renderImgPreview();
         requestAnimationFrame(function () { frontInput.focus(); });
       }
 
       addCardBtn.addEventListener('click', function () {
         if (working.cards.length >= 12) return;
         working.cards.push({
-          id: 'card-' + Date.now(),
-          front: '',
-          back: '',
-          frontImage: null,
+          id:             'card-' + Date.now(),
+          front:          '',
+          back:           '',
+          frontImage:     null,
+          frontImageWidth: '100%',
         });
         selectedIdx = working.cards.length - 1;
         renderCardList();
@@ -495,6 +477,7 @@
       });
 
       function close(save) {
+        saveCurrentImgField();
         document.removeEventListener('keydown', onKey);
         if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
         if (!save) return;
