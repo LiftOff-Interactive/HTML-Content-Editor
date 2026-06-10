@@ -4,6 +4,7 @@
   const toolbarOptions = [
     [{ header: [1, 2, 3, false] }],
     ['bold', 'italic', 'underline'],
+    [{ align: [] }],
     [{ list: 'ordered' }, { list: 'bullet' }],
     ['image'],
     ['clean'],
@@ -65,6 +66,18 @@
     };
     reader.readAsDataURL(file);
   }, true);
+
+  // Open the edit modal when the user clicks any widget blot.
+  // Uses event delegation so it works for both newly inserted and loaded blots,
+  // regardless of when attach() fired relative to Quill's reconcile pass.
+  editorEl.addEventListener('click', function (e) {
+    const widgetNode = e.target.closest('[data-widget-type]');
+    if (!widgetNode) return;
+    const blot = Quill.find(widgetNode);
+    if (blot && typeof blot.edit === 'function') {
+      blot.edit(blot.constructor.value(widgetNode));
+    }
+  });
 
   // Keep the Quill delta in sync when a widget's data changes after an edit.
   // ResizableImageBlot also fires this event on resize completion.

@@ -1,12 +1,12 @@
 (function () {
   'use strict';
 
-  const SAVE_VERSION = 2;
+  var SAVE_VERSION = 2;
 
   // ── Toast ─────────────────────────────────────────────────────────────────
 
   function showToast(msg) {
-    const toast = document.createElement('div');
+    var toast = document.createElement('div');
     toast.style.cssText =
       'position:fixed;bottom:20px;right:20px;z-index:9999;' +
       'background:#1e293b;color:#fff;padding:12px 16px;' +
@@ -25,7 +25,7 @@
   var _statusTimer = null;
 
   function setStatus(text, highlight) {
-    const el = document.getElementById('save-status');
+    var el = document.getElementById('save-status');
     if (!el) return;
     el.textContent = text;
     el.classList.toggle('save-status--saved', !!highlight);
@@ -51,7 +51,7 @@
   function migrateV1toV2(payload) {
     if (!payload || !payload.content || !Array.isArray(payload.content.ops)) return payload;
     payload.content.ops.forEach(function (op) {
-      const val = op.insert;
+      var val = op.insert;
       if (!val || typeof val !== 'object') return;
 
       if (val.accordion && Array.isArray(val.accordion.items)) {
@@ -79,7 +79,7 @@
         });
       }
       if (val['knowledge-check']) {
-        const kc = val['knowledge-check'];
+        var kc = val['knowledge-check'];
         kc.question = toHtml(kc.question);
         kc.hint     = toHtml(kc.hint);
         if (Array.isArray(kc.options)) {
@@ -97,25 +97,52 @@
     return payload;
   }
 
-  // ── Save ──────────────────────────────────────────────────────────────────
+  // ── Apply payload (shared by JSON and HTML load paths) ────────────────────
+
+  function applyPayload(payload) {
+    if (!payload || !payload.version) {
+      showToast('Incompatible file — saved with a different version of Content Editor.');
+      return;
+    }
+    if (payload.version === 1) {
+      migrateV1toV2(payload);
+    }
+    if (payload.version !== SAVE_VERSION) {
+      showToast('Incompatible file — saved with a different version of Content Editor.');
+      return;
+    }
+
+    var quill = window.contentEditor && window.contentEditor.quill;
+    if (quill && payload.content) {
+      quill.setContents(payload.content, Quill.sources.SILENT);
+    }
+    if (payload.theme && window.ThemePanel) {
+      window.ThemePanel.deserialize(JSON.stringify(payload.theme));
+    }
+
+    setStatus('');
+    showToast('Project loaded.');
+  }
+
+  // ── Save JSON ─────────────────────────────────────────────────────────────
 
   function saveProject() {
-    const quill = window.contentEditor && window.contentEditor.quill;
+    var quill = window.contentEditor && window.contentEditor.quill;
     if (!quill) return;
 
-    const rawTitle = (window.contentEditor.getDocumentTitle && window.contentEditor.getDocumentTitle()) || '';
-    const slug = rawTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'project';
+    var rawTitle = (window.contentEditor.getDocumentTitle && window.contentEditor.getDocumentTitle()) || '';
+    var slug = rawTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'project';
 
-    const payload = {
+    var payload = {
       version: SAVE_VERSION,
       content: quill.getContents(),
       theme:   window.ThemePanel ? window.ThemePanel.getCurrentTheme() : {},
     };
 
-    const json = JSON.stringify(payload, null, 2);
-    const blob = new Blob([json], { type: 'application/json' });
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement('a');
+    var json = JSON.stringify(payload, null, 2);
+    var blob = new Blob([json], { type: 'application/json' });
+    var url  = URL.createObjectURL(blob);
+    var a    = document.createElement('a');
     a.href     = url;
     a.download = slug + '.json';
     document.body.appendChild(a);
@@ -126,47 +153,61 @@
     showSavedConfirmation();
   }
 
-  // ── Load ──────────────────────────────────────────────────────────────────
+  // ── Save HTML ─────────────────────────────────────────────────────────────
+
+  function saveProjectAsHtml() {
+    window.HCERoundtrip.saveAsHtml();
+    showSavedConfirmation();
+  }
+
+  // ── Load JSON ─────────────────────────────────────────────────────────────
 
   function loadProject() {
-    const input  = document.createElement('input');
+    var input  = document.createElement('input');
     input.type   = 'file';
     input.accept = '.json,application/json';
 
     input.addEventListener('change', function () {
-      const file = input.files && input.files[0];
+      var file = input.files && input.files[0];
       if (!file) return;
 
-      const reader = new FileReader();
+      var reader = new FileReader();
       reader.onload = function (e) {
         try {
-          const payload = JSON.parse(e.target.result);
-
-          if (!payload || !payload.version) {
-            showToast('Incompatible file — saved with a different version of Content Editor.');
-            return;
-          }
-          if (payload.version === 1) {
-            payload = migrateV1toV2(payload);
-          }
-          if (payload.version !== SAVE_VERSION) {
-            showToast('Incompatible file — saved with a different version of Content Editor.');
-            return;
-          }
-
-          const quill = window.contentEditor && window.contentEditor.quill;
-          if (quill && payload.content) {
-            quill.setContents(payload.content, Quill.sources.SILENT);
-          }
-
-          if (payload.theme && window.ThemePanel) {
-            window.ThemePanel.deserialize(JSON.stringify(payload.theme));
-          }
-
-          setStatus('');
-          showToast('Project loaded.');
+          var payload = JSON.parse(e.target.result);
+          applyPayload(payload);
         } catch (err) {
           showToast('Could not load file — it may be corrupt or from an incompatible version.');
+        }
+      };
+      reader.readAsText(file);
+    });
+
+    input.click();
+  }
+
+  // ── Load HTML ─────────────────────────────────────────────────────────────
+
+  function loadHtmlProject() {
+    var input  = document.createElement('input');
+    input.type   = 'file';
+    input.accept = '.html,text/html';
+
+    input.addEventListener('change', function () {
+      var file = input.files && input.files[0];
+      if (!file) return;
+
+      var reader = new FileReader();
+      reader.onload = function (e) {
+        try {
+          var payload = window.HCERoundtrip.loadFromHtml(e.target.result);
+          applyPayload(payload);
+        } catch (err) {
+          if (err.message === 'NO_EMBED') {
+            showToast("This HTML file doesn't contain editor project data. Use Export HTML to create view-only files.");
+          } else {
+            showToast('Could not load file — it may be corrupt or from an incompatible version.');
+          }
         }
       };
       reader.readAsText(file);
@@ -178,41 +219,83 @@
   // ── Track unsaved changes ─────────────────────────────────────────────────
 
   function trackChanges() {
-    const quill = window.contentEditor && window.contentEditor.quill;
+    var quill = window.contentEditor && window.contentEditor.quill;
     if (!quill) return;
     quill.on('text-change', function (delta, oldDelta, source) {
-      // Only mark unsaved from user edits and only when not showing "Saved ✓"
       if (source === Quill.sources.USER && !_statusTimer) {
         setStatus('unsaved');
       }
     });
   }
 
+  // ── Dropdown builder ──────────────────────────────────────────────────────
+
+  function buildDropdown(id, label, items) {
+    var wrapper    = document.createElement('div');
+    wrapper.className = 'header-dropdown';
+
+    var btn       = document.createElement('button');
+    btn.className = 'header-btn header-btn--ghost header-btn--has-arrow';
+    btn.id        = id;
+    btn.innerHTML = label + ' <span class="header-btn-arrow" aria-hidden="true">&#9662;</span>';
+
+    var menu         = document.createElement('div');
+    menu.className   = 'header-dropdown-menu';
+    menu.setAttribute('role', 'menu');
+
+    items.forEach(function (item) {
+      var menuItem         = document.createElement('button');
+      menuItem.className   = 'header-dropdown-item';
+      menuItem.textContent = item.label;
+      menuItem.setAttribute('role', 'menuitem');
+      menuItem.addEventListener('click', function () {
+        menu.classList.remove('is-open');
+        item.action();
+      });
+      menu.appendChild(menuItem);
+    });
+
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var isOpen = menu.classList.contains('is-open');
+      document.querySelectorAll('.header-dropdown-menu.is-open').forEach(function (m) {
+        m.classList.remove('is-open');
+      });
+      if (!isOpen) menu.classList.add('is-open');
+    });
+
+    wrapper.appendChild(btn);
+    wrapper.appendChild(menu);
+    return wrapper;
+  }
+
+  // Close all dropdowns when clicking outside
+  document.addEventListener('click', function () {
+    document.querySelectorAll('.header-dropdown-menu.is-open').forEach(function (m) {
+      m.classList.remove('is-open');
+    });
+  });
+
   // ── Build header buttons ──────────────────────────────────────────────────
 
   function buildButtons() {
-    const headerActions = document.querySelector('.header-actions');
+    var headerActions = document.querySelector('.header-actions');
     if (!headerActions) return;
 
-    const saveBtn       = document.createElement('button');
-    saveBtn.className   = 'header-btn header-btn--ghost';
-    saveBtn.id          = 'save-btn';
-    saveBtn.textContent = 'Save';
-    saveBtn.title       = 'Save project as JSON file';
-    saveBtn.addEventListener('click', saveProject);
+    var saveDropdown = buildDropdown('save-btn', 'Save', [
+      { label: 'Save JSON',  action: saveProject },
+      { label: 'Save HTML',  action: saveProjectAsHtml },
+    ]);
 
-    const loadBtn       = document.createElement('button');
-    loadBtn.className   = 'header-btn header-btn--ghost';
-    loadBtn.id          = 'load-btn';
-    loadBtn.textContent = 'Load';
-    loadBtn.title       = 'Load project from JSON file';
-    loadBtn.addEventListener('click', loadProject);
+    var loadDropdown = buildDropdown('load-btn', 'Load', [
+      { label: 'Load JSON',  action: loadProject },
+      { label: 'Load HTML',  action: loadHtmlProject },
+    ]);
 
-    // Insert [Save] [Load] before the status span (which sits before Export HTML)
-    const anchor = document.getElementById('save-status') || document.getElementById('export-btn');
+    var anchor = document.getElementById('save-status') || document.getElementById('export-btn');
     if (anchor) {
-      headerActions.insertBefore(loadBtn, anchor);
-      headerActions.insertBefore(saveBtn, loadBtn);
+      headerActions.insertBefore(loadDropdown, anchor);
+      headerActions.insertBefore(saveDropdown, loadDropdown);
     }
   }
 
@@ -220,7 +303,6 @@
 
   document.addEventListener('DOMContentLoaded', function () {
     buildButtons();
-    // Wait a tick so contentEditor and Quill are fully initialized
     setTimeout(trackChanges, 200);
   });
 

@@ -59,9 +59,6 @@
         this._renderError(this.domNode);
       }
 
-      this.domNode.addEventListener('click', () => {
-        this.edit(this.constructor.value(this.domNode));
-      });
     }
 
     // ── Public API used by edit() after the user saves changes ─────────────

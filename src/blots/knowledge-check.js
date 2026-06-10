@@ -446,7 +446,7 @@
       header.appendChild(closeX);
 
       const body = document.createElement('div');
-      body.style.cssText = 'display:flex;min-height:380px;';
+      body.style.cssText = 'display:flex;flex:1;min-height:0;overflow:hidden;';
 
       const leftCol = document.createElement('div');
       leftCol.style.cssText =

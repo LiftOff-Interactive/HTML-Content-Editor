@@ -239,19 +239,11 @@
     }, 20);
   }
 
-  function _runExport() {
-    const editor = window.contentEditor;
-    if (!editor || !editor.quill) {
-      console.error('[HCEExport] contentEditor not ready');
-      return;
-    }
-
-    const delta    = editor.quill.getContents();
+  function buildExportHtml(delta, title) {
     const bodyHtml = deltaToHtml(delta);
     const css      = buildExportCSS();
-    const title    = (editor.getDocumentTitle && editor.getDocumentTitle()) || 'Exported Document';
 
-    const html = [
+    return [
       '<!DOCTYPE html>',
       '<html lang="en">',
       '<head>',
@@ -269,6 +261,18 @@
       '</body>',
       '</html>',
     ].join('\n');
+  }
+
+  function _runExport() {
+    const editor = window.contentEditor;
+    if (!editor || !editor.quill) {
+      console.error('[HCEExport] contentEditor not ready');
+      return;
+    }
+
+    const delta = editor.quill.getContents();
+    const title = (editor.getDocumentTitle && editor.getDocumentTitle()) || 'Exported Document';
+    const html  = buildExportHtml(delta, title);
 
     const sizeBytes = new Blob([html]).size;
     if (sizeBytes > 5 * 1024 * 1024) {
@@ -288,5 +292,5 @@
     if (btn) btn.addEventListener('click', exportHtml);
   });
 
-  window.HCEExport = { exportHtml };
+  window.HCEExport = { exportHtml, buildExportHtml };
 })();

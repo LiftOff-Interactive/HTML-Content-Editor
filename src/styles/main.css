@@ -384,9 +384,11 @@ body {
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
   width: 420px;
   max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 80px);
   display: flex;
   flex-direction: column;
   font-family: var(--font-family-ui);
+  overflow: hidden;
 }
 
 .widget-modal-header {
@@ -417,6 +419,9 @@ body {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
 }
 
 .widget-modal-field {
@@ -1584,6 +1589,54 @@ body {
 .save-status--saved {
   color: #16a34a;
   font-weight: 500;
+}
+
+/* ---- Save/Load dropdowns ---- */
+.header-dropdown {
+  position: relative;
+  display: inline-flex;
+}
+
+.header-btn--has-arrow .header-btn-arrow {
+  font-size: 9px;
+  margin-left: 3px;
+  opacity: 0.6;
+}
+
+.header-dropdown-menu {
+  display: none;
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 200;
+  background: var(--color-background, #ffffff);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  min-width: 140px;
+  padding: 4px 0;
+}
+
+.header-dropdown-menu.is-open {
+  display: block;
+}
+
+.header-dropdown-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 7px 12px;
+  font-size: 12px;
+  font-family: var(--font-family-ui);
+  color: var(--color-text, #1e293b);
+  background: none;
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.header-dropdown-item:hover {
+  background: rgba(0, 0, 0, 0.05);
 }
 
 /* ---- Widget error state ---- */

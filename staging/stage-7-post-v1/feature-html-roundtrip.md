@@ -83,15 +83,15 @@ export function loadFromHtml(fileText) {
 ---
 
 ## Checklist
-- [ ] `export.js` — extract `buildExportHtml` as a named export
-- [ ] `src/html-roundtrip.js` — `saveAsHtml(delta, theme, title)`
-- [ ] `src/html-roundtrip.js` — `loadFromHtml(fileText)` with missing-tag error
-- [ ] `save-load.js` — wire Save as HTML button
-- [ ] `save-load.js` — wire Load HTML button (file picker filtered to `.html`)
-- [ ] Version migration: v1 JSON embedded in HTML → auto-upgrade to v2
-- [ ] Error toast when HTML file has no embedded data
-- [ ] Manual test: save as HTML → open in browser (renders correctly) → load back into editor (delta restored, theme restored, tab title restored)
-- [ ] Exported `.html` is still zero-dependency (the embed adds no new dependencies)
+- [x] `export.js` — extract `buildExportHtml` as a named export
+- [x] `src/html-roundtrip.js` — `saveAsHtml(delta, theme, title)`
+- [x] `src/html-roundtrip.js` — `loadFromHtml(fileText)` with missing-tag error
+- [x] `save-load.js` — wire Save as HTML button (dropdown: Save JSON / Save HTML)
+- [x] `save-load.js` — wire Load HTML button (dropdown: Load JSON / Load HTML)
+- [x] Version migration: v1 JSON embedded in HTML → auto-upgrade to v2
+- [x] Error toast when HTML file has no embedded data
+- [x] Manual test: save as HTML → open in browser (renders correctly) → load back into editor (delta restored, theme restored, tab title restored)
+- [x] Exported `.html` is still zero-dependency (the embed adds no new dependencies)
 
 ---
 

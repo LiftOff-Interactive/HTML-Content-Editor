@@ -185,23 +185,23 @@ Same as above — the stored HTML is already valid HTML. No escaping needed. The
 ---
 
 ## Checklist
-- [ ] `src/ui/rich-text-field.js` — `RichTextField` class with constructor, `getHtml()`, `focus()`, `destroy()`
-- [ ] Modal CSS — scoped mini toolbar styles in `main.css`
-- [ ] `callout.js` — content → RichTextField
-- [ ] `quote.js` — quote text → RichTextField
-- [ ] `timeline.js` — description → RichTextField (per item)
-- [ ] `accordion.js` — content → RichTextField (per item)
-- [ ] `tabs.js` — tab content → RichTextField (per tab)
-- [ ] `flip-cards.js` — front body, back body → RichTextField (per card)
-- [ ] `click-reveal.js` — revealed content → RichTextField
-- [ ] `carousel.js` — caption → RichTextField (per slide)
-- [ ] `hotspot.js` — tooltip body → RichTextField (per pin)
-- [ ] `knowledge-check.js` — question, feedback, hint → RichTextField
-- [ ] `save-load.js` — v1 → v2 migration (wrap bare strings in `<p>`)
-- [ ] Save format version bumped to `2` on all new saves
-- [ ] Manual test: open a v1 save file → loads correctly with no data loss
-- [ ] Manual test: format text in every widget, export → formatting appears in exported HTML
-- [ ] Memory check: opening and closing modals multiple times doesn't leak Quill instances (verify with DevTools → Memory)
+- [x] `src/ui/rich-text-field.js` — `RichTextField` class with constructor, `getHtml()`, `focus()`, `destroy()`
+- [x] Modal CSS — scoped mini toolbar styles in `main.css`
+- [x] `callout.js` — content → RichTextField
+- [x] `quote.js` — quote text → RichTextField
+- [x] `timeline.js` — description → RichTextField (per item)
+- [x] `accordion.js` — content → RichTextField (per item)
+- [x] `tabs.js` — tab content → RichTextField (per tab)
+- [x] `flip-cards.js` — front body, back body → RichTextField (per card)
+- [x] `click-reveal.js` — revealed content → RichTextField
+- [x] `carousel.js` — caption → RichTextField (per slide)
+- [x] `hotspot.js` — tooltip body → RichTextField (per pin)
+- [x] `knowledge-check.js` — question, feedback, hint → RichTextField
+- [x] `save-load.js` — v1 → v2 migration (wrap bare strings in `<p>`)
+- [x] Save format version bumped to `2` on all new saves
+- [x] Manual test: open a v1 save file → loads correctly with no data loss
+- [x] Manual test: format text in every widget, export → formatting appears in exported HTML
+- [x] Memory check: opening and closing modals multiple times doesn't leak Quill instances (verify with DevTools → Memory)
 
 ---
 
