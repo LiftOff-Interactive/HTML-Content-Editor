@@ -5,6 +5,7 @@
     ['bold', 'italic', 'underline', 'strike'],
     [{ size: ['small', false, 'large', 'huge'] }],
     [{ color: [] }],
+    [{ align: [] }],
     ['link'],
     [{ list: 'ordered' }, { list: 'bullet' }],
     ['clean'],
