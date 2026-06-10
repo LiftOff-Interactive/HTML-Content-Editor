@@ -20,6 +20,7 @@
   function open({ title, fields, data }) {
     return new Promise(function (resolve) {
       const formData = Object.assign({}, data);
+      const richInstances = {};
 
       // ── Overlay ──────────────────────────────────────────────────────────
       const overlay = document.createElement('div');
@@ -60,35 +61,42 @@
         label.setAttribute('for', fieldId);
         label.textContent = field.label;
 
-        let input;
-        if (field.type === 'textarea') {
-          input = document.createElement('textarea');
-          input.className = 'widget-modal-textarea';
-          input.rows = 3;
-          input.value = data[field.key] || '';
-        } else if (field.type === 'select') {
-          input = document.createElement('select');
-          input.className = 'widget-modal-select';
-          (field.options || []).forEach(function (opt) {
-            const option = document.createElement('option');
-            option.value = opt.value;
-            option.textContent = opt.label;
-            if (opt.value === data[field.key]) option.selected = true;
-            input.appendChild(option);
-          });
+        row.appendChild(label);
+
+        if (field.type === 'rich') {
+          const mount = document.createElement('div');
+          const rf = new RichTextField(mount, data[field.key] || '');
+          richInstances[field.key] = rf;
+          row.appendChild(mount);
         } else {
-          input = document.createElement('input');
-          input.className = 'widget-modal-input';
-          input.type = field.type || 'text';
-          input.value = data[field.key] || '';
+          let input;
+          if (field.type === 'textarea') {
+            input = document.createElement('textarea');
+            input.className = 'widget-modal-textarea';
+            input.rows = 3;
+            input.value = data[field.key] || '';
+          } else if (field.type === 'select') {
+            input = document.createElement('select');
+            input.className = 'widget-modal-select';
+            (field.options || []).forEach(function (opt) {
+              const option = document.createElement('option');
+              option.value = opt.value;
+              option.textContent = opt.label;
+              if (opt.value === data[field.key]) option.selected = true;
+              input.appendChild(option);
+            });
+          } else {
+            input = document.createElement('input');
+            input.className = 'widget-modal-input';
+            input.type = field.type || 'text';
+            input.value = data[field.key] || '';
+          }
+          input.id = fieldId;
+          input.addEventListener('input', function () { formData[field.key] = input.value; });
+          input.addEventListener('change', function () { formData[field.key] = input.value; });
+          row.appendChild(input);
         }
 
-        input.id = fieldId;
-        input.addEventListener('input', function () { formData[field.key] = input.value; });
-        input.addEventListener('change', function () { formData[field.key] = input.value; });
-
-        row.appendChild(label);
-        row.appendChild(input);
         body.appendChild(row);
       });
 
@@ -122,10 +130,22 @@
       });
 
       // ── Close helpers ─────────────────────────────────────────────────────
+      function destroyRichFields() {
+        Object.keys(richInstances).forEach(function (key) {
+          richInstances[key].destroy();
+        });
+      }
+
       function close(result) {
+        destroyRichFields();
         document.removeEventListener('keydown', onKeydown);
         if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
         resolve(result);
+      }
+
+      function isRichEditorActive() {
+        const el = document.activeElement;
+        return el && el.classList.contains('ql-editor');
       }
 
       function onKeydown(e) {
@@ -133,15 +153,24 @@
           e.preventDefault();
           close(null);
         }
-        if (e.key === 'Enter' && document.activeElement.tagName !== 'TEXTAREA') {
+        const tag = document.activeElement ? document.activeElement.tagName : '';
+        if (e.key === 'Enter' && tag !== 'TEXTAREA' && !isRichEditorActive()) {
           e.preventDefault();
+          Object.keys(richInstances).forEach(function (key) {
+            formData[key] = richInstances[key].getHtml();
+          });
           close(Object.assign({}, formData));
         }
       }
 
       closeBtn.addEventListener('click', function () { close(null); });
       cancelBtn.addEventListener('click', function () { close(null); });
-      saveBtn.addEventListener('click', function () { close(Object.assign({}, formData)); });
+      saveBtn.addEventListener('click', function () {
+        Object.keys(richInstances).forEach(function (key) {
+          formData[key] = richInstances[key].getHtml();
+        });
+        close(Object.assign({}, formData));
+      });
       overlay.addEventListener('click', function (e) {
         if (e.target === overlay) close(null);
       });
@@ -149,45 +178,5 @@
     });
   }
 
-  /**
-   * WidgetModal.makeAlignRow(initialValue, onChange) → HTMLElement
-   *
-   * Returns a row of three toggle buttons (Left / Center / Right).
-   * initialValue — 'left' | 'center' | 'right'  (defaults to 'left')
-   * onChange(value) — called whenever the selection changes
-   */
-  function makeAlignRow(initialValue, onChange) {
-    const row = document.createElement('div');
-    row.className = 'widget-modal-align-row';
-
-    var current = initialValue || 'left';
-    var buttons = [];
-
-    [
-      { value: 'left',   label: 'Left' },
-      { value: 'center', label: 'Center' },
-      { value: 'right',  label: 'Right' },
-    ].forEach(function (def) {
-      var btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'widget-modal-align-btn' + (def.value === current ? ' is-active' : '');
-      btn.textContent = def.label;
-      btn.dataset.alignValue = def.value;
-
-      btn.addEventListener('click', function () {
-        current = def.value;
-        buttons.forEach(function (b) {
-          b.classList.toggle('is-active', b.dataset.alignValue === current);
-        });
-        if (onChange) onChange(current);
-      });
-
-      buttons.push(btn);
-      row.appendChild(btn);
-    });
-
-    return row;
-  }
-
-  window.WidgetModal = { open, makeAlignRow };
+  window.WidgetModal = { open };
 })();

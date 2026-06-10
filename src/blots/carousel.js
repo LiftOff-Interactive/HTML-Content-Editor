@@ -19,8 +19,7 @@
     static widgetIcon        = '🎠';
     static widgetDescription = 'Image or content slider with prev/next navigation';
     static defaultData       = {
-      _v: 2,
-      widgetAlign: 'left',
+      _v: 1,
       slides: [
         { id: 'slide-1', imageData: null, imageWidth: '100%', altText: '', caption: '', textContent: '<p>Slide 1 — click ✎ Edit to add an image or write content.</p>' },
         { id: 'slide-2', imageData: null, imageWidth: '100%', altText: '', caption: '', textContent: '<p>Slide 2 — click ✎ Edit to add an image or write content.</p>' },
@@ -259,12 +258,22 @@
     _openEditModal(data) {
       const self    = this;
       const working = JSON.parse(JSON.stringify(data));
-      if (!working.widgetAlign) working.widgetAlign = 'left';
       let selectedIdx = 0;
 
+      // Track the active ImageUploadField so it can be flushed before slide
+      // switches and on modal close.
       let currentImgField      = null;
       let currentImgFieldSlice = -1;
-      let textField            = null;
+      let currentRichField     = null;
+      let currentRichFieldIdx  = -1;
+
+      function saveCurrentRichField() {
+        if (currentRichField && currentRichFieldIdx >= 0 && currentRichFieldIdx < working.slides.length) {
+          working.slides[currentRichFieldIdx].textContent = currentRichField.getHtml();
+        }
+        if (currentRichField) { currentRichField.destroy(); currentRichField = null; }
+        currentRichFieldIdx = -1;
+      }
 
       function saveCurrentImgField() {
         if (!currentImgField || currentImgFieldSlice < 0) return;
@@ -277,14 +286,6 @@
         currentImgField.destroy();
         currentImgField      = null;
         currentImgFieldSlice = -1;
-      }
-
-      function flushRichFields() {
-        if (textField) {
-          working.slides[selectedIdx].textContent = textField.getHtml();
-          textField.destroy();
-          textField = null;
-        }
       }
 
       const overlay = document.createElement('div');
@@ -372,21 +373,8 @@
       footer.appendChild(cancelBtn);
       footer.appendChild(saveBtn);
 
-      // Widget alignment section
-      const alignSection = document.createElement('div');
-      alignSection.style.cssText =
-        'padding:10px 16px;border-top:1px solid var(--color-border);display:flex;flex-direction:column;gap:6px;';
-      const alignSectionLabel = document.createElement('label');
-      alignSectionLabel.className = 'widget-modal-label';
-      alignSectionLabel.textContent = 'Widget Alignment';
-      alignSection.appendChild(alignSectionLabel);
-      alignSection.appendChild(WidgetModal.makeAlignRow(working.widgetAlign, function (v) {
-        working.widgetAlign = v;
-      }));
-
       dialog.appendChild(header);
       dialog.appendChild(body);
-      dialog.appendChild(alignSection);
       dialog.appendChild(footer);
       overlay.appendChild(dialog);
       document.body.appendChild(overlay);
@@ -421,8 +409,6 @@
           upBtn.addEventListener('click', function (e) {
             e.stopPropagation();
             if (idx === 0) return;
-            flushRichFields();
-            saveCurrentImgField();
             working.slides.splice(idx - 1, 0, working.slides.splice(idx, 1)[0]);
             selectedIdx = idx - 1;
             renderSlideList();
@@ -431,8 +417,6 @@
           downBtn.addEventListener('click', function (e) {
             e.stopPropagation();
             if (idx === working.slides.length - 1) return;
-            flushRichFields();
-            saveCurrentImgField();
             working.slides.splice(idx + 1, 0, working.slides.splice(idx, 1)[0]);
             selectedIdx = idx + 1;
             renderSlideList();
@@ -452,8 +436,6 @@
               'color:' + (isSel ? 'rgba(255,255,255,0.75)' : 'var(--color-text-muted)') + ';';
             delBtn.addEventListener('click', function (e) {
               e.stopPropagation();
-              flushRichFields();
-              saveCurrentImgField();
               working.slides.splice(idx, 1);
               if (selectedIdx >= working.slides.length) selectedIdx = working.slides.length - 1;
               renderSlideList();
@@ -463,9 +445,6 @@
           }
 
           row.addEventListener('click', function () {
-            if (idx === selectedIdx) return;
-            flushRichFields();
-            saveCurrentImgField();
             selectedIdx = idx;
             renderSlideList();
             renderRight();
@@ -479,11 +458,13 @@
 
       function renderRight() {
         saveCurrentImgField();
+        saveCurrentRichField();
         rightCol.innerHTML = '';
         const slide = working.slides[selectedIdx];
         if (!slide) return;
 
         currentImgFieldSlice = selectedIdx;
+        currentRichFieldIdx  = selectedIdx;
 
         // ── Image field (ImageUploadField) ────────────────────────────────
         const imgSection = document.createElement('div');
@@ -547,7 +528,7 @@
         textWrap.style.flex = '1';
 
         const textLabelRow = document.createElement('div');
-        textLabelRow.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:8px;';
+        textLabelRow.style.cssText = 'display:flex;align-items:center;gap:8px;';
         const textLabel = document.createElement('label');
         textLabel.className = 'widget-modal-label';
         textLabel.textContent = 'Text content';
@@ -559,11 +540,10 @@
         textLabelRow.appendChild(textHint);
 
         const textMount = document.createElement('div');
+        currentRichField = new RichTextField(textMount, slide.textContent || '');
 
         textWrap.appendChild(textLabelRow);
         textWrap.appendChild(textMount);
-
-        textField = new RichTextField(textMount, slide.textContent || '');
 
         function updateImageFields() {
           const hasImg = !!working.slides[selectedIdx].imageData;
@@ -581,8 +561,6 @@
 
       addSlideBtn.addEventListener('click', function () {
         if (working.slides.length >= 12) return;
-        flushRichFields();
-        saveCurrentImgField();
         working.slides.push({
           id:          'slide-' + Date.now(),
           imageData:   null,
@@ -597,8 +575,8 @@
       });
 
       function close(save) {
-        flushRichFields();
         saveCurrentImgField();
+        saveCurrentRichField();
         document.removeEventListener('keydown', onKey);
         if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
         if (!save) return;

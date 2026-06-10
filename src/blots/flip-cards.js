@@ -19,13 +19,12 @@
     static widgetIcon        = '🃏';
     static widgetDescription = 'Cards that flip on click to reveal a back face';
     static defaultData       = {
-      _v: 2,
-      widgetAlign: 'left',
+      _v: 1,
       cards: [
-        { id: 'card-1', front: 'What is HTML?',       frontBody: '', back: 'HyperText Markup Language — the structure of web pages.',    frontImage: null, frontImageWidth: '100%' },
-        { id: 'card-2', front: 'What is CSS?',        frontBody: '', back: 'Cascading Style Sheets — controls presentation and layout.', frontImage: null, frontImageWidth: '100%' },
-        { id: 'card-3', front: 'What is JavaScript?', frontBody: '', back: 'A scripting language that adds interactivity to web pages.', frontImage: null, frontImageWidth: '100%' },
-        { id: 'card-4', front: 'What is a Blot?',     frontBody: '', back: 'A Quill content node — the building block of the editor.',  frontImage: null, frontImageWidth: '100%' },
+        { id: 'card-1', front: 'What is HTML?',       frontBody: '', back: 'HyperText Markup Language — the structure of web pages.',    backBody: '', frontImage: null, frontImageWidth: '100%' },
+        { id: 'card-2', front: 'What is CSS?',        frontBody: '', back: 'Cascading Style Sheets — controls presentation and layout.', backBody: '', frontImage: null, frontImageWidth: '100%' },
+        { id: 'card-3', front: 'What is JavaScript?', frontBody: '', back: 'A scripting language that adds interactivity to web pages.', backBody: '', frontImage: null, frontImageWidth: '100%' },
+        { id: 'card-4', front: 'What is a Blot?',     frontBody: '', back: 'A Quill content node — the building block of the editor.',  backBody: '', frontImage: null, frontImageWidth: '100%' },
       ],
       columns: 3,
     };
@@ -48,13 +47,15 @@
             : 'width:100%;';
           imgHtml =
             '<img src="' + card.frontImage + '" class="flip-card-img" alt="" ' +
-                'style="' + w + 'height:auto;object-fit:contain;display:block;max-width:100%;margin:0 auto 4px;">';
+                'style="' + w + 'height:auto;object-fit:contain;display:block;' +
+                'max-width:100%;margin:0 auto 4px;">';
         }
         cardsHtml +=
           '<div class="flip-card-item" tabindex="0" role="button" ' +
               'aria-label="Front: ' + esc(card.front) + '" ' +
               'data-card-id="' + esc(card.id) + '" ' +
-              'data-front="' + esc(card.front) + '">' +
+              'data-front="' + esc(card.front) + '" ' +
+              'data-back="' + esc(card.back) + '">' +
             '<div class="flip-card-inner">' +
               '<div class="flip-card-front">' +
                 imgHtml +
@@ -62,7 +63,8 @@
                 (card.frontBody ? '<div class="flip-card-front-body">' + card.frontBody + '</div>' : '') +
               '</div>' +
               '<div class="flip-card-back">' +
-                '<div class="flip-card-back-text">' + (card.back || '') + '</div>' +
+                '<div class="flip-card-back-text">' + esc(card.back) + '</div>' +
+                (card.backBody ? '<div class="flip-card-back-body">' + card.backBody + '</div>' : '') +
               '</div>' +
             '</div>' +
           '</div>';
@@ -81,6 +83,10 @@
         cardEl.addEventListener('click', function (e) {
           e.stopPropagation();
           cardEl.classList.toggle('is-flipped');
+          cardEl.setAttribute('aria-label',
+            (cardEl.classList.contains('is-flipped') ? 'Back: ' : 'Front: ') +
+            (cardEl.classList.contains('is-flipped') ? (cardEl.dataset.back || '') : (cardEl.dataset.front || ''))
+          );
         });
         cardEl.addEventListener('keydown', function (e) {
           if (e.key === 'Enter' || e.key === ' ') {
@@ -107,21 +113,33 @@
       const cols    = data.columns || 3;
 
       const onClickHandler =
-        '(function(el){el.classList.toggle("is-flipped");})(this)';
+        '(function(el){' +
+          'el.classList.toggle("is-flipped");' +
+          'el.setAttribute("aria-label",' +
+            'el.classList.contains("is-flipped")' +
+            '?"Back: "+el.dataset.back' +
+            ':"Front: "+el.dataset.front);' +
+        '})(this)';
+
       const onKeyHandler =
         'if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();this.click()}';
 
       const frontFaceStyle =
-        'position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;' +
-        'border-radius:' + radius + ';display:flex;flex-direction:column;align-items:center;' +
-        'justify-content:center;padding:16px;overflow-y:auto;text-align:center;' +
+        'position:absolute;inset:0;' +
+        'backface-visibility:hidden;-webkit-backface-visibility:hidden;' +
+        'border-radius:' + radius + ';' +
+        'display:flex;flex-direction:column;align-items:center;justify-content:center;' +
+        'padding:16px;overflow-y:auto;text-align:center;' +
         'background:' + primary + ';color:#fff;';
 
       const backFaceStyle =
-        'position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;' +
-        'border-radius:' + radius + ';display:flex;flex-direction:column;align-items:center;' +
-        'justify-content:center;padding:16px;overflow-y:auto;text-align:center;' +
-        'background:' + surface + ';color:' + text + ';border:1px solid ' + border + ';' +
+        'position:absolute;inset:0;' +
+        'backface-visibility:hidden;-webkit-backface-visibility:hidden;' +
+        'border-radius:' + radius + ';' +
+        'display:flex;flex-direction:column;align-items:center;justify-content:center;' +
+        'padding:16px;overflow-y:auto;text-align:center;' +
+        'background:' + surface + ';color:' + text + ';' +
+        'border:1px solid ' + border + ';' +
         'transform:rotateY(180deg);';
 
       let cardsHtml = '';
@@ -129,36 +147,44 @@
         let imgHtml = '';
         if (card.frontImage) {
           const w = card.frontImageWidth && card.frontImageWidth !== '100%'
-            ? card.frontImageWidth : '100%';
+            ? card.frontImageWidth
+            : '100%';
           imgHtml =
             '<img src="' + card.frontImage + '" ' +
                 'style="width:' + w + ';max-width:100%;max-height:80px;' +
                 'object-fit:contain;margin-bottom:8px;display:block;" alt="">';
         }
 
-        const frontBodyHtml = card.frontBody
-          ? '<div style="font-family:' + font + ';font-size:13px;line-height:1.5;margin-top:6px;">' + card.frontBody + '</div>'
-          : '';
-
         cardsHtml +=
-          '<div class="hce-fc-card" tabindex="0" role="button" ' +
+          '<div class="hce-fc-card" ' +
+              'tabindex="0" role="button" ' +
               'aria-label="Front: ' + esc(card.front) + '" ' +
+              'data-front="' + esc(card.front) + '" ' +
+              'data-back="' + esc(card.back) + '" ' +
               'onclick="' + esc(onClickHandler) + '" ' +
               'onkeydown="' + onKeyHandler + '" ' +
               'style="perspective:1000px;height:200px;cursor:pointer;border-radius:' + radius + ';">' +
             '<div class="hce-fc-inner" ' +
-                'style="position:relative;width:100%;height:100%;transform-style:preserve-3d;transition:transform 0.5s ease;">' +
+                'style="position:relative;width:100%;height:100%;' +
+                  'transform-style:preserve-3d;transition:transform 0.5s ease;">' +
               '<div style="' + frontFaceStyle + '">' +
                 imgHtml +
                 '<div style="font-family:' + font + ';font-size:15px;font-weight:600;line-height:1.4;">' +
                   esc(card.front) +
                 '</div>' +
-                frontBodyHtml +
+                (card.frontBody
+                  ? '<div style="font-family:' + font + ';font-size:13px;line-height:1.5;margin-top:6px;">' +
+                      card.frontBody + '</div>'
+                  : '') +
               '</div>' +
               '<div style="' + backFaceStyle + '">' +
-                '<div style="font-family:' + font + ';font-size:14px;line-height:1.5;">' +
-                  (card.back || '') +
+                '<div style="font-family:' + font + ';font-size:14px;font-weight:600;line-height:1.4;">' +
+                  esc(card.back) +
                 '</div>' +
+                (card.backBody
+                  ? '<div style="font-family:' + font + ';font-size:13px;line-height:1.5;margin-top:6px;">' +
+                      card.backBody + '</div>'
+                  : '') +
               '</div>' +
             '</div>' +
           '</div>';
@@ -169,7 +195,11 @@
           '.hce-fc-card.is-flipped .hce-fc-inner{transform:rotateY(180deg);}' +
           '@media(prefers-reduced-motion:reduce){.hce-fc-inner{transition:none !important;}}' +
         '</style>' +
-        '<div style="display:grid;grid-template-columns:repeat(' + cols + ',1fr);gap:16px;margin:8px 0;">' +
+        '<div style="' +
+          'display:grid;' +
+          'grid-template-columns:repeat(' + cols + ',1fr);' +
+          'gap:16px;margin:8px 0;' +
+        '">' +
           cardsHtml +
         '</div>';
     }
@@ -181,25 +211,25 @@
     _openEditModal(data) {
       const self    = this;
       const working = JSON.parse(JSON.stringify(data));
-      if (!working.widgetAlign) working.widgetAlign = 'left';
       let selectedIdx = 0;
 
+      // Track the active ImageUploadField so it can be flushed before card
+      // switches and on modal close.
       let currentImgField      = null;
       let currentImgFieldSlice = -1;
-      let frontBodyField       = null;
-      let backField            = null;
+      let currentFrontRichField = null;
+      let currentBackRichField  = null;
+      let currentRichCardIdx    = -1;
 
-      function flushRichFields() {
-        if (frontBodyField) {
-          working.cards[selectedIdx].frontBody = frontBodyField.getHtml();
-          frontBodyField.destroy();
-          frontBodyField = null;
+      function saveCurrentRichFields() {
+        if (currentRichCardIdx >= 0 && currentRichCardIdx < working.cards.length) {
+          const c = working.cards[currentRichCardIdx];
+          if (currentFrontRichField) c.frontBody = currentFrontRichField.getHtml();
+          if (currentBackRichField)  c.backBody  = currentBackRichField.getHtml();
         }
-        if (backField) {
-          working.cards[selectedIdx].back = backField.getHtml();
-          backField.destroy();
-          backField = null;
-        }
+        if (currentFrontRichField) { currentFrontRichField.destroy(); currentFrontRichField = null; }
+        if (currentBackRichField)  { currentBackRichField.destroy();  currentBackRichField  = null; }
+        currentRichCardIdx = -1;
       }
 
       function saveCurrentImgField() {
@@ -239,11 +269,12 @@
       header.appendChild(closeX);
 
       const body = document.createElement('div');
-      body.style.cssText = 'display:flex;min-height:360px;';
+      body.style.cssText = 'display:flex;min-height:320px;';
 
       const leftCol = document.createElement('div');
       leftCol.style.cssText =
-        'width:160px;flex-shrink:0;border-right:1px solid var(--color-border);display:flex;flex-direction:column;';
+        'width:160px;flex-shrink:0;border-right:1px solid var(--color-border);' +
+        'display:flex;flex-direction:column;';
 
       const cardListEl = document.createElement('div');
       cardListEl.style.cssText = 'flex:1;overflow-y:auto;';
@@ -258,7 +289,8 @@
 
       const colsWrap = document.createElement('div');
       colsWrap.style.cssText =
-        'padding:8px 10px;border-top:1px solid var(--color-border);font-size:12px;font-family:var(--font-family-ui);';
+        'padding:8px 10px;border-top:1px solid var(--color-border);font-size:12px;' +
+        'font-family:var(--font-family-ui);';
       const colsLabel = document.createElement('label');
       colsLabel.style.cssText = 'display:block;color:var(--color-text-muted);margin-bottom:4px;';
       colsLabel.textContent = 'Columns';
@@ -289,18 +321,6 @@
       body.appendChild(leftCol);
       body.appendChild(rightCol);
 
-      // Widget alignment — full-width section
-      const alignSection = document.createElement('div');
-      alignSection.style.cssText =
-        'padding:10px 16px;border-top:1px solid var(--color-border);display:flex;flex-direction:column;gap:6px;';
-      const alignSectionLabel = document.createElement('label');
-      alignSectionLabel.className = 'widget-modal-label';
-      alignSectionLabel.textContent = 'Widget Alignment';
-      alignSection.appendChild(alignSectionLabel);
-      alignSection.appendChild(WidgetModal.makeAlignRow(working.widgetAlign, function (v) {
-        working.widgetAlign = v;
-      }));
-
       const footer = document.createElement('div');
       footer.className = 'widget-modal-footer';
       const cancelBtn = document.createElement('button');
@@ -316,7 +336,6 @@
 
       dialog.appendChild(header);
       dialog.appendChild(body);
-      dialog.appendChild(alignSection);
       dialog.appendChild(footer);
       overlay.appendChild(dialog);
       document.body.appendChild(overlay);
@@ -342,7 +361,8 @@
             (isSelected ? 'background:var(--color-primary);color:#fff;' : 'color:var(--color-text);');
 
           const labelSpan = document.createElement('span');
-          labelSpan.style.cssText = 'flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+          labelSpan.style.cssText =
+            'flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
           labelSpan.textContent = card.front || 'Card ' + (idx + 1);
 
           const upBtn   = makeReorderBtn('▲', isSelected);
@@ -351,8 +371,6 @@
           upBtn.addEventListener('click', function (e) {
             e.stopPropagation();
             if (idx === 0) return;
-            flushRichFields();
-            saveCurrentImgField();
             working.cards.splice(idx - 1, 0, working.cards.splice(idx, 1)[0]);
             selectedIdx = idx - 1;
             renderCardList();
@@ -361,8 +379,6 @@
           downBtn.addEventListener('click', function (e) {
             e.stopPropagation();
             if (idx === working.cards.length - 1) return;
-            flushRichFields();
-            saveCurrentImgField();
             working.cards.splice(idx + 1, 0, working.cards.splice(idx, 1)[0]);
             selectedIdx = idx + 1;
             renderCardList();
@@ -382,8 +398,6 @@
               'color:' + (isSelected ? 'rgba(255,255,255,0.75)' : 'var(--color-text-muted)') + ';';
             delBtn.addEventListener('click', function (e) {
               e.stopPropagation();
-              flushRichFields();
-              saveCurrentImgField();
               working.cards.splice(idx, 1);
               if (selectedIdx >= working.cards.length) selectedIdx = working.cards.length - 1;
               renderCardList();
@@ -393,9 +407,6 @@
           }
 
           item.addEventListener('click', function () {
-            if (idx === selectedIdx) return;
-            flushRichFields();
-            saveCurrentImgField();
             selectedIdx = idx;
             renderCardList();
             renderRight();
@@ -408,13 +419,16 @@
       }
 
       function renderRight() {
+        saveCurrentImgField();
+        saveCurrentRichFields();
         rightCol.innerHTML = '';
         const card = working.cards[selectedIdx];
         if (!card) return;
 
         currentImgFieldSlice = selectedIdx;
+        currentRichCardIdx   = selectedIdx;
 
-        // Front heading (plain text)
+        // ── Front heading ─────────────────────────────────────────────────────
         const frontWrap = document.createElement('div');
         frontWrap.className = 'widget-modal-field';
         const frontLabel = document.createElement('label');
@@ -423,7 +437,7 @@
         const frontInput = document.createElement('input');
         frontInput.className = 'widget-modal-input';
         frontInput.type = 'text';
-        frontInput.value = card.front || '';
+        frontInput.value = card.front;
         frontInput.addEventListener('input', function () {
           working.cards[selectedIdx].front = frontInput.value;
           renderCardList();
@@ -431,17 +445,18 @@
         frontWrap.appendChild(frontLabel);
         frontWrap.appendChild(frontInput);
 
-        // Front body (rich text)
+        // ── Front body (rich) ─────────────────────────────────────────────────
         const frontBodyWrap = document.createElement('div');
         frontBodyWrap.className = 'widget-modal-field';
         const frontBodyLabel = document.createElement('label');
         frontBodyLabel.className = 'widget-modal-label';
         frontBodyLabel.textContent = 'Front body (optional)';
-        const frontBodyMount = document.createElement('div');
+        const frontMount = document.createElement('div');
+        currentFrontRichField = new RichTextField(frontMount, card.frontBody || '');
         frontBodyWrap.appendChild(frontBodyLabel);
-        frontBodyWrap.appendChild(frontBodyMount);
+        frontBodyWrap.appendChild(frontMount);
 
-        // Front image
+        // ── Front image (ImageUploadField) ────────────────────────────────────
         const imgWrap = document.createElement('div');
         imgWrap.className = 'widget-modal-field';
         const imgLabel = document.createElement('label');
@@ -461,36 +476,50 @@
           working.cards[i].frontImageWidth = value.width || '100%';
         });
 
-        // Back (rich text)
+        // ── Back heading ──────────────────────────────────────────────────────
         const backWrap = document.createElement('div');
         backWrap.className = 'widget-modal-field';
         const backLabel = document.createElement('label');
         backLabel.className = 'widget-modal-label';
-        backLabel.textContent = 'Back text';
-        const backMount = document.createElement('div');
+        backLabel.textContent = 'Back heading';
+        const backInput = document.createElement('input');
+        backInput.className = 'widget-modal-input';
+        backInput.type = 'text';
+        backInput.value = card.back;
+        backInput.addEventListener('input', function () {
+          working.cards[selectedIdx].back = backInput.value;
+        });
         backWrap.appendChild(backLabel);
-        backWrap.appendChild(backMount);
+        backWrap.appendChild(backInput);
+
+        // ── Back body (rich) ──────────────────────────────────────────────────
+        const backBodyWrap = document.createElement('div');
+        backBodyWrap.className = 'widget-modal-field';
+        const backBodyLabel = document.createElement('label');
+        backBodyLabel.className = 'widget-modal-label';
+        backBodyLabel.textContent = 'Back body (optional)';
+        const backMount = document.createElement('div');
+        currentBackRichField = new RichTextField(backMount, card.backBody || '');
+        backBodyWrap.appendChild(backBodyLabel);
+        backBodyWrap.appendChild(backMount);
 
         rightCol.appendChild(frontWrap);
         rightCol.appendChild(frontBodyWrap);
         rightCol.appendChild(imgWrap);
         rightCol.appendChild(backWrap);
-
-        frontBodyField = new RichTextField(frontBodyMount, card.frontBody || '');
-        backField      = new RichTextField(backMount, card.back || '');
+        rightCol.appendChild(backBodyWrap);
 
         requestAnimationFrame(function () { frontInput.focus(); });
       }
 
       addCardBtn.addEventListener('click', function () {
         if (working.cards.length >= 12) return;
-        flushRichFields();
-        saveCurrentImgField();
         working.cards.push({
           id:             'card-' + Date.now(),
           front:          '',
           frontBody:      '',
           back:           '',
+          backBody:       '',
           frontImage:     null,
           frontImageWidth: '100%',
         });
@@ -500,8 +529,8 @@
       });
 
       function close(save) {
-        flushRichFields();
         saveCurrentImgField();
+        saveCurrentRichFields();
         document.removeEventListener('keydown', onKey);
         if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
         if (!save) return;
@@ -515,7 +544,9 @@
       closeX.addEventListener('click',   function () { close(false); });
       cancelBtn.addEventListener('click', function () { close(false); });
       saveBtn.addEventListener('click',   function () { close(true); });
-      overlay.addEventListener('click', function (e) { if (e.target === overlay) close(false); });
+      overlay.addEventListener('click', function (e) {
+        if (e.target === overlay) close(false);
+      });
       document.addEventListener('keydown', onKey);
 
       renderCardList();

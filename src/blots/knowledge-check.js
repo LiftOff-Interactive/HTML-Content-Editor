@@ -15,10 +15,6 @@
     return 'opt-' + Date.now() + '-' + Math.floor(Math.random() * 9999);
   }
 
-  function stripTags(html) {
-    return (html || '').replace(/<[^>]*>/g, '').trim();
-  }
-
   class KnowledgeCheckBlot extends BaseWidgetBlot {
     static blotName          = 'knowledge-check';
     static tagName           = 'div';
@@ -27,8 +23,7 @@
     static widgetIcon        = '❓';
     static widgetDescription = 'Multiple-choice or true/false self-assessment question';
     static defaultData = {
-      _v: 2,
-      widgetAlign: 'left',
+      _v: 1,
       questionType: 'multiple-choice',
       question: 'Enter your question here…',
       options: [
@@ -106,7 +101,7 @@
               (self._hintVisible ? 'Hide Hint' : 'Show Hint') +
             '</button>' +
             '<div class="kc-hint"' + (self._hintVisible ? '' : ' style="display:none;"') + '>' +
-              data.hint +
+              (data.hint || '') +
             '</div>' +
           '</div>'
         : '';
@@ -129,7 +124,7 @@
           '</div>' +
           '<div class="kc-body">' +
             '<fieldset class="kc-fieldset">' +
-              '<legend class="kc-question">' + data.question + '</legend>' +
+              '<legend class="kc-question">' + (data.question || '') + '</legend>' +
               hintHtml +
               '<div class="kc-options">' + optionsHtml + '</div>' +
               actionHtml +
@@ -211,6 +206,7 @@
       const opts = data.options || [];
       const isTF = data.questionType === 'true-false';
 
+      // Obfuscate correct indices — stops casual source inspection
       const correctIndices = [];
       opts.forEach(function (opt, idx) { if (opt.correct) correctIndices.push(idx); });
       const answerKey = btoa(JSON.stringify(correctIndices));
@@ -269,7 +265,7 @@
               'background:' + surface + ';border:1px solid ' + border + ';' +
               'border-radius:' + radius + ';font-family:' + font + ';font-size:0.9em;' +
               'color:' + muted + ';font-style:italic;">' +
-              data.hint +
+              (data.hint || '') +
             '</div>' +
           '</div>'
         : '';
@@ -287,6 +283,7 @@
         ? '<button class="hce-kc-retry" type="button" style="' + retryStyle + '">↺ Try Again</button>'
         : '';
 
+      // Build inline script
       const script =
         '(function(){' +
           'var root=document.querySelector(\'[data-kc="' + uid + '"]\');' +
@@ -298,11 +295,13 @@
           'var retryBtn=root.querySelector(".hce-kc-retry");' +
           'var isTF=' + (isTF ? 'true' : 'false') + ';' +
           'var selIdx=-1;' +
+          // Hint
           'if(hintBtn&&hintEl){hintBtn.addEventListener("click",function(){' +
             'var v=hintEl.style.display!=="none";' +
             'hintEl.style.display=v?"none":"block";' +
             'hintBtn.textContent=v?"Show Hint":"Hide Hint";' +
           '});}' +
+          // TF selection
           'if(isTF){root.querySelectorAll(".hce-kc-tf-btn").forEach(function(btn){' +
             'btn.addEventListener("click",function(){' +
               'root.querySelectorAll(".hce-kc-tf-btn").forEach(function(b){' +
@@ -314,6 +313,7 @@
               'selIdx=parseInt(btn.dataset.optIdx,10);' +
             '});' +
           '});}' +
+          // Submit
           'submitBtn.addEventListener("click",function(){' +
             'var idx=-1;' +
             'if(isTF){idx=selIdx;}' +
@@ -339,6 +339,7 @@
             'if(hintEl)hintEl.style.display="none";' +
             'if(retryBtn)retryBtn.style.display="inline-block";' +
           '});' +
+          // Retry
           'if(retryBtn){retryBtn.addEventListener("click",function(){' +
             'root.querySelectorAll("input").forEach(function(i){i.disabled=false;i.checked=false;});' +
             'if(isTF){root.querySelectorAll(".hce-kc-tf-btn").forEach(function(b){' +
@@ -365,7 +366,7 @@
             '<legend style="font-family:' + font + ';font-size:1.1em;font-weight:600;' +
                 'color:' + text + ';margin-bottom:16px;display:block;' +
                 'border:none;padding:0;width:100%;">' +
-              data.question +
+              (data.question || '') +
             '</legend>' +
             hintHtml +
             '<div>' + optionsHtml + '</div>' +
@@ -385,8 +386,33 @@
     _openEditModal(data) {
       const self    = this;
       const working = JSON.parse(JSON.stringify(data));
-      if (!working.widgetAlign) working.widgetAlign = 'left';
       let selOptIdx = 0;
+
+      let questionRichField = null;
+      let feedbackRichField = null;
+      let hintRichField     = null;
+      let currentRichOptIdx = -1;
+
+      function saveAllRichFields() {
+        if (questionRichField) {
+          working.question = questionRichField.getHtml();
+          questionRichField.destroy();
+          questionRichField = null;
+        }
+        if (feedbackRichField) {
+          if (currentRichOptIdx >= 0 && currentRichOptIdx < working.options.length) {
+            working.options[currentRichOptIdx].feedback = feedbackRichField.getHtml();
+          }
+          feedbackRichField.destroy();
+          feedbackRichField = null;
+        }
+        if (hintRichField) {
+          working.hint = hintRichField.getHtml();
+          hintRichField.destroy();
+          hintRichField = null;
+        }
+        currentRichOptIdx = -1;
+      }
 
       if (!working.options || working.options.length === 0) {
         working.options = JSON.parse(JSON.stringify(KnowledgeCheckBlot.defaultData.options));
@@ -395,28 +421,7 @@
         working.options[0].correct = true;
       }
 
-      let questionField = null;
-      let feedbackRtf   = null;
-      let hintRtf       = null;
-
-      function flushRichFields() {
-        if (questionField) {
-          working.question = questionField.getHtml();
-          questionField.destroy();
-          questionField = null;
-        }
-        if (feedbackRtf) {
-          if (working.options[selOptIdx]) working.options[selOptIdx].feedback = feedbackRtf.getHtml();
-          feedbackRtf.destroy();
-          feedbackRtf = null;
-        }
-        if (hintRtf) {
-          working.hint = hintRtf.getHtml();
-          hintRtf.destroy();
-          hintRtf = null;
-        }
-      }
-
+      // Modal skeleton
       const overlay = document.createElement('div');
       overlay.className = 'widget-modal-overlay';
 
@@ -455,17 +460,6 @@
       body.appendChild(leftCol);
       body.appendChild(rightCol);
 
-      const alignSection = document.createElement('div');
-      alignSection.style.cssText =
-        'padding:10px 16px;border-top:1px solid var(--color-border);display:flex;flex-direction:column;gap:6px;';
-      const alignSectionLabel = document.createElement('label');
-      alignSectionLabel.className = 'widget-modal-label';
-      alignSectionLabel.textContent = 'Widget Alignment';
-      alignSection.appendChild(alignSectionLabel);
-      alignSection.appendChild(WidgetModal.makeAlignRow(working.widgetAlign, function (v) {
-        working.widgetAlign = v;
-      }));
-
       const footer = document.createElement('div');
       footer.className = 'widget-modal-footer';
       const cancelBtn = document.createElement('button');
@@ -481,7 +475,6 @@
 
       dialog.appendChild(header);
       dialog.appendChild(body);
-      dialog.appendChild(alignSection);
       dialog.appendChild(footer);
       overlay.appendChild(dialog);
       document.body.appendChild(overlay);
@@ -508,6 +501,7 @@
         'padding:8px 10px;font-size:12px;font-family:var(--font-family-ui);' +
         'border:none;background:transparent;cursor:pointer;color:var(--color-primary);text-align:left;';
 
+      // Settings: question type
       const settingsWrap = document.createElement('div');
       settingsWrap.style.cssText =
         'padding:10px 12px;border-top:1px solid var(--color-border);' +
@@ -531,7 +525,6 @@
         rb.addEventListener('change', function () {
           if (!rb.checked) return;
           const prev = working.questionType;
-          flushRichFields();
           working.questionType = value;
           if (value === 'true-false' && prev !== 'true-false') {
             const firstCorrect = working.options.findIndex(function (o) { return o.correct; });
@@ -562,6 +555,7 @@
       leftCol.appendChild(optListEl);
       leftCol.appendChild(optFooter);
 
+      // Render functions
       function renderOptList() {
         optListEl.innerHTML = '';
         const isTF = working.questionType === 'true-false';
@@ -584,7 +578,7 @@
 
           const textSpan = document.createElement('span');
           textSpan.style.cssText = 'flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
-          textSpan.textContent = stripTags(opt.text) || '(empty)';
+          textSpan.textContent = opt.text || '(empty)';
 
           row.appendChild(correctDot);
           row.appendChild(textSpan);
@@ -607,7 +601,6 @@
             upBtn.addEventListener('click', function (e) {
               e.stopPropagation();
               if (idx === 0) return;
-              flushRichFields();
               working.options.splice(idx - 1, 0, working.options.splice(idx, 1)[0]);
               selOptIdx = idx - 1;
               renderOptList(); renderRight();
@@ -615,7 +608,6 @@
             downBtn.addEventListener('click', function (e) {
               e.stopPropagation();
               if (idx === working.options.length - 1) return;
-              flushRichFields();
               working.options.splice(idx + 1, 0, working.options.splice(idx, 1)[0]);
               selOptIdx = idx + 1;
               renderOptList(); renderRight();
@@ -623,7 +615,6 @@
             delBtn.addEventListener('click', function (e) {
               e.stopPropagation();
               if (working.options.length <= 2) return;
-              flushRichFields();
               const wasCorrect = working.options[idx].correct;
               working.options.splice(idx, 1);
               if (wasCorrect) working.options[0].correct = true;
@@ -636,8 +627,6 @@
           }
 
           row.addEventListener('click', function () {
-            if (idx === selOptIdx) return;
-            flushRichFields();
             selOptIdx = idx;
             renderOptList(); renderRight();
           });
@@ -652,20 +641,21 @@
       }
 
       function renderRight() {
+        saveAllRichFields();
         rightCol.innerHTML = '';
+        currentRichOptIdx = selOptIdx;
 
-        // Question
+        // Question (rich)
         const qWrap = document.createElement('div');
         qWrap.className = 'widget-modal-field';
         const qLabel = document.createElement('label');
         qLabel.className = 'widget-modal-label';
         qLabel.textContent = 'Question';
         const qMount = document.createElement('div');
+        questionRichField = new RichTextField(qMount, working.question || '');
         qWrap.appendChild(qLabel);
         qWrap.appendChild(qMount);
         rightCol.appendChild(qWrap);
-
-        questionField = new RichTextField(qMount, working.question || '');
 
         const opt = working.options[selOptIdx];
         if (!opt) return;
@@ -681,7 +671,7 @@
         optHeading.textContent = 'Option ' + (selOptIdx + 1);
         rightCol.appendChild(optHeading);
 
-        // Option text (plain input — TF is fixed, MC kept as plain text for button label clarity)
+        // Option text
         const optTxtWrap = document.createElement('div');
         optTxtWrap.className = 'widget-modal-field';
         const optTxtLabel = document.createElement('label');
@@ -690,7 +680,7 @@
         const optTxtInput = document.createElement('input');
         optTxtInput.className = 'widget-modal-input';
         optTxtInput.type = 'text';
-        optTxtInput.value = stripTags(opt.text);
+        optTxtInput.value = opt.text;
         optTxtInput.placeholder = 'e.g. Option A';
         if (working.questionType === 'true-false') {
           optTxtInput.disabled = true;
@@ -727,35 +717,33 @@
         correctRow.appendChild(document.createTextNode('This is the correct answer'));
         rightCol.appendChild(correctRow);
 
-        // Feedback
+        // Feedback (rich)
         const fbWrap = document.createElement('div');
         fbWrap.className = 'widget-modal-field';
         const fbLabel = document.createElement('label');
         fbLabel.className = 'widget-modal-label';
         fbLabel.textContent = 'Feedback (shown after submit)';
         const fbMount = document.createElement('div');
+        feedbackRichField = new RichTextField(fbMount, opt.feedback || '');
         fbWrap.appendChild(fbLabel);
         fbWrap.appendChild(fbMount);
         rightCol.appendChild(fbWrap);
-
-        feedbackRtf = new RichTextField(fbMount, opt.feedback || '');
 
         const hr2 = document.createElement('hr');
         hr2.style.cssText = 'border:none;border-top:1px solid var(--color-border);margin:0;';
         rightCol.appendChild(hr2);
 
-        // Hint
+        // Hint (rich)
         const hintWrap = document.createElement('div');
         hintWrap.className = 'widget-modal-field';
         const hintLabel = document.createElement('label');
         hintLabel.className = 'widget-modal-label';
         hintLabel.textContent = 'Hint (optional)';
         const hintMount = document.createElement('div');
+        hintRichField = new RichTextField(hintMount, working.hint || '');
         hintWrap.appendChild(hintLabel);
         hintWrap.appendChild(hintMount);
         rightCol.appendChild(hintWrap);
-
-        hintRtf = new RichTextField(hintMount, working.hint || '');
 
         // Allow retry
         const retryRow = document.createElement('label');
@@ -773,7 +761,6 @@
 
       addOptBtn.addEventListener('click', function () {
         if (working.options.length >= 8 || working.questionType === 'true-false') return;
-        flushRichFields();
         working.options.push({ id: genId(), text: '', correct: false, feedback: '' });
         selOptIdx = working.options.length - 1;
         renderOptList(); renderRight();
@@ -784,7 +771,7 @@
       });
 
       function close(save) {
-        flushRichFields();
+        saveAllRichFields();
         document.removeEventListener('keydown', onKey);
         if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
         if (!save) return;

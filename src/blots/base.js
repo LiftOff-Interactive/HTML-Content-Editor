@@ -35,11 +35,6 @@
       node.setAttribute('data-widget-type', this.blotName);
       node.setAttribute('contenteditable', 'false');
       node.classList.add('widget-blot', 'widget-blot--' + this.blotName);
-      const align = merged.widgetAlign || 'left';
-      node.setAttribute('data-widget-align', align);
-      if (align === 'center' || align === 'right') {
-        node.style.textAlign = align;
-      }
       return node;
     }
 
@@ -75,9 +70,6 @@
     // Also fires a custom event so editor.js can keep the Quill delta in sync.
     updateData(newData) {
       this.domNode.setAttribute('data-widget-data', JSON.stringify(newData));
-      const align = newData.widgetAlign || 'left';
-      this.domNode.setAttribute('data-widget-align', align);
-      this.domNode.style.textAlign = (align === 'center' || align === 'right') ? align : '';
       this.domNode.innerHTML = '';
       try {
         this.renderEditor(this.domNode, newData);

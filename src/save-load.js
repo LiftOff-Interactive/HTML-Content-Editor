@@ -3,93 +3,6 @@
 
   const SAVE_VERSION = 2;
 
-  // ── v1 → v2 migration ────────────────────────────────────────────────────
-
-  function wrapHtml(str) {
-    if (!str) return '';
-    if (/^\s*</.test(str)) return str;
-    return '<p>' + str + '</p>';
-  }
-
-  function migrateV1toV2(payload) {
-    var ops = (payload.content && payload.content.ops) || [];
-    ops.forEach(function (op) {
-      if (!op.insert || typeof op.insert !== 'object') return;
-
-      if (op.insert.callout) {
-        var d = op.insert.callout;
-        if (!d.widgetAlign) d.widgetAlign = 'left';
-        d.body = wrapHtml(d.body);
-        d._v = 2;
-      }
-      if (op.insert.quote) {
-        var d = op.insert.quote;
-        if (!d.widgetAlign) d.widgetAlign = 'left';
-        d.quote = wrapHtml(d.quote);
-        d._v = 2;
-      }
-      if (op.insert.timeline) {
-        var d = op.insert.timeline;
-        if (!d.widgetAlign) d.widgetAlign = 'left';
-        if (d.items) d.items.forEach(function (item) { item.content = wrapHtml(item.content); });
-        d._v = 2;
-      }
-      if (op.insert.accordion) {
-        var d = op.insert.accordion;
-        if (!d.widgetAlign) d.widgetAlign = 'left';
-        if (d.items) d.items.forEach(function (item) { item.content = wrapHtml(item.content); });
-        d._v = 2;
-      }
-      if (op.insert.tabs) {
-        var d = op.insert.tabs;
-        if (!d.widgetAlign) d.widgetAlign = 'left';
-        if (d.tabs) d.tabs.forEach(function (tab) { tab.content = wrapHtml(tab.content); });
-        d._v = 2;
-      }
-      if (op.insert['flip-cards']) {
-        var d = op.insert['flip-cards'];
-        if (!d.widgetAlign) d.widgetAlign = 'left';
-        if (d.cards) d.cards.forEach(function (card) {
-          if (!card.frontBody) card.frontBody = '';
-          card.back = wrapHtml(card.back);
-        });
-        d._v = 2;
-      }
-      if (op.insert['click-reveal']) {
-        var d = op.insert['click-reveal'];
-        if (!d.widgetAlign) d.widgetAlign = 'left';
-        if (d.items) d.items.forEach(function (item) { item.content = wrapHtml(item.content); });
-        d._v = 2;
-      }
-      if (op.insert.carousel) {
-        var d = op.insert.carousel;
-        if (!d.widgetAlign) d.widgetAlign = 'left';
-        if (d.slides) d.slides.forEach(function (slide) {
-          slide.textContent = wrapHtml(slide.textContent);
-        });
-        d._v = 2;
-      }
-      if (op.insert.hotspot) {
-        var d = op.insert.hotspot;
-        if (!d.widgetAlign) d.widgetAlign = 'left';
-        if (d.pins) d.pins.forEach(function (pin) { pin.content = wrapHtml(pin.content); });
-        d._v = 2;
-      }
-      if (op.insert['knowledge-check']) {
-        var d = op.insert['knowledge-check'];
-        if (!d.widgetAlign) d.widgetAlign = 'left';
-        d.question = wrapHtml(d.question);
-        if (d.hint) d.hint = wrapHtml(d.hint);
-        if (d.options) d.options.forEach(function (opt) {
-          opt.feedback = wrapHtml(opt.feedback);
-        });
-        d._v = 2;
-      }
-    });
-    payload.version = 2;
-    return payload;
-  }
-
   // ── Toast ─────────────────────────────────────────────────────────────────
 
   function showToast(msg) {
@@ -125,6 +38,63 @@
       setStatus('');
       _statusTimer = null;
     }, 3000);
+  }
+
+  // ── Migration ─────────────────────────────────────────────────────────────
+
+  function toHtml(str) {
+    if (!str) return '';
+    if (str.trimStart().startsWith('<')) return str;
+    return '<p>' + str + '</p>';
+  }
+
+  function migrateV1toV2(payload) {
+    if (!payload || !payload.content || !Array.isArray(payload.content.ops)) return payload;
+    payload.content.ops.forEach(function (op) {
+      const val = op.insert;
+      if (!val || typeof val !== 'object') return;
+
+      if (val.accordion && Array.isArray(val.accordion.items)) {
+        val.accordion.items.forEach(function (item) { item.content = toHtml(item.content); });
+      }
+      if (val.tabs && Array.isArray(val.tabs.tabs)) {
+        val.tabs.tabs.forEach(function (tab) { tab.content = toHtml(tab.content); });
+      }
+      if (val.timeline && Array.isArray(val.timeline.items)) {
+        val.timeline.items.forEach(function (item) { item.content = toHtml(item.content); });
+      }
+      if (val['click-reveal'] && Array.isArray(val['click-reveal'].items)) {
+        val['click-reveal'].items.forEach(function (item) { item.content = toHtml(item.content); });
+      }
+      if (val.carousel && Array.isArray(val.carousel.slides)) {
+        val.carousel.slides.forEach(function (slide) { slide.textContent = toHtml(slide.textContent); });
+      }
+      if (val.hotspot && Array.isArray(val.hotspot.pins)) {
+        val.hotspot.pins.forEach(function (pin) { pin.content = toHtml(pin.content); });
+      }
+      if (val['flip-cards'] && Array.isArray(val['flip-cards'].cards)) {
+        val['flip-cards'].cards.forEach(function (card) {
+          if (!('frontBody' in card)) card.frontBody = '';
+          if (!('backBody' in card)) card.backBody = '';
+        });
+      }
+      if (val['knowledge-check']) {
+        const kc = val['knowledge-check'];
+        kc.question = toHtml(kc.question);
+        kc.hint     = toHtml(kc.hint);
+        if (Array.isArray(kc.options)) {
+          kc.options.forEach(function (opt) { opt.feedback = toHtml(opt.feedback); });
+        }
+      }
+      if (val.callout) {
+        val.callout.body = toHtml(val.callout.body);
+      }
+      if (val.quote) {
+        val.quote.text = toHtml(val.quote.text);
+      }
+    });
+    payload.version = 2;
+    return payload;
   }
 
   // ── Save ──────────────────────────────────────────────────────────────────
@@ -172,12 +142,16 @@
         try {
           const payload = JSON.parse(e.target.result);
 
-          if (!payload || (payload.version !== 1 && payload.version !== 2)) {
+          if (!payload || !payload.version) {
             showToast('Incompatible file — saved with a different version of Content Editor.');
             return;
           }
           if (payload.version === 1) {
             payload = migrateV1toV2(payload);
+          }
+          if (payload.version !== SAVE_VERSION) {
+            showToast('Incompatible file — saved with a different version of Content Editor.');
+            return;
           }
 
           const quill = window.contentEditor && window.contentEditor.quill;

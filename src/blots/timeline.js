@@ -17,8 +17,7 @@
     static widgetIcon        = '↓';
     static widgetDescription = 'A linear sequence of events or steps';
     static defaultData       = {
-      _v: 2,
-      widgetAlign: 'left',
+      _v: 1,
       items: [
         { id: 'step-1', date: 'Step 1', title: 'Define the Problem',   content: 'Description of the first step.',  icon: '1' },
         { id: 'step-2', date: 'Step 2', title: 'Research Solutions',   content: 'Description of the second step.', icon: '2' },
@@ -27,6 +26,7 @@
     };
 
     renderEditor(container, data) {
+      // Use divs instead of ol/li so Quill's snow CSS list styles don't override padding
       let html = '<div class="timeline-widget">';
       data.items.forEach(function (item, i) {
         const isLast = i === data.items.length - 1;
@@ -34,9 +34,15 @@
           '<div class="timeline-item">' +
             '<div class="timeline-dot">' + esc(item.icon || String(i + 1)) + '</div>' +
             (!isLast ? '<div class="timeline-line"></div>' : '') +
-            (item.date    ? '<div class="timeline-date">'    + esc(item.date)    + '</div>' : '') +
-            (item.title   ? '<div class="timeline-title">'   + esc(item.title)   + '</div>' : '') +
-            (item.content ? '<div class="timeline-content">' + item.content      + '</div>' : '') +
+            (item.date
+              ? '<div class="timeline-date">'    + esc(item.date)    + '</div>'
+              : '') +
+            (item.title
+              ? '<div class="timeline-title">'   + esc(item.title)   + '</div>'
+              : '') +
+            (item.content
+              ? '<div class="timeline-content">' + item.content      + '</div>'
+              : '') +
           '</div>';
       });
       html += '</div>';
@@ -45,12 +51,12 @@
 
     renderExport(container, data) {
       const root    = getComputedStyle(document.documentElement);
-      const primary = root.getPropertyValue('--color-primary').trim()    || '#2563eb';
-      const border  = root.getPropertyValue('--color-border').trim()     || '#e2e8f0';
-      const text    = root.getPropertyValue('--color-text').trim()       || '#1e293b';
-      const muted   = root.getPropertyValue('--color-text-muted').trim() || '#64748b';
-      const font    = root.getPropertyValue('--font-family-body').trim() || 'Georgia, serif';
-      const uiFont  = root.getPropertyValue('--font-family-ui').trim()   || 'system-ui, sans-serif';
+      const primary = root.getPropertyValue('--color-primary').trim()        || '#2563eb';
+      const border  = root.getPropertyValue('--color-border').trim()         || '#e2e8f0';
+      const text    = root.getPropertyValue('--color-text').trim()           || '#1e293b';
+      const muted   = root.getPropertyValue('--color-text-muted').trim()     || '#64748b';
+      const font    = root.getPropertyValue('--font-family-body').trim()     || 'Georgia, serif';
+      const uiFont  = root.getPropertyValue('--font-family-ui').trim()       || 'system-ui, sans-serif';
 
       const dotStyle =
         'position:absolute;left:0;top:4px;width:28px;height:28px;border-radius:50%;' +
@@ -64,12 +70,23 @@
       data.items.forEach(function (item, i) {
         const isLast = i === data.items.length - 1;
         items +=
-          '<li style="position:relative;padding-left:54px;padding-bottom:' + (isLast ? '0' : '24px') + ';">' +
+          '<li style="position:relative;padding-left:54px;' +
+              'padding-bottom:' + (isLast ? '0' : '24px') + ';">' +
             '<div style="' + dotStyle + '">' + esc(item.icon || String(i + 1)) + '</div>' +
             (!isLast ? '<div style="' + lineStyle + '"></div>' : '') +
-            (item.date  ? '<div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:' + primary + ';font-family:' + uiFont + ';margin-bottom:2px;">' + esc(item.date) + '</div>' : '') +
-            (item.title ? '<div style="font-size:14px;font-weight:600;color:' + text + ';font-family:' + font + ';margin-bottom:4px;">' + esc(item.title) + '</div>' : '') +
-            (item.content ? '<div style="font-size:13px;color:' + muted + ';font-family:' + font + ';line-height:1.6;">' + item.content + '</div>' : '') +
+            (item.date
+              ? '<div style="font-size:11px;font-weight:600;text-transform:uppercase;' +
+                  'letter-spacing:0.05em;color:' + primary + ';font-family:' + uiFont + ';' +
+                  'margin-bottom:2px;">' + esc(item.date) + '</div>'
+              : '') +
+            (item.title
+              ? '<div style="font-size:14px;font-weight:600;color:' + text + ';' +
+                  'font-family:' + font + ';margin-bottom:4px;">' + esc(item.title) + '</div>'
+              : '') +
+            (item.content
+              ? '<div style="font-size:13px;color:' + muted + ';' +
+                  'font-family:' + font + ';line-height:1.6;">' + item.content + '</div>'
+              : '') +
           '</li>';
       });
 
@@ -84,17 +101,9 @@
     _openEditModal(data) {
       const self = this;
       const working = JSON.parse(JSON.stringify(data));
-      if (!working.widgetAlign) working.widgetAlign = 'left';
       let selectedIdx = 0;
-      let contentField = null;   // active lazy RichTextField
-
-      function flushRichFields() {
-        if (contentField) {
-          working.items[selectedIdx].content = contentField.getHtml();
-          contentField.destroy();
-          contentField = null;
-        }
-      }
+      let currentRichField = null;
+      let currentRichFieldIdx = -1;
 
       const overlay = document.createElement('div');
       overlay.className = 'widget-modal-overlay';
@@ -122,11 +131,12 @@
 
       // Two-column body
       const body = document.createElement('div');
-      body.style.cssText = 'display:flex;min-height:300px;';
+      body.style.cssText = 'display:flex;min-height:280px;';
 
       const leftCol = document.createElement('div');
       leftCol.style.cssText =
-        'width:160px;flex-shrink:0;border-right:1px solid var(--color-border);display:flex;flex-direction:column;';
+        'width:160px;flex-shrink:0;border-right:1px solid var(--color-border);' +
+        'display:flex;flex-direction:column;';
 
       const itemListEl = document.createElement('div');
       itemListEl.style.cssText = 'flex:1;overflow-y:auto;';
@@ -143,22 +153,10 @@
       leftCol.appendChild(addItemBtn);
 
       const rightCol = document.createElement('div');
-      rightCol.style.cssText = 'flex:1;padding:16px;display:flex;flex-direction:column;gap:12px;overflow-y:auto;';
+      rightCol.style.cssText = 'flex:1;padding:16px;display:flex;flex-direction:column;gap:12px;';
 
       body.appendChild(leftCol);
       body.appendChild(rightCol);
-
-      // Widget alignment — spans full width below the two-column area
-      const alignSection = document.createElement('div');
-      alignSection.style.cssText =
-        'padding:10px 16px;border-top:1px solid var(--color-border);display:flex;flex-direction:column;gap:6px;';
-      const alignLabel = document.createElement('label');
-      alignLabel.className = 'widget-modal-label';
-      alignLabel.textContent = 'Widget Alignment';
-      alignSection.appendChild(alignLabel);
-      alignSection.appendChild(WidgetModal.makeAlignRow(working.widgetAlign, function (v) {
-        working.widgetAlign = v;
-      }));
 
       // Footer
       const footer = document.createElement('div');
@@ -176,10 +174,17 @@
 
       dialog.appendChild(header);
       dialog.appendChild(body);
-      dialog.appendChild(alignSection);
       dialog.appendChild(footer);
       overlay.appendChild(dialog);
       document.body.appendChild(overlay);
+
+      function saveCurrentRichField() {
+        if (currentRichField && currentRichFieldIdx >= 0 && currentRichFieldIdx < working.items.length) {
+          working.items[currentRichFieldIdx].content = currentRichField.getHtml();
+        }
+        if (currentRichField) { currentRichField.destroy(); currentRichField = null; }
+        currentRichFieldIdx = -1;
+      }
 
       function makeReorderBtn(symbol, isSelected) {
         const btn = document.createElement('button');
@@ -204,7 +209,8 @@
               : 'color:var(--color-text);');
 
           const labelSpan = document.createElement('span');
-          labelSpan.style.cssText = 'flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+          labelSpan.style.cssText =
+            'flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
           labelSpan.textContent = item.title || item.date || 'Step ' + (idx + 1);
 
           const upBtn   = makeReorderBtn('▲', isSelected);
@@ -213,7 +219,6 @@
           upBtn.addEventListener('click', function (e) {
             e.stopPropagation();
             if (idx === 0) return;
-            flushRichFields();
             working.items.splice(idx - 1, 0, working.items.splice(idx, 1)[0]);
             selectedIdx = idx - 1;
             renderItemList();
@@ -222,7 +227,6 @@
           downBtn.addEventListener('click', function (e) {
             e.stopPropagation();
             if (idx === working.items.length - 1) return;
-            flushRichFields();
             working.items.splice(idx + 1, 0, working.items.splice(idx, 1)[0]);
             selectedIdx = idx + 1;
             renderItemList();
@@ -242,7 +246,6 @@
               'color:' + (isSelected ? 'rgba(255,255,255,0.75)' : 'var(--color-text-muted)') + ';';
             delBtn.addEventListener('click', function (e) {
               e.stopPropagation();
-              flushRichFields();
               working.items.splice(idx, 1);
               if (selectedIdx >= working.items.length) selectedIdx = working.items.length - 1;
               renderItemList();
@@ -252,8 +255,6 @@
           }
 
           row.addEventListener('click', function () {
-            if (idx === selectedIdx) return;
-            flushRichFields();
             selectedIdx = idx;
             renderItemList();
             renderRight();
@@ -268,19 +269,21 @@
       function makeField(labelText, el) {
         const wrap = document.createElement('div');
         wrap.className = 'widget-modal-field';
-        const lbl = document.createElement('label');
-        lbl.className = 'widget-modal-label';
-        lbl.textContent = labelText;
-        wrap.appendChild(lbl);
+        const label = document.createElement('label');
+        label.className = 'widget-modal-label';
+        label.textContent = labelText;
+        wrap.appendChild(label);
         wrap.appendChild(el);
         return wrap;
       }
 
       function renderRight() {
+        saveCurrentRichField();
         rightCol.innerHTML = '';
         const item = working.items[selectedIdx];
         if (!item) return;
 
+        // Icon field (short, sits next to date)
         const topRow = document.createElement('div');
         topRow.style.cssText = 'display:flex;gap:10px;';
 
@@ -289,7 +292,8 @@
         iconInput.type = 'text';
         iconInput.maxLength = 2;
         iconInput.value = item.icon;
-        iconInput.style.cssText = 'width:52px;text-align:center;';
+        iconInput.style.width = '52px';
+        iconInput.style.textAlign = 'center';
         iconInput.addEventListener('input', function () {
           working.items[selectedIdx].icon = iconInput.value;
         });
@@ -306,19 +310,19 @@
 
         const iconWrap = document.createElement('div');
         iconWrap.className = 'widget-modal-field';
-        const iconLbl = document.createElement('label');
-        iconLbl.className = 'widget-modal-label';
-        iconLbl.textContent = 'Icon';
-        iconWrap.appendChild(iconLbl);
+        const iconLabel = document.createElement('label');
+        iconLabel.className = 'widget-modal-label';
+        iconLabel.textContent = 'Icon';
+        iconWrap.appendChild(iconLabel);
         iconWrap.appendChild(iconInput);
 
         const dateWrap = document.createElement('div');
         dateWrap.className = 'widget-modal-field';
         dateWrap.style.flex = '1';
-        const dateLbl = document.createElement('label');
-        dateLbl.className = 'widget-modal-label';
-        dateLbl.textContent = 'Date / label';
-        dateWrap.appendChild(dateLbl);
+        const dateLabel = document.createElement('label');
+        dateLabel.className = 'widget-modal-label';
+        dateLabel.textContent = 'Date / label';
+        dateWrap.appendChild(dateLabel);
         dateWrap.appendChild(dateInput);
 
         topRow.appendChild(iconWrap);
@@ -333,27 +337,26 @@
           renderItemList();
         });
 
-        // Rich text content field
-        const contentMount = document.createElement('div');
         const contentWrap = document.createElement('div');
         contentWrap.className = 'widget-modal-field';
-        const contentLbl = document.createElement('label');
-        contentLbl.className = 'widget-modal-label';
-        contentLbl.textContent = 'Content';
-        contentWrap.appendChild(contentLbl);
-        contentWrap.appendChild(contentMount);
+        contentWrap.style.flex = '1';
+        const contentLabel = document.createElement('label');
+        contentLabel.className = 'widget-modal-label';
+        contentLabel.textContent = 'Content';
+        const mount = document.createElement('div');
+        currentRichField = new RichTextField(mount, item.content);
+        currentRichFieldIdx = selectedIdx;
+        contentWrap.appendChild(contentLabel);
+        contentWrap.appendChild(mount);
 
         rightCol.appendChild(topRow);
         rightCol.appendChild(makeField('Title', titleInput));
         rightCol.appendChild(contentWrap);
-
-        contentField = new RichTextField(contentMount, item.content || '');
         requestAnimationFrame(function () { titleInput.focus(); });
       }
 
       addItemBtn.addEventListener('click', function () {
         if (working.items.length >= 8) return;
-        flushRichFields();
         const n = working.items.length + 1;
         working.items.push({
           id: 'step-' + Date.now(),
@@ -368,8 +371,8 @@
       });
 
       function close(save) {
+        saveCurrentRichField();
         document.removeEventListener('keydown', onKey);
-        flushRichFields();
         if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
         if (!save) return;
         self.updateData(working);
