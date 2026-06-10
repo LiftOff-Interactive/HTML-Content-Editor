@@ -64,11 +64,14 @@
 
       closeList();
 
-      if (attrs && attrs.header === 1) { html += '<h1>' + (inner || '') + '</h1>'; return; }
-      if (attrs && attrs.header === 2) { html += '<h2>' + (inner || '') + '</h2>'; return; }
-      if (attrs && attrs.header === 3) { html += '<h3>' + (inner || '') + '</h3>'; return; }
+      const align = attrs && attrs.align;
+      const style = align ? ' style="text-align:' + align + ';"' : '';
 
-      html += inner ? '<p>' + inner + '</p>' : '<p><br></p>';
+      if (attrs && attrs.header === 1) { html += '<h1' + style + '>' + (inner || '') + '</h1>'; return; }
+      if (attrs && attrs.header === 2) { html += '<h2' + style + '>' + (inner || '') + '</h2>'; return; }
+      if (attrs && attrs.header === 3) { html += '<h3' + style + '>' + (inner || '') + '</h3>'; return; }
+
+      html += inner ? '<p' + style + '>' + inner + '</p>' : '<p><br></p>';
     }
 
     for (const op of ops) {
@@ -104,7 +107,15 @@
               'border-radius:0.5rem;color:#dc2626;font-family:system-ui,sans-serif;' +
               'font-size:0.875rem;">⚠ Widget could not be exported (' + blotName + ')</div>';
           }
-          html += container.innerHTML;
+          const align = (data && data.widgetAlign) || 'left';
+          if (align === 'center' || align === 'right') {
+            html +=
+              '<div style="text-align:' + align + ';">' +
+                container.innerHTML +
+              '</div>';
+          } else {
+            html += container.innerHTML;
+          }
         }
         lineBuffer = '';
         continue;

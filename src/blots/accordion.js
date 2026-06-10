@@ -19,7 +19,8 @@
     static widgetIcon        = '📂';
     static widgetDescription = 'Expandable/collapsible content panels';
     static defaultData       = {
-      _v: 1,
+      _v: 2,
+      widgetAlign: 'left',
       allowMultiple: false,
       items: [
         { id: 'item-1', header: 'Panel 1', content: '', open: false },
@@ -51,12 +52,10 @@
       html += '</div>';
       container.innerHTML = html;
 
-      // Stop clicks on the summary from bubbling to the base-class click-to-edit handler
       container.querySelectorAll('.accordion-summary').forEach(function (summary) {
         summary.addEventListener('click', function (e) { e.stopPropagation(); });
       });
 
-      // For allowMultiple: false, close other panels when one opens
       if (!data.allowMultiple) {
         container.querySelectorAll('.accordion-item').forEach(function (details) {
           details.addEventListener('toggle', function (e) {
@@ -86,25 +85,13 @@
       const font    = root.getPropertyValue('--font-family-body').trim()     || 'Georgia, serif';
       const radius  = root.getPropertyValue('--widget-border-radius').trim() || '0.5rem';
 
-      // Scoped animation CSS for this accordion instance
       const styles =
         '<style>' +
-          '[data-accordion-id="' + uid + '"] .acc-body{' +
-            'display:grid;grid-template-rows:0fr;' +
-            'transition:grid-template-rows 0.25s ease;' +
-          '}' +
-          '[data-accordion-id="' + uid + '"] details[open]>.acc-body{' +
-            'grid-template-rows:1fr;' +
-          '}' +
+          '[data-accordion-id="' + uid + '"] .acc-body{display:grid;grid-template-rows:0fr;transition:grid-template-rows 0.25s ease;}' +
+          '[data-accordion-id="' + uid + '"] details[open]>.acc-body{grid-template-rows:1fr;}' +
           '[data-accordion-id="' + uid + '"] .acc-inner{overflow:hidden;}' +
-          '[data-accordion-id="' + uid + '"] .acc-chevron{' +
-            'display:inline-block;font-size:10px;' +
-            'color:' + muted + ';' +
-            'transition:transform 0.25s ease,color 0.25s ease;' +
-          '}' +
-          '[data-accordion-id="' + uid + '"] details[open] .acc-chevron{' +
-            'transform:rotate(180deg);color:' + primary + ';' +
-          '}' +
+          '[data-accordion-id="' + uid + '"] .acc-chevron{display:inline-block;font-size:10px;color:' + muted + ';transition:transform 0.25s ease,color 0.25s ease;}' +
+          '[data-accordion-id="' + uid + '"] details[open] .acc-chevron{transform:rotate(180deg);color:' + primary + ';}' +
           '[data-accordion-id="' + uid + '"] summary{list-style:none;}' +
           '[data-accordion-id="' + uid + '"] summary::-webkit-details-marker{display:none;}' +
         '</style>';
@@ -112,19 +99,15 @@
       const sumStyle =
         'display:flex;justify-content:space-between;align-items:center;' +
         'padding:12px 16px;cursor:pointer;user-select:none;list-style:none;' +
-        'background:' + surface + ';' +
-        'font-family:' + font + ';font-size:14px;font-weight:600;color:' + text + ';';
+        'background:' + surface + ';font-family:' + font + ';font-size:14px;font-weight:600;color:' + text + ';';
 
       const innerStyle =
-        'padding:12px 16px;font-family:' + font + ';font-size:14px;' +
-        'color:' + muted + ';line-height:1.6;';
+        'padding:12px 16px;font-family:' + font + ';font-size:14px;color:' + muted + ';line-height:1.6;';
 
       let items = '';
       data.items.forEach(function (item, i) {
         items +=
-          '<details' + (item.open ? ' open' : '') + ' style="' +
-            'border-top:' + (i === 0 ? '0' : '1px solid ' + border) + ';' +
-          '">' +
+          '<details' + (item.open ? ' open' : '') + ' style="border-top:' + (i === 0 ? '0' : '1px solid ' + border) + ';">' +
             '<summary style="' + sumStyle + '">' +
               '<span>' + esc(item.header) + '</span>' +
               '<span class="acc-chevron">&#9660;</span>' +
@@ -135,7 +118,6 @@
           '</details>';
       });
 
-      // Script to enforce single-open behavior when allowMultiple is false
       let script = '';
       if (!data.allowMultiple) {
         script =
@@ -153,11 +135,7 @@
 
       container.innerHTML =
         styles +
-        '<div data-accordion-id="' + uid + '" style="' +
-          'border:1px solid ' + border + ';' +
-          'border-radius:' + radius + ';' +
-          'overflow:hidden;margin:8px 0;' +
-        '">' +
+        '<div data-accordion-id="' + uid + '" style="border:1px solid ' + border + ';border-radius:' + radius + ';overflow:hidden;margin:8px 0;">' +
           items +
         '</div>' +
         script;
@@ -170,7 +148,17 @@
     _openEditModal(data) {
       const self = this;
       const working = JSON.parse(JSON.stringify(data));
+      if (!working.widgetAlign) working.widgetAlign = 'left';
       let selectedIdx = 0;
+      let contentField = null;
+
+      function flushRichFields() {
+        if (contentField) {
+          working.items[selectedIdx].content = contentField.getHtml();
+          contentField.destroy();
+          contentField = null;
+        }
+      }
 
       const overlay = document.createElement('div');
       overlay.className = 'widget-modal-overlay';
@@ -199,30 +187,25 @@
       // Options bar — allowMultiple toggle
       const optionsBar = document.createElement('div');
       optionsBar.style.cssText =
-        'padding:10px 16px;border-bottom:1px solid var(--color-border);' +
-        'display:flex;align-items:center;';
+        'padding:10px 16px;border-bottom:1px solid var(--color-border);display:flex;align-items:center;';
       const multiLabel = document.createElement('label');
       multiLabel.style.cssText =
-        'display:flex;align-items:center;gap:6px;font-size:13px;' +
-        'font-family:var(--font-family-ui);color:var(--color-text);cursor:pointer;';
+        'display:flex;align-items:center;gap:6px;font-size:13px;font-family:var(--font-family-ui);color:var(--color-text);cursor:pointer;';
       const multiCheck = document.createElement('input');
       multiCheck.type = 'checkbox';
       multiCheck.checked = working.allowMultiple;
-      multiCheck.addEventListener('change', function () {
-        working.allowMultiple = multiCheck.checked;
-      });
+      multiCheck.addEventListener('change', function () { working.allowMultiple = multiCheck.checked; });
       multiLabel.appendChild(multiCheck);
       multiLabel.appendChild(document.createTextNode('Allow multiple panels open at once'));
       optionsBar.appendChild(multiLabel);
 
       // Two-column body
       const body = document.createElement('div');
-      body.style.cssText = 'display:flex;min-height:280px;';
+      body.style.cssText = 'display:flex;min-height:300px;';
 
       const leftCol = document.createElement('div');
       leftCol.style.cssText =
-        'width:160px;flex-shrink:0;border-right:1px solid var(--color-border);' +
-        'display:flex;flex-direction:column;';
+        'width:160px;flex-shrink:0;border-right:1px solid var(--color-border);display:flex;flex-direction:column;';
 
       const itemListEl = document.createElement('div');
       itemListEl.style.cssText = 'flex:1;overflow-y:auto;';
@@ -239,10 +222,22 @@
       leftCol.appendChild(addItemBtn);
 
       const rightCol = document.createElement('div');
-      rightCol.style.cssText = 'flex:1;padding:16px;display:flex;flex-direction:column;gap:12px;';
+      rightCol.style.cssText = 'flex:1;padding:16px;display:flex;flex-direction:column;gap:12px;overflow-y:auto;';
 
       body.appendChild(leftCol);
       body.appendChild(rightCol);
+
+      // Widget alignment — full-width section
+      const alignSection = document.createElement('div');
+      alignSection.style.cssText =
+        'padding:10px 16px;border-top:1px solid var(--color-border);display:flex;flex-direction:column;gap:6px;';
+      const alignLabel = document.createElement('label');
+      alignLabel.className = 'widget-modal-label';
+      alignLabel.textContent = 'Widget Alignment';
+      alignSection.appendChild(alignLabel);
+      alignSection.appendChild(WidgetModal.makeAlignRow(working.widgetAlign, function (v) {
+        working.widgetAlign = v;
+      }));
 
       // Footer
       const footer = document.createElement('div');
@@ -261,9 +256,20 @@
       dialog.appendChild(header);
       dialog.appendChild(optionsBar);
       dialog.appendChild(body);
+      dialog.appendChild(alignSection);
       dialog.appendChild(footer);
       overlay.appendChild(dialog);
       document.body.appendChild(overlay);
+
+      function makeReorderBtn(symbol, isSelected) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.textContent = symbol;
+        btn.style.cssText =
+          'background:none;border:none;cursor:pointer;font-size:9px;padding:0 1px;line-height:1;' +
+          'color:' + (isSelected ? 'rgba(255,255,255,0.75)' : 'var(--color-text-muted)') + ';';
+        return btn;
+      }
 
       function renderItemList() {
         itemListEl.innerHTML = '';
@@ -273,20 +279,19 @@
           row.style.cssText =
             'display:flex;align-items:center;padding:7px 10px;cursor:pointer;' +
             'font-size:12px;font-family:var(--font-family-ui);gap:2px;' +
-            (isSelected
-              ? 'background:var(--color-primary);color:#fff;'
-              : 'color:var(--color-text);');
+            (isSelected ? 'background:var(--color-primary);color:#fff;' : 'color:var(--color-text);');
 
           const labelSpan = document.createElement('span');
           labelSpan.style.cssText = 'flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
           labelSpan.textContent = item.header || 'Panel ' + (idx + 1);
 
-          const upBtn = makeReorderBtn('▲', isSelected);
+          const upBtn   = makeReorderBtn('▲', isSelected);
           const downBtn = makeReorderBtn('▼', isSelected);
 
           upBtn.addEventListener('click', function (e) {
             e.stopPropagation();
             if (idx === 0) return;
+            flushRichFields();
             working.items.splice(idx - 1, 0, working.items.splice(idx, 1)[0]);
             selectedIdx = idx - 1;
             renderItemList();
@@ -295,6 +300,7 @@
           downBtn.addEventListener('click', function (e) {
             e.stopPropagation();
             if (idx === working.items.length - 1) return;
+            flushRichFields();
             working.items.splice(idx + 1, 0, working.items.splice(idx, 1)[0]);
             selectedIdx = idx + 1;
             renderItemList();
@@ -314,6 +320,7 @@
               'color:' + (isSelected ? 'rgba(255,255,255,0.75)' : 'var(--color-text-muted)') + ';';
             delBtn.addEventListener('click', function (e) {
               e.stopPropagation();
+              flushRichFields();
               working.items.splice(idx, 1);
               if (selectedIdx >= working.items.length) selectedIdx = working.items.length - 1;
               renderItemList();
@@ -323,6 +330,8 @@
           }
 
           row.addEventListener('click', function () {
+            if (idx === selectedIdx) return;
+            flushRichFields();
             selectedIdx = idx;
             renderItemList();
             renderRight();
@@ -332,16 +341,6 @@
 
         addItemBtn.disabled = working.items.length >= 8;
         addItemBtn.style.opacity = working.items.length >= 8 ? '0.4' : '1';
-      }
-
-      function makeReorderBtn(symbol, isSelected) {
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.textContent = symbol;
-        btn.style.cssText =
-          'background:none;border:none;cursor:pointer;font-size:9px;padding:0 1px;line-height:1;' +
-          'color:' + (isSelected ? 'rgba(255,255,255,0.75)' : 'var(--color-text-muted)') + ';';
-        return btn;
       }
 
       function renderRight() {
@@ -367,65 +366,23 @@
 
         const contentWrap = document.createElement('div');
         contentWrap.className = 'widget-modal-field';
-        contentWrap.style.flex = '1';
-
-        const contentLabelRow = document.createElement('div');
-        contentLabelRow.style.cssText = 'display:flex;align-items:center;justify-content:space-between;';
         const contentLabel = document.createElement('label');
         contentLabel.className = 'widget-modal-label';
         contentLabel.textContent = 'Content';
-        const imgInsertBtn = document.createElement('button');
-        imgInsertBtn.type = 'button';
-        imgInsertBtn.textContent = '📷 Insert image';
-        imgInsertBtn.style.cssText =
-          'font-size:11px;font-family:var(--font-family-ui);color:var(--color-primary);' +
-          'background:none;border:none;cursor:pointer;padding:0;';
-        contentLabelRow.appendChild(contentLabel);
-        contentLabelRow.appendChild(imgInsertBtn);
-
-        const imgFileInput = document.createElement('input');
-        imgFileInput.type = 'file';
-        imgFileInput.accept = 'image/*';
-        imgFileInput.style.display = 'none';
-
-        const contentArea = document.createElement('textarea');
-        contentArea.className = 'widget-modal-textarea';
-        contentArea.style.minHeight = '160px';
-        contentArea.value = item.content;
-        contentArea.addEventListener('input', function () {
-          working.items[selectedIdx].content = contentArea.value;
-        });
-
-        imgInsertBtn.addEventListener('click', function () { imgFileInput.click(); });
-        imgFileInput.addEventListener('change', function () {
-          const file = imgFileInput.files[0];
-          if (!file) return;
-          const reader = new FileReader();
-          reader.onload = function (e) {
-            const tag = '<img src="' + e.target.result + '" style="max-width:100%;height:auto;">';
-            const start = contentArea.selectionStart;
-            const end   = contentArea.selectionEnd;
-            contentArea.value =
-              contentArea.value.substring(0, start) + tag + contentArea.value.substring(end);
-            working.items[selectedIdx].content = contentArea.value;
-            contentArea.setSelectionRange(start + tag.length, start + tag.length);
-            contentArea.focus();
-          };
-          reader.readAsDataURL(file);
-          imgFileInput.value = '';
-        });
-
-        contentWrap.appendChild(contentLabelRow);
-        contentWrap.appendChild(imgFileInput);
-        contentWrap.appendChild(contentArea);
+        const contentMount = document.createElement('div');
+        contentWrap.appendChild(contentLabel);
+        contentWrap.appendChild(contentMount);
 
         rightCol.appendChild(headerWrap);
         rightCol.appendChild(contentWrap);
+
+        contentField = new RichTextField(contentMount, item.content || '');
         requestAnimationFrame(function () { headerInput.focus(); });
       }
 
       addItemBtn.addEventListener('click', function () {
         if (working.items.length >= 8) return;
+        flushRichFields();
         working.items.push({ id: 'item-' + Date.now(), header: 'New Panel', content: '', open: false });
         selectedIdx = working.items.length - 1;
         renderItemList();
@@ -434,6 +391,7 @@
 
       function close(save) {
         document.removeEventListener('keydown', onKey);
+        flushRichFields();
         if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
         if (!save) return;
         self.updateData(working);

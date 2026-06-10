@@ -149,5 +149,45 @@
     });
   }
 
-  window.WidgetModal = { open };
+  /**
+   * WidgetModal.makeAlignRow(initialValue, onChange) → HTMLElement
+   *
+   * Returns a row of three toggle buttons (Left / Center / Right).
+   * initialValue — 'left' | 'center' | 'right'  (defaults to 'left')
+   * onChange(value) — called whenever the selection changes
+   */
+  function makeAlignRow(initialValue, onChange) {
+    const row = document.createElement('div');
+    row.className = 'widget-modal-align-row';
+
+    var current = initialValue || 'left';
+    var buttons = [];
+
+    [
+      { value: 'left',   label: 'Left' },
+      { value: 'center', label: 'Center' },
+      { value: 'right',  label: 'Right' },
+    ].forEach(function (def) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'widget-modal-align-btn' + (def.value === current ? ' is-active' : '');
+      btn.textContent = def.label;
+      btn.dataset.alignValue = def.value;
+
+      btn.addEventListener('click', function () {
+        current = def.value;
+        buttons.forEach(function (b) {
+          b.classList.toggle('is-active', b.dataset.alignValue === current);
+        });
+        if (onChange) onChange(current);
+      });
+
+      buttons.push(btn);
+      row.appendChild(btn);
+    });
+
+    return row;
+  }
+
+  window.WidgetModal = { open, makeAlignRow };
 })();

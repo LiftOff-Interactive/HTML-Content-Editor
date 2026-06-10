@@ -19,7 +19,8 @@
     static widgetIcon        = '📑';
     static widgetDescription = 'Tabbed content panels';
     static defaultData       = {
-      _v: 1,
+      _v: 2,
+      widgetAlign: 'left',
       tabs: [
         { id: 'tab-1', label: 'Tab 1', content: '' },
         { id: 'tab-2', label: 'Tab 2', content: '' },
@@ -38,11 +39,11 @@
       const activeId = data.activeTab || data.tabs[0].id;
 
       let tabBtns = '';
-      let panels = '';
+      let panels  = '';
 
       data.tabs.forEach(function (tab, i) {
         const isActive = tab.id === activeId;
-        const panelId = uid + '-p' + i;
+        const panelId  = uid + '-p' + i;
         tabBtns +=
           '<button class="tab-btn' + (isActive ? ' tab-btn--active' : '') + '" ' +
             'role="tab" aria-selected="' + isActive + '" ' +
@@ -77,15 +78,14 @@
       const activeId = data.activeTab || data.tabs[0].id;
       const root = getComputedStyle(document.documentElement);
 
-      const primary  = root.getPropertyValue('--color-primary').trim()       || '#2563eb';
-      const border   = root.getPropertyValue('--color-border').trim()        || '#e2e8f0';
-      const surface  = root.getPropertyValue('--color-surface').trim()       || '#f8fafc';
-      const text     = root.getPropertyValue('--color-text').trim()          || '#1e293b';
-      const muted    = root.getPropertyValue('--color-text-muted').trim()    || '#64748b';
-      const font     = root.getPropertyValue('--font-family-body').trim()    || 'Georgia, serif';
-      const radius   = root.getPropertyValue('--widget-border-radius').trim()|| '0.5rem';
+      const primary  = root.getPropertyValue('--color-primary').trim()        || '#2563eb';
+      const border   = root.getPropertyValue('--color-border').trim()         || '#e2e8f0';
+      const surface  = root.getPropertyValue('--color-surface').trim()        || '#f8fafc';
+      const text     = root.getPropertyValue('--color-text').trim()           || '#1e293b';
+      const muted    = root.getPropertyValue('--color-text-muted').trim()     || '#64748b';
+      const font     = root.getPropertyValue('--font-family-body').trim()     || 'Georgia, serif';
+      const radius   = root.getPropertyValue('--widget-border-radius').trim() || '0.5rem';
 
-      // Self-contained onclick — scoped to this widget's container via data attribute
       const onclick =
         '(function(btn){' +
           'var g=btn.closest("[data-tabs-id]");' +
@@ -102,7 +102,7 @@
           '});' +
         '})(this)';
 
-      let tabBtns = '';
+      let tabBtns   = '';
       let tabPanels = '';
 
       data.tabs.forEach(function (tab) {
@@ -113,8 +113,7 @@
           'background:none;cursor:pointer;' +
           'font-family:' + font + ';font-size:14px;' +
           'font-weight:' + (isActive ? '600' : '400') + ';' +
-          'color:' + (isActive ? primary : muted) + ';' +
-          'white-space:nowrap;';
+          'color:' + (isActive ? primary : muted) + ';white-space:nowrap;';
         tabBtns +=
           '<button role="tab" aria-selected="' + isActive + '" ' +
             'data-tab-id="' + esc(tab.id) + '" ' +
@@ -131,15 +130,10 @@
       });
 
       container.innerHTML =
-        '<div data-tabs-id="' + uid + '" style="' +
-          'border:1px solid ' + border + ';' +
-          'border-radius:' + radius + ';' +
-          'overflow:hidden;margin:8px 0;' +
-        '">' +
-          '<div role="tablist" style="' +
-            'display:flex;border-bottom:1px solid ' + border + ';' +
-            'background:' + surface + ';overflow-x:auto;' +
-          '">' + tabBtns + '</div>' +
+        '<div data-tabs-id="' + uid + '" style="border:1px solid ' + border + ';border-radius:' + radius + ';overflow:hidden;margin:8px 0;">' +
+          '<div role="tablist" style="display:flex;border-bottom:1px solid ' + border + ';background:' + surface + ';overflow-x:auto;">' +
+            tabBtns +
+          '</div>' +
           '<div>' + tabPanels + '</div>' +
         '</div>';
     }
@@ -151,7 +145,17 @@
     _openEditModal(data) {
       const self = this;
       const working = JSON.parse(JSON.stringify(data));
+      if (!working.widgetAlign) working.widgetAlign = 'left';
       let selectedIdx = 0;
+      let contentField = null;
+
+      function flushRichFields() {
+        if (contentField) {
+          working.tabs[selectedIdx].content = contentField.getHtml();
+          contentField.destroy();
+          contentField = null;
+        }
+      }
 
       const overlay = document.createElement('div');
       overlay.className = 'widget-modal-overlay';
@@ -179,13 +183,11 @@
 
       // Two-column body
       const body = document.createElement('div');
-      body.style.cssText = 'display:flex;min-height:280px;';
+      body.style.cssText = 'display:flex;min-height:300px;';
 
-      // Left: tab list
       const leftCol = document.createElement('div');
       leftCol.style.cssText =
-        'width:160px;flex-shrink:0;border-right:1px solid var(--color-border);' +
-        'display:flex;flex-direction:column;';
+        'width:160px;flex-shrink:0;border-right:1px solid var(--color-border);display:flex;flex-direction:column;';
 
       const tabListEl = document.createElement('div');
       tabListEl.style.cssText = 'flex:1;overflow-y:auto;';
@@ -201,12 +203,23 @@
       leftCol.appendChild(tabListEl);
       leftCol.appendChild(addTabBtn);
 
-      // Right: edit fields for selected tab
       const rightCol = document.createElement('div');
-      rightCol.style.cssText = 'flex:1;padding:16px;display:flex;flex-direction:column;gap:12px;';
+      rightCol.style.cssText = 'flex:1;padding:16px;display:flex;flex-direction:column;gap:12px;overflow-y:auto;';
 
       body.appendChild(leftCol);
       body.appendChild(rightCol);
+
+      // Widget alignment — full-width section
+      const alignSection = document.createElement('div');
+      alignSection.style.cssText =
+        'padding:10px 16px;border-top:1px solid var(--color-border);display:flex;flex-direction:column;gap:6px;';
+      const alignLabel = document.createElement('label');
+      alignLabel.className = 'widget-modal-label';
+      alignLabel.textContent = 'Widget Alignment';
+      alignSection.appendChild(alignLabel);
+      alignSection.appendChild(WidgetModal.makeAlignRow(working.widgetAlign, function (v) {
+        working.widgetAlign = v;
+      }));
 
       // Footer
       const footer = document.createElement('div');
@@ -224,9 +237,20 @@
 
       dialog.appendChild(header);
       dialog.appendChild(body);
+      dialog.appendChild(alignSection);
       dialog.appendChild(footer);
       overlay.appendChild(dialog);
       document.body.appendChild(overlay);
+
+      function makeReorderBtn(symbol, isSelected) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.textContent = symbol;
+        btn.style.cssText =
+          'background:none;border:none;cursor:pointer;font-size:9px;padding:0 1px;line-height:1;' +
+          'color:' + (isSelected ? 'rgba(255,255,255,0.75)' : 'var(--color-text-muted)') + ';';
+        return btn;
+      }
 
       function renderTabList() {
         tabListEl.innerHTML = '';
@@ -236,21 +260,19 @@
           item.style.cssText =
             'display:flex;align-items:center;padding:7px 10px;cursor:pointer;' +
             'font-size:12px;font-family:var(--font-family-ui);gap:2px;' +
-            (isSelected
-              ? 'background:var(--color-primary);color:#fff;'
-              : 'color:var(--color-text);');
+            (isSelected ? 'background:var(--color-primary);color:#fff;' : 'color:var(--color-text);');
 
           const labelSpan = document.createElement('span');
           labelSpan.style.cssText = 'flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
           labelSpan.textContent = tab.label || 'Tab ' + (idx + 1);
 
-          // Up/Down buttons
-          const upBtn = makeReorderBtn('▲', isSelected);
+          const upBtn   = makeReorderBtn('▲', isSelected);
           const downBtn = makeReorderBtn('▼', isSelected);
 
           upBtn.addEventListener('click', function (e) {
             e.stopPropagation();
             if (idx === 0) return;
+            flushRichFields();
             working.tabs.splice(idx - 1, 0, working.tabs.splice(idx, 1)[0]);
             selectedIdx = idx - 1;
             renderTabList();
@@ -259,6 +281,7 @@
           downBtn.addEventListener('click', function (e) {
             e.stopPropagation();
             if (idx === working.tabs.length - 1) return;
+            flushRichFields();
             working.tabs.splice(idx + 1, 0, working.tabs.splice(idx, 1)[0]);
             selectedIdx = idx + 1;
             renderTabList();
@@ -278,6 +301,7 @@
               'color:' + (isSelected ? 'rgba(255,255,255,0.75)' : 'var(--color-text-muted)') + ';';
             delBtn.addEventListener('click', function (e) {
               e.stopPropagation();
+              flushRichFields();
               working.tabs.splice(idx, 1);
               if (selectedIdx >= working.tabs.length) selectedIdx = working.tabs.length - 1;
               renderTabList();
@@ -287,6 +311,8 @@
           }
 
           item.addEventListener('click', function () {
+            if (idx === selectedIdx) return;
+            flushRichFields();
             selectedIdx = idx;
             renderTabList();
             renderRight();
@@ -296,16 +322,6 @@
 
         addTabBtn.disabled = working.tabs.length >= 8;
         addTabBtn.style.opacity = working.tabs.length >= 8 ? '0.4' : '1';
-      }
-
-      function makeReorderBtn(symbol, isSelected) {
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.textContent = symbol;
-        btn.style.cssText =
-          'background:none;border:none;cursor:pointer;font-size:9px;padding:0 1px;line-height:1;' +
-          'color:' + (isSelected ? 'rgba(255,255,255,0.75)' : 'var(--color-text-muted)') + ';';
-        return btn;
       }
 
       function renderRight() {
@@ -331,65 +347,23 @@
 
         const contentWrap = document.createElement('div');
         contentWrap.className = 'widget-modal-field';
-        contentWrap.style.flex = '1';
-
-        const contentLabelRow = document.createElement('div');
-        contentLabelRow.style.cssText = 'display:flex;align-items:center;justify-content:space-between;';
         const contentLabel = document.createElement('label');
         contentLabel.className = 'widget-modal-label';
         contentLabel.textContent = 'Content';
-        const imgInsertBtn = document.createElement('button');
-        imgInsertBtn.type = 'button';
-        imgInsertBtn.textContent = '📷 Insert image';
-        imgInsertBtn.style.cssText =
-          'font-size:11px;font-family:var(--font-family-ui);color:var(--color-primary);' +
-          'background:none;border:none;cursor:pointer;padding:0;';
-        contentLabelRow.appendChild(contentLabel);
-        contentLabelRow.appendChild(imgInsertBtn);
-
-        const imgFileInput = document.createElement('input');
-        imgFileInput.type = 'file';
-        imgFileInput.accept = 'image/*';
-        imgFileInput.style.display = 'none';
-
-        const contentArea = document.createElement('textarea');
-        contentArea.className = 'widget-modal-textarea';
-        contentArea.style.minHeight = '160px';
-        contentArea.value = tab.content;
-        contentArea.addEventListener('input', function () {
-          working.tabs[selectedIdx].content = contentArea.value;
-        });
-
-        imgInsertBtn.addEventListener('click', function () { imgFileInput.click(); });
-        imgFileInput.addEventListener('change', function () {
-          const file = imgFileInput.files[0];
-          if (!file) return;
-          const reader = new FileReader();
-          reader.onload = function (e) {
-            const tag = '<img src="' + e.target.result + '" style="max-width:100%;height:auto;">';
-            const start = contentArea.selectionStart;
-            const end   = contentArea.selectionEnd;
-            contentArea.value =
-              contentArea.value.substring(0, start) + tag + contentArea.value.substring(end);
-            working.tabs[selectedIdx].content = contentArea.value;
-            contentArea.setSelectionRange(start + tag.length, start + tag.length);
-            contentArea.focus();
-          };
-          reader.readAsDataURL(file);
-          imgFileInput.value = '';
-        });
-
-        contentWrap.appendChild(contentLabelRow);
-        contentWrap.appendChild(imgFileInput);
-        contentWrap.appendChild(contentArea);
+        const contentMount = document.createElement('div');
+        contentWrap.appendChild(contentLabel);
+        contentWrap.appendChild(contentMount);
 
         rightCol.appendChild(labelWrap);
         rightCol.appendChild(contentWrap);
+
+        contentField = new RichTextField(contentMount, tab.content || '');
         requestAnimationFrame(function () { labelInput.focus(); });
       }
 
       addTabBtn.addEventListener('click', function () {
         if (working.tabs.length >= 8) return;
+        flushRichFields();
         working.tabs.push({ id: 'tab-' + Date.now(), label: 'New Tab', content: '' });
         selectedIdx = working.tabs.length - 1;
         renderTabList();
@@ -398,9 +372,9 @@
 
       function close(save) {
         document.removeEventListener('keydown', onKey);
+        flushRichFields();
         if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
         if (!save) return;
-        // Ensure activeTab still points to a valid tab
         const ids = working.tabs.map(function (t) { return t.id; });
         if (!ids.includes(working.activeTab)) working.activeTab = working.tabs[0].id;
         self.updateData(working);

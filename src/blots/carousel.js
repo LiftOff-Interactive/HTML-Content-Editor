@@ -19,7 +19,8 @@
     static widgetIcon        = '🎠';
     static widgetDescription = 'Image or content slider with prev/next navigation';
     static defaultData       = {
-      _v: 1,
+      _v: 2,
+      widgetAlign: 'left',
       slides: [
         { id: 'slide-1', imageData: null, imageWidth: '100%', altText: '', caption: '', textContent: '<p>Slide 1 — click ✎ Edit to add an image or write content.</p>' },
         { id: 'slide-2', imageData: null, imageWidth: '100%', altText: '', caption: '', textContent: '<p>Slide 2 — click ✎ Edit to add an image or write content.</p>' },
@@ -258,12 +259,12 @@
     _openEditModal(data) {
       const self    = this;
       const working = JSON.parse(JSON.stringify(data));
+      if (!working.widgetAlign) working.widgetAlign = 'left';
       let selectedIdx = 0;
 
-      // Track the active ImageUploadField so it can be flushed before slide
-      // switches and on modal close.
       let currentImgField      = null;
       let currentImgFieldSlice = -1;
+      let textField            = null;
 
       function saveCurrentImgField() {
         if (!currentImgField || currentImgFieldSlice < 0) return;
@@ -276,6 +277,14 @@
         currentImgField.destroy();
         currentImgField      = null;
         currentImgFieldSlice = -1;
+      }
+
+      function flushRichFields() {
+        if (textField) {
+          working.slides[selectedIdx].textContent = textField.getHtml();
+          textField.destroy();
+          textField = null;
+        }
       }
 
       const overlay = document.createElement('div');
@@ -363,8 +372,21 @@
       footer.appendChild(cancelBtn);
       footer.appendChild(saveBtn);
 
+      // Widget alignment section
+      const alignSection = document.createElement('div');
+      alignSection.style.cssText =
+        'padding:10px 16px;border-top:1px solid var(--color-border);display:flex;flex-direction:column;gap:6px;';
+      const alignSectionLabel = document.createElement('label');
+      alignSectionLabel.className = 'widget-modal-label';
+      alignSectionLabel.textContent = 'Widget Alignment';
+      alignSection.appendChild(alignSectionLabel);
+      alignSection.appendChild(WidgetModal.makeAlignRow(working.widgetAlign, function (v) {
+        working.widgetAlign = v;
+      }));
+
       dialog.appendChild(header);
       dialog.appendChild(body);
+      dialog.appendChild(alignSection);
       dialog.appendChild(footer);
       overlay.appendChild(dialog);
       document.body.appendChild(overlay);
@@ -399,6 +421,8 @@
           upBtn.addEventListener('click', function (e) {
             e.stopPropagation();
             if (idx === 0) return;
+            flushRichFields();
+            saveCurrentImgField();
             working.slides.splice(idx - 1, 0, working.slides.splice(idx, 1)[0]);
             selectedIdx = idx - 1;
             renderSlideList();
@@ -407,6 +431,8 @@
           downBtn.addEventListener('click', function (e) {
             e.stopPropagation();
             if (idx === working.slides.length - 1) return;
+            flushRichFields();
+            saveCurrentImgField();
             working.slides.splice(idx + 1, 0, working.slides.splice(idx, 1)[0]);
             selectedIdx = idx + 1;
             renderSlideList();
@@ -426,6 +452,8 @@
               'color:' + (isSel ? 'rgba(255,255,255,0.75)' : 'var(--color-text-muted)') + ';';
             delBtn.addEventListener('click', function (e) {
               e.stopPropagation();
+              flushRichFields();
+              saveCurrentImgField();
               working.slides.splice(idx, 1);
               if (selectedIdx >= working.slides.length) selectedIdx = working.slides.length - 1;
               renderSlideList();
@@ -435,6 +463,9 @@
           }
 
           row.addEventListener('click', function () {
+            if (idx === selectedIdx) return;
+            flushRichFields();
+            saveCurrentImgField();
             selectedIdx = idx;
             renderSlideList();
             renderRight();
@@ -524,52 +555,15 @@
         textHint.style.cssText =
           'font-size:10px;color:var(--color-text-muted);font-family:var(--font-family-ui);white-space:nowrap;';
         textHint.textContent = 'shown when no image';
-        const txtImgBtn = document.createElement('button');
-        txtImgBtn.type = 'button';
-        txtImgBtn.textContent = '📷 Insert image';
-        txtImgBtn.style.cssText =
-          'font-size:11px;font-family:var(--font-family-ui);color:var(--color-primary);' +
-          'background:none;border:none;cursor:pointer;padding:0;white-space:nowrap;';
         textLabelRow.appendChild(textLabel);
         textLabelRow.appendChild(textHint);
-        textLabelRow.appendChild(txtImgBtn);
 
-        const txtImgInput = document.createElement('input');
-        txtImgInput.type = 'file';
-        txtImgInput.accept = 'image/*';
-        txtImgInput.style.display = 'none';
-
-        const textArea = document.createElement('textarea');
-        textArea.className = 'widget-modal-textarea';
-        textArea.style.minHeight = '120px';
-        textArea.value = slide.textContent || '';
-        textArea.placeholder = '<p>Your text content here. HTML is supported.</p>';
-        textArea.addEventListener('input', function () {
-          working.slides[selectedIdx].textContent = textArea.value;
-        });
-
-        txtImgBtn.addEventListener('click', function () { txtImgInput.click(); });
-        txtImgInput.addEventListener('change', function () {
-          const file = txtImgInput.files[0];
-          if (!file) return;
-          const reader = new FileReader();
-          reader.onload = function (ev) {
-            const tag = '<img src="' + ev.target.result + '" style="max-width:100%;height:auto;">';
-            const start = textArea.selectionStart;
-            const end   = textArea.selectionEnd;
-            textArea.value =
-              textArea.value.substring(0, start) + tag + textArea.value.substring(end);
-            working.slides[selectedIdx].textContent = textArea.value;
-            textArea.setSelectionRange(start + tag.length, start + tag.length);
-            textArea.focus();
-          };
-          reader.readAsDataURL(file);
-          txtImgInput.value = '';
-        });
+        const textMount = document.createElement('div');
 
         textWrap.appendChild(textLabelRow);
-        textWrap.appendChild(txtImgInput);
-        textWrap.appendChild(textArea);
+        textWrap.appendChild(textMount);
+
+        textField = new RichTextField(textMount, slide.textContent || '');
 
         function updateImageFields() {
           const hasImg = !!working.slides[selectedIdx].imageData;
@@ -587,6 +581,8 @@
 
       addSlideBtn.addEventListener('click', function () {
         if (working.slides.length >= 12) return;
+        flushRichFields();
+        saveCurrentImgField();
         working.slides.push({
           id:          'slide-' + Date.now(),
           imageData:   null,
@@ -601,6 +597,7 @@
       });
 
       function close(save) {
+        flushRichFields();
         saveCurrentImgField();
         document.removeEventListener('keydown', onKey);
         if (overlay.parentNode) overlay.parentNode.removeChild(overlay);

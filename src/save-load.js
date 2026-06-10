@@ -1,7 +1,94 @@
 (function () {
   'use strict';
 
-  const SAVE_VERSION = 1;
+  const SAVE_VERSION = 2;
+
+  // ── v1 → v2 migration ────────────────────────────────────────────────────
+
+  function wrapHtml(str) {
+    if (!str) return '';
+    if (/^\s*</.test(str)) return str;
+    return '<p>' + str + '</p>';
+  }
+
+  function migrateV1toV2(payload) {
+    var ops = (payload.content && payload.content.ops) || [];
+    ops.forEach(function (op) {
+      if (!op.insert || typeof op.insert !== 'object') return;
+
+      if (op.insert.callout) {
+        var d = op.insert.callout;
+        if (!d.widgetAlign) d.widgetAlign = 'left';
+        d.body = wrapHtml(d.body);
+        d._v = 2;
+      }
+      if (op.insert.quote) {
+        var d = op.insert.quote;
+        if (!d.widgetAlign) d.widgetAlign = 'left';
+        d.quote = wrapHtml(d.quote);
+        d._v = 2;
+      }
+      if (op.insert.timeline) {
+        var d = op.insert.timeline;
+        if (!d.widgetAlign) d.widgetAlign = 'left';
+        if (d.items) d.items.forEach(function (item) { item.content = wrapHtml(item.content); });
+        d._v = 2;
+      }
+      if (op.insert.accordion) {
+        var d = op.insert.accordion;
+        if (!d.widgetAlign) d.widgetAlign = 'left';
+        if (d.items) d.items.forEach(function (item) { item.content = wrapHtml(item.content); });
+        d._v = 2;
+      }
+      if (op.insert.tabs) {
+        var d = op.insert.tabs;
+        if (!d.widgetAlign) d.widgetAlign = 'left';
+        if (d.tabs) d.tabs.forEach(function (tab) { tab.content = wrapHtml(tab.content); });
+        d._v = 2;
+      }
+      if (op.insert['flip-cards']) {
+        var d = op.insert['flip-cards'];
+        if (!d.widgetAlign) d.widgetAlign = 'left';
+        if (d.cards) d.cards.forEach(function (card) {
+          if (!card.frontBody) card.frontBody = '';
+          card.back = wrapHtml(card.back);
+        });
+        d._v = 2;
+      }
+      if (op.insert['click-reveal']) {
+        var d = op.insert['click-reveal'];
+        if (!d.widgetAlign) d.widgetAlign = 'left';
+        if (d.items) d.items.forEach(function (item) { item.content = wrapHtml(item.content); });
+        d._v = 2;
+      }
+      if (op.insert.carousel) {
+        var d = op.insert.carousel;
+        if (!d.widgetAlign) d.widgetAlign = 'left';
+        if (d.slides) d.slides.forEach(function (slide) {
+          slide.textContent = wrapHtml(slide.textContent);
+        });
+        d._v = 2;
+      }
+      if (op.insert.hotspot) {
+        var d = op.insert.hotspot;
+        if (!d.widgetAlign) d.widgetAlign = 'left';
+        if (d.pins) d.pins.forEach(function (pin) { pin.content = wrapHtml(pin.content); });
+        d._v = 2;
+      }
+      if (op.insert['knowledge-check']) {
+        var d = op.insert['knowledge-check'];
+        if (!d.widgetAlign) d.widgetAlign = 'left';
+        d.question = wrapHtml(d.question);
+        if (d.hint) d.hint = wrapHtml(d.hint);
+        if (d.options) d.options.forEach(function (opt) {
+          opt.feedback = wrapHtml(opt.feedback);
+        });
+        d._v = 2;
+      }
+    });
+    payload.version = 2;
+    return payload;
+  }
 
   // ── Toast ─────────────────────────────────────────────────────────────────
 
@@ -85,9 +172,12 @@
         try {
           const payload = JSON.parse(e.target.result);
 
-          if (!payload || payload.version !== SAVE_VERSION) {
+          if (!payload || (payload.version !== 1 && payload.version !== 2)) {
             showToast('Incompatible file — saved with a different version of Content Editor.');
             return;
+          }
+          if (payload.version === 1) {
+            payload = migrateV1toV2(payload);
           }
 
           const quill = window.contentEditor && window.contentEditor.quill;

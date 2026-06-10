@@ -19,7 +19,8 @@
     static widgetIcon        = '📍';
     static widgetDescription = 'Image with clickable pin markers and tooltips';
     static defaultData = {
-      _v: 1,
+      _v: 2,
+      widgetAlign: 'left',
       imageData: null,
       altText: '',
       pins: [],
@@ -48,7 +49,7 @@
               'style="left:' + pin.x + '%;top:' + pin.y + '%;" ' +
               'aria-hidden="true">' +
             '<strong class="hotspot-tooltip-label">' + esc(pin.label) + '</strong>' +
-            (pin.content ? '<p class="hotspot-tooltip-content">' + esc(pin.content) + '</p>' : '') +
+            (pin.content ? '<div class="hotspot-tooltip-content">' + pin.content + '</div>' : '') +
           '</div>';
       });
 
@@ -173,8 +174,8 @@
               esc(pin.label) +
             '</strong>' +
             (pin.content
-              ? '<p style="margin:0;font-size:13px;line-height:1.5;color:' + text + ';">' +
-                  esc(pin.content) + '</p>'
+              ? '<div style="margin:0;font-size:13px;line-height:1.5;color:' + text + ';">' +
+                  pin.content + '</div>'
               : '') +
           '</div>';
       });
@@ -207,7 +208,19 @@
     _openEditModal(data) {
       const self = this;
       const working = JSON.parse(JSON.stringify(data));
+      if (!working.widgetAlign) working.widgetAlign = 'left';
       let selectedPinIdx = working.pins.length > 0 ? 0 : -1;
+      let contentField = null;
+
+      function flushRichFields() {
+        if (contentField) {
+          if (selectedPinIdx >= 0 && working.pins[selectedPinIdx]) {
+            working.pins[selectedPinIdx].content = contentField.getHtml();
+          }
+          contentField.destroy();
+          contentField = null;
+        }
+      }
 
       // --- Modal skeleton ---
       const overlay = document.createElement('div');
@@ -261,8 +274,20 @@
       footer.appendChild(cancelBtn);
       footer.appendChild(saveBtn);
 
+      const alignSection = document.createElement('div');
+      alignSection.style.cssText =
+        'padding:10px 16px;border-top:1px solid var(--color-border);display:flex;flex-direction:column;gap:6px;';
+      const alignSectionLabel = document.createElement('label');
+      alignSectionLabel.className = 'widget-modal-label';
+      alignSectionLabel.textContent = 'Widget Alignment';
+      alignSection.appendChild(alignSectionLabel);
+      alignSection.appendChild(WidgetModal.makeAlignRow(working.widgetAlign, function (v) {
+        working.widgetAlign = v;
+      }));
+
       dialog.appendChild(header);
       dialog.appendChild(body);
+      dialog.appendChild(alignSection);
       dialog.appendChild(footer);
       overlay.appendChild(dialog);
       document.body.appendChild(overlay);
@@ -436,6 +461,7 @@
         const rect = imgEl.getBoundingClientRect();
         const x = Math.round(((e.clientX - rect.left) / rect.width)  * 1000) / 10;
         const y = Math.round(((e.clientY - rect.top)  / rect.height) * 1000) / 10;
+        flushRichFields();
         working.pins.push({
           id: 'pin-' + Date.now(),
           x: Math.max(2, Math.min(98, x)),
@@ -477,6 +503,8 @@
           marker.setAttribute('aria-label', 'Pin ' + (idx + 1) + (pin.label ? ': ' + pin.label : ''));
           marker.addEventListener('click', function (e) {
             e.stopPropagation();
+            if (idx === selectedPinIdx) return;
+            flushRichFields();
             selectedPinIdx = idx;
             renderPins();
             renderPinList();
@@ -525,6 +553,7 @@
             'color:' + (isSelected ? 'rgba(255,255,255,0.75)' : 'var(--color-text-muted)') + ';';
           delBtn.addEventListener('click', function (e) {
             e.stopPropagation();
+            flushRichFields();
             working.pins.splice(idx, 1);
             if (selectedPinIdx >= working.pins.length) selectedPinIdx = working.pins.length - 1;
             renderPins();
@@ -536,6 +565,8 @@
           row.appendChild(labelSpan);
           row.appendChild(delBtn);
           row.addEventListener('click', function () {
+            if (idx === selectedPinIdx) return;
+            flushRichFields();
             selectedPinIdx = idx;
             renderPins();
             renderPinList();
@@ -588,23 +619,19 @@
         const contentLbl = document.createElement('label');
         contentLbl.className = 'widget-modal-label';
         contentLbl.textContent = 'Tooltip content';
-        const contentArea = document.createElement('textarea');
-        contentArea.className = 'widget-modal-textarea';
-        contentArea.style.minHeight = '80px';
-        contentArea.value = pin.content;
-        contentArea.placeholder = 'Description shown in the tooltip…';
-        contentArea.addEventListener('input', function () {
-          working.pins[selectedPinIdx].content = contentArea.value;
-        });
+        const contentMount = document.createElement('div');
         contentWrap.appendChild(contentLbl);
-        contentWrap.appendChild(contentArea);
+        contentWrap.appendChild(contentMount);
 
         pinFormEl.appendChild(pinNumLbl);
         pinFormEl.appendChild(labelWrap);
         pinFormEl.appendChild(contentWrap);
+
+        contentField = new RichTextField(contentMount, pin.content || '');
       }
 
       function close(save) {
+        flushRichFields();
         document.removeEventListener('keydown', onKey);
         if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
         if (!save) return;

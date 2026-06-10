@@ -15,6 +15,10 @@
     return 'opt-' + Date.now() + '-' + Math.floor(Math.random() * 9999);
   }
 
+  function stripTags(html) {
+    return (html || '').replace(/<[^>]*>/g, '').trim();
+  }
+
   class KnowledgeCheckBlot extends BaseWidgetBlot {
     static blotName          = 'knowledge-check';
     static tagName           = 'div';
@@ -23,7 +27,8 @@
     static widgetIcon        = '❓';
     static widgetDescription = 'Multiple-choice or true/false self-assessment question';
     static defaultData = {
-      _v: 1,
+      _v: 2,
+      widgetAlign: 'left',
       questionType: 'multiple-choice',
       question: 'Enter your question here…',
       options: [
@@ -62,7 +67,7 @@
             }
           }
           const fbHtml = (self._submitted && opt.feedback)
-            ? '<div class="kc-opt-feedback">' + esc(opt.feedback) + '</div>'
+            ? '<div class="kc-opt-feedback">' + opt.feedback + '</div>'
             : '';
           optionsHtml +=
             '<button type="button" class="kc-tf-btn' +
@@ -83,7 +88,7 @@
             }
           }
           const fbHtml = (self._submitted && opt.feedback)
-            ? '<div class="kc-opt-feedback">' + esc(opt.feedback) + '</div>'
+            ? '<div class="kc-opt-feedback">' + opt.feedback + '</div>'
             : '';
           optionsHtml +=
             '<label class="kc-opt' + stateClass + '">' +
@@ -101,7 +106,7 @@
               (self._hintVisible ? 'Hide Hint' : 'Show Hint') +
             '</button>' +
             '<div class="kc-hint"' + (self._hintVisible ? '' : ' style="display:none;"') + '>' +
-              esc(data.hint) +
+              data.hint +
             '</div>' +
           '</div>'
         : '';
@@ -124,7 +129,7 @@
           '</div>' +
           '<div class="kc-body">' +
             '<fieldset class="kc-fieldset">' +
-              '<legend class="kc-question">' + esc(data.question) + '</legend>' +
+              '<legend class="kc-question">' + data.question + '</legend>' +
               hintHtml +
               '<div class="kc-options">' + optionsHtml + '</div>' +
               actionHtml +
@@ -206,7 +211,6 @@
       const opts = data.options || [];
       const isTF = data.questionType === 'true-false';
 
-      // Obfuscate correct indices — stops casual source inspection
       const correctIndices = [];
       opts.forEach(function (opt, idx) { if (opt.correct) correctIndices.push(idx); });
       const answerKey = btoa(JSON.stringify(correctIndices));
@@ -228,7 +232,7 @@
               '</button>' +
               '<div class="hce-kc-fb" style="display:none;margin-top:8px;font-size:0.875em;' +
                   'color:' + muted + ';font-style:italic;">' +
-                esc(opt.feedback || '') +
+                (opt.feedback || '') +
               '</div>' +
             '</div>';
         });
@@ -248,7 +252,7 @@
               '</label>' +
               '<div class="hce-kc-fb" style="display:none;margin-top:6px;padding-left:22px;' +
                   'font-size:0.875em;color:' + muted + ';font-style:italic;">' +
-                esc(opt.feedback || '') +
+                (opt.feedback || '') +
               '</div>' +
             '</div>';
         });
@@ -265,7 +269,7 @@
               'background:' + surface + ';border:1px solid ' + border + ';' +
               'border-radius:' + radius + ';font-family:' + font + ';font-size:0.9em;' +
               'color:' + muted + ';font-style:italic;">' +
-              esc(data.hint) +
+              data.hint +
             '</div>' +
           '</div>'
         : '';
@@ -283,7 +287,6 @@
         ? '<button class="hce-kc-retry" type="button" style="' + retryStyle + '">↺ Try Again</button>'
         : '';
 
-      // Build inline script
       const script =
         '(function(){' +
           'var root=document.querySelector(\'[data-kc="' + uid + '"]\');' +
@@ -295,13 +298,11 @@
           'var retryBtn=root.querySelector(".hce-kc-retry");' +
           'var isTF=' + (isTF ? 'true' : 'false') + ';' +
           'var selIdx=-1;' +
-          // Hint
           'if(hintBtn&&hintEl){hintBtn.addEventListener("click",function(){' +
             'var v=hintEl.style.display!=="none";' +
             'hintEl.style.display=v?"none":"block";' +
             'hintBtn.textContent=v?"Show Hint":"Hide Hint";' +
           '});}' +
-          // TF selection
           'if(isTF){root.querySelectorAll(".hce-kc-tf-btn").forEach(function(btn){' +
             'btn.addEventListener("click",function(){' +
               'root.querySelectorAll(".hce-kc-tf-btn").forEach(function(b){' +
@@ -313,7 +314,6 @@
               'selIdx=parseInt(btn.dataset.optIdx,10);' +
             '});' +
           '});}' +
-          // Submit
           'submitBtn.addEventListener("click",function(){' +
             'var idx=-1;' +
             'if(isTF){idx=selIdx;}' +
@@ -339,7 +339,6 @@
             'if(hintEl)hintEl.style.display="none";' +
             'if(retryBtn)retryBtn.style.display="inline-block";' +
           '});' +
-          // Retry
           'if(retryBtn){retryBtn.addEventListener("click",function(){' +
             'root.querySelectorAll("input").forEach(function(i){i.disabled=false;i.checked=false;});' +
             'if(isTF){root.querySelectorAll(".hce-kc-tf-btn").forEach(function(b){' +
@@ -366,7 +365,7 @@
             '<legend style="font-family:' + font + ';font-size:1.1em;font-weight:600;' +
                 'color:' + text + ';margin-bottom:16px;display:block;' +
                 'border:none;padding:0;width:100%;">' +
-              esc(data.question) +
+              data.question +
             '</legend>' +
             hintHtml +
             '<div>' + optionsHtml + '</div>' +
@@ -386,6 +385,7 @@
     _openEditModal(data) {
       const self    = this;
       const working = JSON.parse(JSON.stringify(data));
+      if (!working.widgetAlign) working.widgetAlign = 'left';
       let selOptIdx = 0;
 
       if (!working.options || working.options.length === 0) {
@@ -395,7 +395,28 @@
         working.options[0].correct = true;
       }
 
-      // Modal skeleton
+      let questionField = null;
+      let feedbackRtf   = null;
+      let hintRtf       = null;
+
+      function flushRichFields() {
+        if (questionField) {
+          working.question = questionField.getHtml();
+          questionField.destroy();
+          questionField = null;
+        }
+        if (feedbackRtf) {
+          if (working.options[selOptIdx]) working.options[selOptIdx].feedback = feedbackRtf.getHtml();
+          feedbackRtf.destroy();
+          feedbackRtf = null;
+        }
+        if (hintRtf) {
+          working.hint = hintRtf.getHtml();
+          hintRtf.destroy();
+          hintRtf = null;
+        }
+      }
+
       const overlay = document.createElement('div');
       overlay.className = 'widget-modal-overlay';
 
@@ -434,6 +455,17 @@
       body.appendChild(leftCol);
       body.appendChild(rightCol);
 
+      const alignSection = document.createElement('div');
+      alignSection.style.cssText =
+        'padding:10px 16px;border-top:1px solid var(--color-border);display:flex;flex-direction:column;gap:6px;';
+      const alignSectionLabel = document.createElement('label');
+      alignSectionLabel.className = 'widget-modal-label';
+      alignSectionLabel.textContent = 'Widget Alignment';
+      alignSection.appendChild(alignSectionLabel);
+      alignSection.appendChild(WidgetModal.makeAlignRow(working.widgetAlign, function (v) {
+        working.widgetAlign = v;
+      }));
+
       const footer = document.createElement('div');
       footer.className = 'widget-modal-footer';
       const cancelBtn = document.createElement('button');
@@ -449,6 +481,7 @@
 
       dialog.appendChild(header);
       dialog.appendChild(body);
+      dialog.appendChild(alignSection);
       dialog.appendChild(footer);
       overlay.appendChild(dialog);
       document.body.appendChild(overlay);
@@ -475,7 +508,6 @@
         'padding:8px 10px;font-size:12px;font-family:var(--font-family-ui);' +
         'border:none;background:transparent;cursor:pointer;color:var(--color-primary);text-align:left;';
 
-      // Settings: question type
       const settingsWrap = document.createElement('div');
       settingsWrap.style.cssText =
         'padding:10px 12px;border-top:1px solid var(--color-border);' +
@@ -499,6 +531,7 @@
         rb.addEventListener('change', function () {
           if (!rb.checked) return;
           const prev = working.questionType;
+          flushRichFields();
           working.questionType = value;
           if (value === 'true-false' && prev !== 'true-false') {
             const firstCorrect = working.options.findIndex(function (o) { return o.correct; });
@@ -529,7 +562,6 @@
       leftCol.appendChild(optListEl);
       leftCol.appendChild(optFooter);
 
-      // Render functions
       function renderOptList() {
         optListEl.innerHTML = '';
         const isTF = working.questionType === 'true-false';
@@ -552,7 +584,7 @@
 
           const textSpan = document.createElement('span');
           textSpan.style.cssText = 'flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
-          textSpan.textContent = opt.text || '(empty)';
+          textSpan.textContent = stripTags(opt.text) || '(empty)';
 
           row.appendChild(correctDot);
           row.appendChild(textSpan);
@@ -575,6 +607,7 @@
             upBtn.addEventListener('click', function (e) {
               e.stopPropagation();
               if (idx === 0) return;
+              flushRichFields();
               working.options.splice(idx - 1, 0, working.options.splice(idx, 1)[0]);
               selOptIdx = idx - 1;
               renderOptList(); renderRight();
@@ -582,6 +615,7 @@
             downBtn.addEventListener('click', function (e) {
               e.stopPropagation();
               if (idx === working.options.length - 1) return;
+              flushRichFields();
               working.options.splice(idx + 1, 0, working.options.splice(idx, 1)[0]);
               selOptIdx = idx + 1;
               renderOptList(); renderRight();
@@ -589,6 +623,7 @@
             delBtn.addEventListener('click', function (e) {
               e.stopPropagation();
               if (working.options.length <= 2) return;
+              flushRichFields();
               const wasCorrect = working.options[idx].correct;
               working.options.splice(idx, 1);
               if (wasCorrect) working.options[0].correct = true;
@@ -601,6 +636,8 @@
           }
 
           row.addEventListener('click', function () {
+            if (idx === selOptIdx) return;
+            flushRichFields();
             selOptIdx = idx;
             renderOptList(); renderRight();
           });
@@ -617,21 +654,18 @@
       function renderRight() {
         rightCol.innerHTML = '';
 
-        // Question text
+        // Question
         const qWrap = document.createElement('div');
         qWrap.className = 'widget-modal-field';
         const qLabel = document.createElement('label');
         qLabel.className = 'widget-modal-label';
         qLabel.textContent = 'Question';
-        const qArea = document.createElement('textarea');
-        qArea.className = 'widget-modal-textarea';
-        qArea.style.minHeight = '60px';
-        qArea.value = working.question;
-        qArea.placeholder = 'Enter your question…';
-        qArea.addEventListener('input', function () { working.question = qArea.value; });
+        const qMount = document.createElement('div');
         qWrap.appendChild(qLabel);
-        qWrap.appendChild(qArea);
+        qWrap.appendChild(qMount);
         rightCol.appendChild(qWrap);
+
+        questionField = new RichTextField(qMount, working.question || '');
 
         const opt = working.options[selOptIdx];
         if (!opt) return;
@@ -647,7 +681,7 @@
         optHeading.textContent = 'Option ' + (selOptIdx + 1);
         rightCol.appendChild(optHeading);
 
-        // Option text
+        // Option text (plain input — TF is fixed, MC kept as plain text for button label clarity)
         const optTxtWrap = document.createElement('div');
         optTxtWrap.className = 'widget-modal-field';
         const optTxtLabel = document.createElement('label');
@@ -656,7 +690,7 @@
         const optTxtInput = document.createElement('input');
         optTxtInput.className = 'widget-modal-input';
         optTxtInput.type = 'text';
-        optTxtInput.value = opt.text;
+        optTxtInput.value = stripTags(opt.text);
         optTxtInput.placeholder = 'e.g. Option A';
         if (working.questionType === 'true-false') {
           optTxtInput.disabled = true;
@@ -699,17 +733,12 @@
         const fbLabel = document.createElement('label');
         fbLabel.className = 'widget-modal-label';
         fbLabel.textContent = 'Feedback (shown after submit)';
-        const fbArea = document.createElement('textarea');
-        fbArea.className = 'widget-modal-textarea';
-        fbArea.style.minHeight = '60px';
-        fbArea.value = opt.feedback || '';
-        fbArea.placeholder = 'Explain why this answer is right or wrong…';
-        fbArea.addEventListener('input', function () {
-          working.options[selOptIdx].feedback = fbArea.value;
-        });
+        const fbMount = document.createElement('div');
         fbWrap.appendChild(fbLabel);
-        fbWrap.appendChild(fbArea);
+        fbWrap.appendChild(fbMount);
         rightCol.appendChild(fbWrap);
+
+        feedbackRtf = new RichTextField(fbMount, opt.feedback || '');
 
         const hr2 = document.createElement('hr');
         hr2.style.cssText = 'border:none;border-top:1px solid var(--color-border);margin:0;';
@@ -721,15 +750,12 @@
         const hintLabel = document.createElement('label');
         hintLabel.className = 'widget-modal-label';
         hintLabel.textContent = 'Hint (optional)';
-        const hintInput = document.createElement('input');
-        hintInput.className = 'widget-modal-input';
-        hintInput.type = 'text';
-        hintInput.value = working.hint || '';
-        hintInput.placeholder = 'A nudge shown before the learner submits…';
-        hintInput.addEventListener('input', function () { working.hint = hintInput.value; });
+        const hintMount = document.createElement('div');
         hintWrap.appendChild(hintLabel);
-        hintWrap.appendChild(hintInput);
+        hintWrap.appendChild(hintMount);
         rightCol.appendChild(hintWrap);
+
+        hintRtf = new RichTextField(hintMount, working.hint || '');
 
         // Allow retry
         const retryRow = document.createElement('label');
@@ -747,6 +773,7 @@
 
       addOptBtn.addEventListener('click', function () {
         if (working.options.length >= 8 || working.questionType === 'true-false') return;
+        flushRichFields();
         working.options.push({ id: genId(), text: '', correct: false, feedback: '' });
         selOptIdx = working.options.length - 1;
         renderOptList(); renderRight();
@@ -757,6 +784,7 @@
       });
 
       function close(save) {
+        flushRichFields();
         document.removeEventListener('keydown', onKey);
         if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
         if (!save) return;
