@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>F1 — Edit-Modal Save-Button Self-Test</title>
+<style>
+  :root { color-scheme: light; }
+  body { margin: 0; font: 14px/1.5 system-ui, sans-serif; background: #0f1226; color: #e7e9f3; }
+  header { padding: 14px 20px; border-bottom: 1px solid #2a2f55; position: sticky; top: 0; background: #0f1226; z-index: 5; }
+  h1 { font-size: 16px; margin: 0 0 4px; }
+  #banner { font-weight: 700; font-size: 15px; padding: 6px 12px; border-radius: 999px; display: inline-block; }
+  .pending { background: #444; color: #fff; }
+  .ok { background: #18794e; color: #fff; }
+  .bad { background: #b4232f; color: #fff; }
+  main { display: flex; gap: 18px; padding: 16px 20px; align-items: flex-start; }
+  #results { flex: 1; min-width: 0; }
+  table { border-collapse: collapse; width: 100%; font-size: 12.5px; }
+  th, td { border: 1px solid #2a2f55; padding: 5px 8px; text-align: left; vertical-align: top; }
+  th { background: #1b1f40; position: sticky; top: 56px; }
+  td.p { color: #4ade80; font-weight: 700; }
+  td.f { color: #f87171; font-weight: 700; }
+  .ev { color: #9aa0c7; font-size: 11px; font-family: ui-monospace, monospace; white-space: pre-wrap; }
+  #stage { width: 768px; flex-shrink: 0; border: 2px dashed #2a2f55; border-radius: 8px; overflow: hidden; background: #fff; }
+  #stage .lbl { font-size: 11px; color: #9aa0c7; padding: 3px 6px; background: #0f1226; }
+  iframe { display: block; border: 0; width: 768px; background: #fff; }
+</style>
+</head>
+<body>
+<header>
+  <h1>F1 — Edit-Modal Save-Button Self-Test</h1>
+  <span id="banner" class="pending">Running…</span>
+  <span id="sub" class="ev"></span>
+</header>
+<main>
+  <div id="results"><table id="tbl"><thead><tr>
+    <th>Widget</th><th>Viewport</th>
+    <th title="Dialog fully within viewport">A·dialog</th>
+    <th title="Footer fully within viewport & inside dialog">B·footer</th>
+    <th title="Save button clickable (elementFromPoint hits it)">C·save</th>
+    <th title="Overflow contained by dialog: body scrolls internally, footer not clipped (dialog.scrollHeight ≤ clientHeight)">D·contain</th>
+    <th>Result</th><th>Evidence</th>
+  </tr></thead><tbody></tbody></table></div>
+  <div id="stage"><div class="lbl">live editor under test (height = simulated viewport)</div><iframe id="frame" src="index.html"></iframe></div>
+</main>
+
+<script>
+(function () {
+  'use strict';
+
+  // ── Config ────────────────────────────────────────────────────────────────
+  var HEIGHTS = [600, 400];          // simulated viewport heights to stress
+  var WIDTH = 768;                   // simulated viewport width (per spec)
+  var EPS = 1.5;                     // sub-pixel tolerance
+  var frame = document.getElementById('frame');
+  var tbody = document.querySelector('#tbl tbody');
+  var banner = document.getElementById('banner');
+  var sub = document.getElementById('sub');
+
+  var LONG_HTML = (function () {
+    var p = '<p>' + 'Maximum content stress line for layout overflow. '.repeat(8) + '</p>';
+    return p.repeat(30);
+  })();
+  var LONG_TEXT = 'Very long single-field value '.repeat(40);
+
+  function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+  function raf() { return new Promise(function (r) { requestAnimationFrame(function () { requestAnimationFrame(r); }); }); }
+
+  function waitForEditor() {
+    return new Promise(function (resolve, reject) {
+      var tries = 0;
+      (function poll() {
+        tries++;
+        var win = frame.contentWindow;
+        try {
+          if (win && win.contentEditor && win.contentEditor.quill &&
+              win.WidgetRegistry && win.Quill) { return resolve(win); }
+        } catch (e) { /* cross-origin during load */ }
+        if (tries > 200) return reject(new Error('editor never booted'));
+        setTimeout(poll, 50);
+      })();
+    });
+  }
+
+  function killAnim(doc) {
+    var s = doc.createElement('style');
+    s.textContent = '*,*::before,*::after{transition:none !important;animation:none !important;caret-color:transparent !important}';
+    doc.head.appendChild(s);
+  }
+
+  function clearOverlays(doc) {
+    doc.querySelectorAll('.widget-modal-overlay').forEach(function (o) { o.remove(); });
+  }
+
+  function resetDoc(win) {
+    clearOverlays(win.document);
+    var Delta = win.Quill.import('delta');
+    win.contentEditor.quill.setContents(new Delta().insert('\n'), 'silent');
+  }
+
+  // Insert one widget, open its real edit modal, return the overlay element.
+  function openModalFor(win, BlotClass) {
+    var quill = win.contentEditor.quill;
+    var name = BlotClass.blotName;
+    var data = JSON.parse(JSON.stringify(BlotClass.defaultData || {}));
+    quill.insertEmbed(0, name, data, 'user');
+    quill.update('silent');
+    var node = win.document.querySelector('#editor [data-widget-type="' + name + '"]');
+    if (!node) throw new Error('embed node not found for ' + name);
+    var blot = win.Quill.find(node);
+    if (!blot || typeof blot.edit !== 'function') throw new Error('blot/edit missing for ' + name);
+    blot.edit(BlotClass.value(node));
+    var overlays = win.document.querySelectorAll('.widget-modal-overlay');
+    var overlay = overlays[overlays.length - 1];
+    if (!overlay) throw new Error('no modal opened for ' + name);
+    return overlay;
+  }
+
+  // Fill every editable region with maximum content to force overflow.
+  function stuff(overlay) {
+    overlay.querySelectorAll('.ql-editor').forEach(function (ed) { ed.innerHTML = LONG_HTML; });
+    overlay.querySelectorAll('textarea').forEach(function (t) { t.value = LONG_TEXT; });
+    overlay.querySelectorAll('input[type="text"], input:not([type])').forEach(function (i) { i.value = LONG_TEXT; });
+  }
+
+  function findScroller(dialog) {
+    var win = dialog.ownerDocument.defaultView;
+    var all = dialog.querySelectorAll('*');
+    for (var i = 0; i < all.length; i++) {
+      var el = all[i];
+      var oy = win.getComputedStyle(el).overflowY;
+      if ((oy === 'auto' || oy === 'scroll') && el.scrollHeight > el.clientHeight + 4) return el;
+    }
+    return null;
+  }
+
+  function measure(win, overlay, H) {
+    var doc = win.document;
+    var dialog = overlay.querySelector('.widget-modal');
+    var footer = overlay.querySelector('.widget-modal-footer');
+    var save = overlay.querySelector('.widget-modal-btn--save');
+    var dr = dialog.getBoundingClientRect();
+    var fr = footer.getBoundingClientRect();
+    var sr = save.getBoundingClientRect();
+
+    // A — dialog fully inside the simulated viewport
+    var A = dr.top >= -EPS && dr.bottom <= H + EPS;
+    // B — footer fully inside viewport AND inside the dialog box (not clipped out)
+    var B = fr.top >= -EPS && fr.bottom <= H + EPS && fr.bottom <= dr.bottom + EPS && fr.top >= dr.top - EPS;
+    // C — Save button is the hit target at its own center (not covered / off-screen)
+    var cx = sr.left + sr.width / 2, cy = sr.top + sr.height / 2;
+    var hit = (cy >= 0 && cy <= H) ? doc.elementFromPoint(cx, cy) : null;
+    var C = !!hit && (hit === save || save.contains(hit) || hit.contains(save));
+    // D — overflow is CONTAINED by the dialog: the body shrinks and scrolls internally
+    //     instead of pushing the footer past the dialog's overflow:hidden clip.
+    //     In the bug, the unshrinkable body made dialog.scrollHeight > clientHeight.
+    var D = dialog.scrollHeight <= dialog.clientHeight + EPS;
+    // Informational only: which region absorbed the overflow (none = content fit).
+    var scroller = findScroller(dialog);
+    var deDoc = doc.documentElement;
+    var pageScrolled = deDoc.scrollHeight > deDoc.clientHeight + EPS;  // underlying app, not the modal
+
+    var ev =
+      'dialog ' + Math.round(dr.top) + '→' + Math.round(dr.bottom) + ' / vh ' + H +
+      ' · footer ' + Math.round(fr.top) + '→' + Math.round(fr.bottom) +
+      ' · save@' + Math.round(cx) + ',' + Math.round(cy) + ' hit=' + (hit ? (hit.className || hit.tagName) : 'null') +
+      ' · dialog sh/ch=' + dialog.scrollHeight + '/' + dialog.clientHeight +
+      ' · scroller=' + (scroller ? (scroller.className || scroller.tagName) + '(' + scroller.scrollHeight + '>' + scroller.clientHeight + ')' : 'none') +
+      ' · appScroll=' + pageScrolled;
+
+    return { A: A, B: B, C: C, D: D, pass: A && B && C && D, ev: ev };
+  }
+
+  function row(widget, vp, r) {
+    var tr = document.createElement('tr');
+    function cell(ok) { return '<td class="' + (ok ? 'p' : 'f') + '">' + (ok ? 'PASS' : 'FAIL') + '</td>'; }
+    tr.innerHTML =
+      '<td>' + widget + '</td><td>' + vp + '</td>' +
+      cell(r.A) + cell(r.B) + cell(r.C) + cell(r.D) +
+      '<td class="' + (r.pass ? 'p' : 'f') + '">' + (r.pass ? 'PASS' : 'FAIL') + '</td>' +
+      '<td class="ev">' + r.ev + '</td>';
+    tbody.appendChild(tr);
+  }
+
+  function errRow(widget, vp, msg) {
+    var tr = document.createElement('tr');
+    tr.innerHTML = '<td>' + widget + '</td><td>' + vp + '</td>' +
+      '<td class="f" colspan="5">ERROR</td><td class="ev">' + msg + '</td>';
+    tbody.appendChild(tr);
+  }
+
+  async function run() {
+    var win;
+    try { win = await waitForEditor(); }
+    catch (e) { banner.className = 'bad'; banner.textContent = 'BOOT FAILED'; sub.textContent = e.message; return; }
+    killAnim(win.document);
+
+    var widgets = win.WidgetRegistry.getAll();
+    var results = [];
+    var total = 0, passed = 0;
+
+    for (var h = 0; h < HEIGHTS.length; h++) {
+      var H = HEIGHTS[h];
+      frame.style.width = WIDTH + 'px';
+      frame.style.height = H + 'px';
+      await raf(); await sleep(60);   // let the inner layout settle at the new viewport
+
+      for (var w = 0; w < widgets.length; w++) {
+        var BlotClass = widgets[w];
+        var name = BlotClass.blotName;
+        var vp = WIDTH + '×' + H;
+        total++;
+        try {
+          resetDoc(win);
+          await raf();
+          var overlay = openModalFor(win, BlotClass);
+          await raf();             // let RichTextField mini-Quills mount
+          stuff(overlay);
+          await raf(); await sleep(20);
+          var r = measure(win, overlay, H);
+          if (r.pass) passed++;
+          results.push({ widget: name, vp: vp, A: r.A, B: r.B, C: r.C, D: r.D, pass: r.pass, ev: r.ev });
+          row(name, vp, r);
+          clearOverlays(win.document);
+        } catch (e) {
+          results.push({ widget: name, vp: vp, error: e.message });
+          errRow(name, vp, e.message);
+          try { clearOverlays(win.document); } catch (_) {}
+        }
+        await raf();
+      }
+    }
+
+    resetDoc(win);
+    frame.style.height = '640px';
+    var allPass = passed === total && total > 0;
+    banner.className = allPass ? 'ok' : 'bad';
+    banner.textContent = (allPass ? 'ALL GREEN' : 'FAILURES') + ' — ' + passed + '/' + total;
+    sub.textContent = ' ' + widgets.length + ' widgets × ' + HEIGHTS.length + ' viewports';
+    window.__F1_RESULTS__ = { passed: passed, total: total, allPass: allPass, cases: results };
+  }
+
+  frame.addEventListener('load', function () { run(); });
+})();
+</script>
+</body>
+</html>

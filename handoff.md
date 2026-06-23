@@ -1,5 +1,5 @@
 # Handoff — HTML Content Editor
-_Last updated: 2026-06-23 · Current stage: **Stage 8 — No-JavaScript / SharePoint-safe export (code complete + self-test verified; pending human verification in the live editor)**_
+_Last updated: 2026-06-23 · Current stage: **v3.0.0 foundation in progress on branch `stage-9-v3-foundation`. F1 (modal Save-button fix) ✅ done & verified (20/20 self-test green, 27/27 no-JS regression green). Next: F4 styling pass.**_
 
 ## Goals
 ~~Get the project to a public v1 release on GitHub.~~ **Done.** v1.0.0 is live.
@@ -11,9 +11,18 @@ Live URLs:
 - v2.0.0 release: https://github.com/Frankyface/HTML-Content-Editor/releases/tag/v2.0.0
 
 ## Current State
-All stages (1–7) complete. v2.0.0 shipped on `main`.
+All stages (1–7) complete. v2.0.0 shipped on `main`. Stage 8 (no-JS export) shipped on `main` (`d9e0b96`).
 
-**Stage 8 — No-JS / SharePoint export — code complete, self-test verified, not yet committed.**
+**v3.0.0 FOUNDATION — in progress on branch `stage-9-v3-foundation`.** Build order: F1 → F4 → F2 → F3 Phase 1 → course-mode foundation, each behind the §4 verification gate.
+
+**F1 — Fix: edit modals hide the Save button — ✅ DONE & VERIFIED.**
+- Part 1 (the fix): brought the 4 broken bespoke modal bodies into the canonical bounded-flex layout `display:flex;flex:1;min-height:0;overflow:hidden;` (dropping the per-body `min-height:NNNpx`): `tabs.js:253`, `carousel.js:439`, `hotspot.js:369`, `click-reveal.js:306`. Added `min-height:0;overflow-y:auto;` to `tabs.js:277` rightCol (the only broken modal whose rich-text column lacked overflow). Matches the 4 already-correct modals (accordion/flip-cards/knowledge-check/timeline).
+- Hardening: added `flex-shrink:0;` to `.widget-modal-header` and `.widget-modal-footer` in `main.css` so header/footer can never be squeezed.
+- Part 2 (the `WidgetModal.buildFrame()` DRY refactor) is **deferred** to a reviewed follow-up (decided with the human), tracked as a future task. Part 1 fully resolves the user-visible bug.
+- Verification: new `_modal_tests.html` self-test loads the real `index.html` in a height-controlled iframe (inner `100vh` = 600/400px), opens all 10 registry widgets' real edit modals, stuffs every rich-text/textarea/input field to overflow, and asserts (A) dialog within viewport, (B) footer within viewport & inside dialog, (C) Save button hit-tested via `elementFromPoint`, (D) overflow contained (`dialog.scrollHeight ≤ clientHeight`). **20/20 green** at 768×600 and 768×400. `_nojs_tests.html` still **27/27 green** (F1 didn't touch exports). Live editor boots with zero console errors.
+- Harness-bug note: the first run failed (D) because the initial metric measured the *underlying editor app* scrolling behind the fixed modal (irrelevant) and flagged widgets whose modal content simply fit. Replaced D with the precise `dialog.scrollHeight ≤ clientHeight` containment check — the exact discriminator of the original bug.
+
+**Stage 8 — No-JS / SharePoint export — shipped & pushed to `main` (commit `d9e0b96`).** v3.0.0 is now fully planned (see `v3_kickoff_prompt.md` + `docs/v3_master_plan.md`).
 The user deploys exports into SharePoint via the **Embed web part**, which strips `<script>`, `on*` handlers, and `javascript:` URLs — so the standard `Export HTML` widgets break there. Stage 8 adds a second **"Export for SharePoint"** button (`#export-sharepoint-btn`) that renders every widget JavaScript-free.
 - Engine: `src/export.js` `deltaToHtml(delta, opts)` / `buildExportHtml(delta, title, opts)` take `{ noJs }`; in no-JS mode each widget embed is rendered via `renderExportNoJS(container, data, ctx)` (fallback to `renderExport`). `ctx.uid` (`wx<n>`, per-export counter) is the only unique-id source — export instances are bare `Object.create(prototype)`, so `this._uid` is undefined.
 - 7 interactive blots got `renderExportNoJS`: tabs (radio+`:checked`), accordion (native `<details>`, single-open via `<details name>`), flip-cards (checkbox+`:checked`+`:has()`), click-reveal (`<details>`), carousel (scroll-snap + anchor nav), hotspot (radio+`:checked`+`:has()` + close-label), knowledge-check (radio+`:checked`+`:has()` submit-gate). The 4 static widgets (callout, quote, timeline, resizable-image) fall back to `renderExport` (already JS-free).
@@ -51,6 +60,7 @@ What's built (all stages):
 - `src/styles/main.css` — app shell + all widget CSS + dropdown styles + modal max-height constraint
 
 ## Things I've Changed
+- 2026-06-23: **v3 F1 — modal Save-button fix.** Edited `src/blots/tabs.js` (body@253 + rightCol@277), `carousel.js` (body@439), `hotspot.js` (body@369), `click-reveal.js` (body@306) to the canonical bounded-flex body layout; added `flex-shrink:0` to `.widget-modal-header`/`.widget-modal-footer` in `main.css`. New `_modal_tests.html` browser self-test (20/20 green). New `.claude/launch.json` (`hce`/8137). Copied import fixtures to `fixtures/` (git-ignored). Started branch `stage-9-v3-foundation`.
 - 2026-06-23: Stage 8 — No-JS / SharePoint export. New files: `staging/stage-8-nojs-export/overview.md`, `_nojs_selftest.html` (root-level browser QA harness — open over localhost, exports one of every widget no-JS into an iframe with PASS/FAIL banner). Edited `src/export.js` (no-JS mode + ctx + `#export-sharepoint-btn` wiring + `exportHtmlNoJs`), `index.html` (new button), and added `renderExportNoJS` to tabs/accordion/flip-cards/click-reveal/carousel/hotspot/knowledge-check. Per-widget conversions were drafted by a parallel agent workflow against the Tabs reference, then fixed (the `!important` inline-override bug) and browser-verified.
 - 2026-06-09: Stage 7 Features 2 & 3 complete + bug fixes. Shipped as v2.0.0.
   - Feature 2: `src/ui/rich-text-field.js` (new), rich text in all 11 widgets, v1→v2 migration in save-load.js.
@@ -78,5 +88,7 @@ What's built (all stages):
 - `window.contentEditor.getDocumentTitle()` shared by tab title (editor.js), save filename (save-load.js), and export title (export.js).
 
 ## Pointer
-→ Stage 8 (No-JS / SharePoint export) is code-complete and self-test-verified. Active feature file: `staging/stage-8-nojs-export/overview.md`.
-→ Next: human-verify the "Export for SharePoint" button in the live editor + a real SharePoint Embed web part, then commit. The `Things I've Changed` Tried/Failed insight: scoped-`<style>` state rules must use `!important` to beat widgets' inline base styles.
+→ Stage 8 (No-JS / SharePoint export) shipped & pushed to `main` (commit `d9e0b96`). Still worth doing once: human-verify the "Export for SharePoint" button against a real SharePoint Embed web part. Tried/Failed insight: scoped-`<style>` state rules must use `!important` to beat widgets' inline base styles.
+→ **v3.0.0 foundation is building on branch `stage-9-v3-foundation`.** Reference docs: **`v3_kickoff_prompt.md`** (executable brief) and **`docs/v3_master_plan.md`** (446-line design spec). Build order F1 → F4 → F2 → F3 Phase 1 → course foundation, each behind the §4 verification gate; checkpoint with the human per gate.
+→ **NEXT: F4 — styling pass** (editor chrome + exports + "Showcase" preset). The load-bearing trap (R6): no blot reads `--widget-shadow` today, so per-blot `getPropertyValue` reads in all 11 `renderExport` are **required**; preserve Stage-8 `!important` discipline in the 7 `renderExportNoJS` (R5). v2→v3 umbrella save bump is owned by F2/F3 (F4 alone changes no save format), but the migration must supply new theme-token defaults so upgraded v2 files render identically.
+→ Test infra: `_modal_tests.html` (F1, 20/20), `_nojs_tests.html` (27/27 regression guard — keep green), `_nojs_selftest.html` (one-of-every-widget no-JS export banner — re-run for F4). Preview: `.claude/launch.json` config `hce` on port 8137 (created this session). Fixtures copied to `fixtures/` (git-ignored — large/local-only). Open decision still pending for later: F1 Part 2 `buildFrame` refactor (deferred follow-up).
