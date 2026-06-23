@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>No-JS Export Self-Test</title>
+  <link rel="stylesheet" href="src/styles/theme-defaults.css">
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 0; background: #f1f5f9; color: #0f172a; }
+    .bar { padding: 12px 20px; background: #fff; border-bottom: 1px solid #e2e8f0; display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+    .verdict { font-weight: 700; padding: 4px 10px; border-radius: 999px; }
+    .pass { background: #dcfce7; color: #166534; }
+    .fail { background: #fee2e2; color: #991b1b; }
+    #checks { font-size: 13px; color: #475569; }
+    iframe { width: 100%; height: calc(100vh - 60px); border: 0; background: #fff; }
+    code { background: #e2e8f0; padding: 1px 5px; border-radius: 4px; }
+  </style>
+
+  <!-- Same dependencies the editor loads (minus editor.js — we call the export engine directly) -->
+  <script src="vendor/quill/dist/quill.js"></script>
+  <script src="src/ui/modal.js"></script>
+  <script src="src/ui/image-upload-field.js"></script>
+  <script src="src/ui/rich-text-field.js"></script>
+  <script src="src/registry.js"></script>
+  <script src="src/blots/base.js"></script>
+  <script src="src/blots/image.js"></script>
+  <script src="src/blots/callout.js"></script>
+  <script src="src/blots/tabs.js"></script>
+  <script src="src/blots/accordion.js"></script>
+  <script src="src/blots/quote.js"></script>
+  <script src="src/blots/timeline.js"></script>
+  <script src="src/blots/flip-cards.js"></script>
+  <script src="src/blots/click-reveal.js"></script>
+  <script src="src/blots/carousel.js"></script>
+  <script src="src/blots/hotspot.js"></script>
+  <script src="src/blots/knowledge-check.js"></script>
+  <script src="src/export.js"></script>
+</head>
+<body>
+  <div class="bar">
+    <strong>No-JS Export Self-Test</strong>
+    <span id="verdict" class="verdict">running…</span>
+    <span id="checks"></span>
+  </div>
+  <iframe id="out" title="No-JS export preview"></iframe>
+
+  <script>
+    window.addEventListener('load', function () {
+      var WR = window.WidgetRegistry;
+      var NAMES = ['callout','tabs','accordion','quote','timeline','flip-cards','click-reveal','carousel','hotspot','knowledge-check'];
+
+      // Build a Quill delta with one of every widget, twice for the first two
+      // (tabs + accordion) to prove multiple instances don't collide.
+      var ops = [{ insert: 'No-JS Export Self-Test\n', attributes: { header: 1 } }];
+      function pushWidget(name) {
+        var Blot = WR.get(name);
+        if (!Blot) { ops.push({ insert: '[missing: ' + name + ']\n' }); return; }
+        var data = JSON.parse(JSON.stringify(Blot.defaultData || {}));
+        var embed = {}; embed[name] = data;
+        ops.push({ insert: '\n' });
+        ops.push({ insert: '\n', attributes: { header: 2 } }); // spacer heading line breaks
+        ops.push({ insert: name + '\n', attributes: { header: 3 } });
+        ops.push({ insert: embed });
+        ops.push({ insert: '\n' });
+      }
+      NAMES.forEach(pushWidget);
+      pushWidget('tabs');       // second instance — collision check
+      pushWidget('accordion');  // second instance — collision check
+
+      var delta = { ops: ops };
+      var html = window.HCEExport.buildExportHtml(delta, 'No-JS Self Test', { noJs: true });
+      window.__noJsHtml = html;
+
+      // Assertions: the exported body must be free of JS.
+      var body = html.replace(/^[\s\S]*?<body>/i, '').replace(/<\/body>[\s\S]*$/i, '');
+      var hasScript   = /<script/i.test(body);
+      var hasOn       = /\son[a-z]+\s*=/i.test(body);
+      var hasJsUrl    = /javascript:/i.test(html);
+      var pass = !hasScript && !hasOn && !hasJsUrl;
+
+      document.getElementById('checks').innerHTML =
+        '<code>&lt;script&gt;</code> in body: ' + (hasScript ? '❌ FOUND' : '✅ none') + ' &nbsp; ' +
+        '<code>on*=</code> handlers: ' + (hasOn ? '❌ FOUND' : '✅ none') + ' &nbsp; ' +
+        '<code>javascript:</code>: ' + (hasJsUrl ? '❌ FOUND' : '✅ none');
+
+      var v = document.getElementById('verdict');
+      v.textContent = pass ? 'PASS — zero JavaScript' : 'FAIL — JS leaked into export';
+      v.className = 'verdict ' + (pass ? 'pass' : 'fail');
+
+      document.getElementById('out').srcdoc = html;
+    });
+  </script>
+</body>
+</html>

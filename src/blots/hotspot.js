@@ -200,6 +200,128 @@
               'No image uploaded</div>');
     }
 
+    renderExportNoJS(container, data, ctx) {
+      const uid = (ctx && ctx.uid) || ('hs' + Math.random().toString(36).slice(2, 7));
+
+      const root    = getComputedStyle(document.documentElement);
+      const primary = root.getPropertyValue('--color-primary').trim()        || '#2563eb';
+      const border  = root.getPropertyValue('--color-border').trim()         || '#e2e8f0';
+      const surface = root.getPropertyValue('--color-surface').trim()        || '#f8fafc';
+      const text    = root.getPropertyValue('--color-text').trim()           || '#1e293b';
+      const font    = root.getPropertyValue('--font-family-body').trim()     || 'Georgia, serif';
+      const radius  = root.getPropertyValue('--widget-border-radius').trim() || '0.5rem';
+
+      // Visually hide the state radios but keep them keyboard-focusable
+      // (NOT display:none — that would break Tab focus + Enter/Space toggle).
+      const radioHide =
+        'position:absolute;width:1px;height:1px;opacity:0;' +
+        'margin:0;padding:0;border:0;pointer-events:none;';
+
+      let radios = '';
+      let pinsHtml = '';
+      let rules = '';
+
+      const pins = (data && data.pins) || [];
+      pins.forEach(function (pin, idx) {
+        const above = pin.y > 65;
+        const rid = uid + '-p' + idx;
+        const tid = uid + '-tip' + idx;
+
+        radios +=
+          '<input type="radio" class="hce-hs-radio" name="' + uid + '-hs" id="' + rid + '" ' +
+              'style="' + radioHide + '" ' +
+              'aria-label="Pin ' + (idx + 1) + ': ' + esc(pin.label) + '">';
+
+        const pinStyle =
+          'position:absolute;' +
+          'left:' + pin.x + '%;top:' + pin.y + '%;' +
+          'transform:translate(-50%,-50%);' +
+          'width:26px;height:26px;border-radius:50%;' +
+          'background:' + primary + ';color:#fff;' +
+          'border:2px solid #fff;' +
+          'font-family:' + font + ';font-size:12px;font-weight:700;' +
+          'cursor:pointer;z-index:2;' +
+          'display:flex;align-items:center;justify-content:center;' +
+          'box-shadow:0 1px 4px rgba(0,0,0,0.3);';
+
+        const tooltipStyle =
+          'position:absolute;' +
+          'left:' + pin.x + '%;top:' + pin.y + '%;' +
+          'transform:translate(-50%,' + (above ? 'calc(-100% - 16px)' : '16px') + ');' +
+          'background:' + surface + ';' +
+          'border:1px solid ' + border + ';' +
+          'border-radius:' + radius + ';' +
+          'padding:8px 12px;' +
+          'max-width:280px;min-width:120px;' +
+          'box-shadow:0 2px 8px rgba(0,0,0,0.12);' +
+          'z-index:10;font-family:' + font + ';' +
+          'display:none;line-height:1.4;';
+
+        pinsHtml +=
+          '<label class="hce-hs-pin" for="' + rid + '" ' +
+              'style="' + pinStyle + '">' +
+            (idx + 1) +
+          '</label>' +
+          '<div class="hce-hs-tip" id="' + tid + '" style="' + tooltipStyle + '">' +
+            '<label class="hce-hs-close" for="' + uid + '-none" ' +
+                'style="position:absolute;top:4px;right:6px;cursor:pointer;' +
+                'font-size:14px;line-height:1;color:' + text + ';opacity:0.55;">&times;</label>' +
+            '<strong style="display:block;font-size:13px;color:' + text + ';' +
+              'padding-right:14px;' +
+              'margin-bottom:' + (pin.content ? '4px' : '0') + ';">' +
+              esc(pin.label) +
+            '</strong>' +
+            (pin.content
+              ? '<div style="margin:0;font-size:13px;line-height:1.5;color:' + text + ';">' +
+                  pin.content + '</div>'
+              : '') +
+          '</div>';
+
+        // Scoped reveal of the matching tooltip + active ring on the checked pin.
+        // !important: the tooltip carries an inline display:none and the pin an
+        // inline box-shadow; inline beats a stylesheet selector, so the reveal
+        // and active-ring overrides must be !important to take effect.
+        rules +=
+          '#' + uid + ':has(#' + rid + ':checked) #' + tid + '{display:block !important;}' +
+          '#' + uid + ':has(#' + rid + ':checked) label[for="' + rid + '"]{' +
+            'box-shadow:0 0 0 3px ' + primary + ',0 0 0 5px rgba(255,255,255,0.9) !important;}' +
+          '#' + uid + ':has(#' + rid + ':checked) label[for="' + rid + '"]::after{animation:none;}';
+      });
+
+      // No-op reset radio: clicking a tooltip close label checks this, hiding all tips
+      // while preserving single-open mutual exclusion.
+      const noneRadio =
+        '<input type="radio" class="hce-hs-radio" name="' + uid + '-hs" id="' + uid + '-none" ' +
+            'checked style="' + radioHide + '" aria-label="Close tooltip">';
+
+      const styleBlock =
+        '<style>' +
+          '#' + uid + ' .hce-hs-pin::after{content:"";position:absolute;inset:-4px;border-radius:50%;' +
+            'border:2px solid ' + primary + ';opacity:0;pointer-events:none;' +
+            'animation:hce-hs-pulse 2s ease-in-out infinite;}' +
+          '@keyframes hce-hs-pulse{0%{transform:scale(0.8);opacity:0.8;}100%{transform:scale(1.8);opacity:0;}}' +
+          '@media(prefers-reduced-motion:reduce){#' + uid + ' .hce-hs-pin::after{animation:none;}}' +
+          rules +
+        '</style>';
+
+      const inner = data.imageData
+        ? '<div style="position:relative;line-height:0;border-radius:' + radius + ';margin:8px 0;">' +
+            '<img src="' + data.imageData + '" alt="' + esc(data.altText) + '" ' +
+                'style="width:100%;height:auto;display:block;border-radius:' + radius + ';">' +
+            pinsHtml +
+          '</div>'
+        : '<div style="padding:24px;text-align:center;font-family:' + font + ';color:#999;font-style:italic;">' +
+            'No image uploaded</div>';
+
+      container.innerHTML =
+        '<div id="' + uid + '" style="position:relative;">' +
+          styleBlock +
+          noneRadio +
+          radios +
+          inner +
+        '</div>';
+    }
+
     edit(data) {
       this._openEditModal(data);
     }

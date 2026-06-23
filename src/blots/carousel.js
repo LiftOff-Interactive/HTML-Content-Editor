@@ -251,6 +251,130 @@
         '<' + 'script>' + script + '</' + 'script>';
     }
 
+    renderExportNoJS(container, data, ctx) {
+      const root    = getComputedStyle(document.documentElement);
+      const primary = root.getPropertyValue('--color-primary').trim()        || '#2563eb';
+      const border  = root.getPropertyValue('--color-border').trim()         || '#e2e8f0';
+      const surface = root.getPropertyValue('--color-surface').trim()        || '#f8fafc';
+      const text    = root.getPropertyValue('--color-text').trim()           || '#1e293b';
+      const muted   = root.getPropertyValue('--color-text-muted').trim()     || '#64748b';
+      const font    = root.getPropertyValue('--font-family-body').trim()     || 'Georgia, serif';
+      const radius  = root.getPropertyValue('--widget-border-radius').trim() || '0.5rem';
+
+      const uid    = (ctx && ctx.uid) || ('car' + Math.random().toString(36).slice(2, 7));
+      const slides = data.slides || [];
+      const count  = slides.length;
+      if (count === 0) { container.innerHTML = ''; return; }
+
+      const showArrows = data.showArrows && count > 1;
+      const showDots   = data.showDots   && count > 1;
+
+      const arrowBase =
+        'position:absolute;top:50%;transform:translateY(-50%);' +
+        'background:' + primary + ';color:#fff;border:none;border-radius:50%;' +
+        'width:36px;height:36px;font-size:24px;line-height:1;cursor:pointer;' +
+        'display:flex;align-items:center;justify-content:center;z-index:2;opacity:0.85;' +
+        'text-decoration:none;box-sizing:border-box;';
+
+      let slidesHtml = '';
+      slides.forEach(function (slide, i) {
+        const sid = uid + '-s' + i;
+
+        let mediaHtml;
+        if (slide.imageData) {
+          const expW = slide.imageWidth && slide.imageWidth !== '100%'
+            ? 'width:' + slide.imageWidth + ';max-width:100%;height:auto;object-fit:contain;display:block;margin:auto;'
+            : 'width:100%;height:auto;object-fit:contain;display:block;';
+          mediaHtml =
+            '<img src="' + slide.imageData + '" alt="' + esc(slide.altText) + '" ' +
+                'style="' + expW + '">';
+        } else {
+          const txt = slide.textContent || '';
+          mediaHtml =
+            '<div style="width:100%;height:100%;display:flex;align-items:center;' +
+                'justify-content:center;padding:24px;font-family:' + font + ';' +
+                'color:' + text + ';line-height:1.6;overflow-y:auto;text-align:center;">' +
+              (txt || '<em style="color:' + muted + ';">No content</em>') +
+            '</div>';
+        }
+
+        const captionHtml = (slide.imageData && slide.caption)
+          ? '<div style="padding:8px 12px;font-family:' + font + ';font-size:13px;' +
+              'color:' + muted + ';text-align:center;border-top:1px solid ' + border + ';' +
+              'background:' + surface + ';">' + esc(slide.caption) + '</div>'
+          : '';
+
+        // Arrows are clamped anchors: first slide's prev points to itself,
+        // last slide's next points to itself (bounded — no infinite loop).
+        const prevTarget = uid + '-s' + (i > 0 ? i - 1 : i);
+        const nextTarget = uid + '-s' + (i < count - 1 ? i + 1 : i);
+        const prevArrow = showArrows
+          ? '<a class="hce-car-prev" href="#' + prevTarget + '" aria-label="Previous slide" style="' + arrowBase + 'left:8px;">&#8249;</a>'
+          : '';
+        const nextArrow = showArrows
+          ? '<a class="hce-car-next" href="#' + nextTarget + '" aria-label="Next slide" style="' + arrowBase + 'right:8px;">&#8250;</a>'
+          : '';
+
+        slidesHtml +=
+          '<div class="hce-car-slide" id="' + sid + '" ' +
+              'style="position:relative;min-width:100%;flex-shrink:0;scroll-snap-align:start;display:flex;flex-direction:column;">' +
+            '<div style="aspect-ratio:16/9;overflow:hidden;background:' + surface + ';">' +
+              mediaHtml +
+            '</div>' +
+            captionHtml +
+            prevArrow +
+            nextArrow +
+          '</div>';
+      });
+
+      let dotsHtml = '';
+      let dotRules = '';
+      if (showDots) {
+        let inner = '';
+        for (let i = 0; i < count; i++) {
+          const sid = uid + '-s' + i;
+          inner +=
+            '<a class="hce-car-dot" href="#' + sid + '" ' +
+                'aria-label="Slide ' + (i + 1) + '" ' +
+                'style="width:8px;height:8px;border-radius:50%;border:none;cursor:pointer;padding:0;' +
+                'background:' + border + ';transition:background 0.2s;"></a>';
+          // Active-dot highlight via :target (scoped under #uid). !important so it
+          // beats the inline default background on the dot anchor.
+          dotRules +=
+            '#' + uid + ' .hce-car-scroll:has(#' + sid + ':target) ~ .hce-car-dots a[href="#' + sid + '"]' +
+              '{background:' + primary + ' !important;}';
+        }
+        // Default active = first dot when no slide in THIS carousel is targeted.
+        dotRules +=
+          '#' + uid + ':not(:has(:target)) .hce-car-dots a[href="#' + uid + '-s0"]{background:' + primary + ' !important;}';
+        dotsHtml =
+          '<div class="hce-car-dots" ' +
+              'style="display:flex;justify-content:center;gap:6px;padding:10px 0 6px;background:' + surface + ';">' +
+            inner +
+          '</div>';
+      }
+
+      const styleBlock =
+        '<style>' +
+          '#' + uid + ' .hce-car-scroll{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;' +
+            'scroll-behavior:smooth;-webkit-overflow-scrolling:touch;}' +
+          '#' + uid + ' .hce-car-scroll::-webkit-scrollbar{display:none;}' +
+          '#' + uid + ' .hce-car-scroll{scrollbar-width:none;}' +
+          dotRules +
+          '@media(prefers-reduced-motion:reduce){#' + uid + ' .hce-car-scroll{scroll-behavior:auto;}}' +
+        '</style>';
+
+      container.innerHTML =
+        '<div id="' + uid + '" data-carousel="' + uid + '" ' +
+            'style="border:1px solid ' + border + ';border-radius:' + radius + ';overflow:hidden;margin:8px 0;">' +
+          styleBlock +
+          '<div class="hce-car-scroll">' +
+            slidesHtml +
+          '</div>' +
+          dotsHtml +
+        '</div>';
+    }
+
     edit(data) {
       this._openEditModal(data);
     }

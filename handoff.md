@@ -1,5 +1,5 @@
 # Handoff — HTML Content Editor
-_Last updated: 2026-06-09 · Current stage: **Stage 7 — Post-v1 Features (all complete)**_
+_Last updated: 2026-06-23 · Current stage: **Stage 8 — No-JavaScript / SharePoint-safe export (code complete + self-test verified; pending human verification in the live editor)**_
 
 ## Goals
 ~~Get the project to a public v1 release on GitHub.~~ **Done.** v1.0.0 is live.
@@ -12,6 +12,14 @@ Live URLs:
 
 ## Current State
 All stages (1–7) complete. v2.0.0 shipped on `main`.
+
+**Stage 8 — No-JS / SharePoint export — code complete, self-test verified, not yet committed.**
+The user deploys exports into SharePoint via the **Embed web part**, which strips `<script>`, `on*` handlers, and `javascript:` URLs — so the standard `Export HTML` widgets break there. Stage 8 adds a second **"Export for SharePoint"** button (`#export-sharepoint-btn`) that renders every widget JavaScript-free.
+- Engine: `src/export.js` `deltaToHtml(delta, opts)` / `buildExportHtml(delta, title, opts)` take `{ noJs }`; in no-JS mode each widget embed is rendered via `renderExportNoJS(container, data, ctx)` (fallback to `renderExport`). `ctx.uid` (`wx<n>`, per-export counter) is the only unique-id source — export instances are bare `Object.create(prototype)`, so `this._uid` is undefined.
+- 7 interactive blots got `renderExportNoJS`: tabs (radio+`:checked`), accordion (native `<details>`, single-open via `<details name>`), flip-cards (checkbox+`:checked`+`:has()`), click-reveal (`<details>`), carousel (scroll-snap + anchor nav), hotspot (radio+`:checked`+`:has()` + close-label), knowledge-check (radio+`:checked`+`:has()` submit-gate). The 4 static widgets (callout, quote, timeline, resizable-image) fall back to `renderExport` (already JS-free).
+- **Gotcha fixed:** state-change CSS rules in the scoped `<style>` lose to inline base styles (inline beats a stylesheet selector). KC grading colors/feedback-reveal and hotspot tooltip-reveal needed `!important`; carousel dot highlight too.
+- Verified in a real browser via `_nojs_selftest.html` (one of every widget, exported no-JS, rendered in an iframe): zero `<script>`/`on*`/`javascript:`; tabs/accordion/flip/hotspot/KC/carousel all interact correctly; multi-instance scoping holds (two tabs + two accordions, no cross-talk). Live editor boots clean with the new button.
+- **Remaining:** human clicks the real "Export for SharePoint" button in the editor, drops the file into an actual SharePoint Embed web part, confirms it renders/interacts. Then commit Stage 8.
 
 **Stage 7 Feature 1 — Image Control — ✅ Complete and human-verified.**
 **Stage 7 Feature 2 — Rich Text in Widgets — ✅ Complete and human-verified.**
@@ -43,6 +51,7 @@ What's built (all stages):
 - `src/styles/main.css` — app shell + all widget CSS + dropdown styles + modal max-height constraint
 
 ## Things I've Changed
+- 2026-06-23: Stage 8 — No-JS / SharePoint export. New files: `staging/stage-8-nojs-export/overview.md`, `_nojs_selftest.html` (root-level browser QA harness — open over localhost, exports one of every widget no-JS into an iframe with PASS/FAIL banner). Edited `src/export.js` (no-JS mode + ctx + `#export-sharepoint-btn` wiring + `exportHtmlNoJs`), `index.html` (new button), and added `renderExportNoJS` to tabs/accordion/flip-cards/click-reveal/carousel/hotspot/knowledge-check. Per-widget conversions were drafted by a parallel agent workflow against the Tabs reference, then fixed (the `!important` inline-override bug) and browser-verified.
 - 2026-06-09: Stage 7 Features 2 & 3 complete + bug fixes. Shipped as v2.0.0.
   - Feature 2: `src/ui/rich-text-field.js` (new), rich text in all 11 widgets, v1→v2 migration in save-load.js.
   - Feature 3: `src/html-roundtrip.js` (new), Save/Load dropdowns (JSON+HTML), `buildExportHtml` extracted from export.js.
@@ -69,5 +78,5 @@ What's built (all stages):
 - `window.contentEditor.getDocumentTitle()` shared by tab title (editor.js), save filename (save-load.js), and export title (export.js).
 
 ## Pointer
-→ Stage 7 complete. All features shipped as v2.0.0.
-→ No active feature file — start a new session by defining Stage 8 scope.
+→ Stage 8 (No-JS / SharePoint export) is code-complete and self-test-verified. Active feature file: `staging/stage-8-nojs-export/overview.md`.
+→ Next: human-verify the "Export for SharePoint" button in the live editor + a real SharePoint Embed web part, then commit. The `Things I've Changed` Tried/Failed insight: scoped-`<style>` state rules must use `!important` to beat widgets' inline base styles.

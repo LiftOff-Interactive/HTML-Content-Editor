@@ -144,6 +144,75 @@
         '</div>';
     }
 
+    // ── No-JavaScript export (SharePoint-safe) ──────────────────────────────
+    // Reproduces tab switching with hidden radio inputs + :checked + <label>,
+    // all scoped under a per-instance unique id (ctx.uid) so multiple tab
+    // widgets on one page never collide. Emits zero <script>, zero on* handlers,
+    // zero javascript: URLs. The radios are visually hidden but stay keyboard-
+    // focusable so arrow-key tab switching still works.
+    renderExportNoJS(container, data, ctx) {
+      const uid = (ctx && ctx.uid) || ('tx' + Math.random().toString(36).slice(2, 7));
+      const tabs = (data && data.tabs) || [];
+      const activeId = data.activeTab || (tabs[0] && tabs[0].id);
+      const root = getComputedStyle(document.documentElement);
+
+      const primary = root.getPropertyValue('--color-primary').trim()        || '#2563eb';
+      const border  = root.getPropertyValue('--color-border').trim()         || '#e2e8f0';
+      const surface = root.getPropertyValue('--color-surface').trim()        || '#f8fafc';
+      const text    = root.getPropertyValue('--color-text').trim()           || '#1e293b';
+      const muted   = root.getPropertyValue('--color-text-muted').trim()     || '#64748b';
+      const font    = root.getPropertyValue('--font-family-body').trim()     || 'Georgia, serif';
+      const radius  = root.getPropertyValue('--widget-border-radius').trim() || '0.5rem';
+
+      let radios = '';
+      let labels = '';
+      let panels = '';
+      let rules  = '';
+
+      tabs.forEach(function (tab, i) {
+        const rid = uid + '-t' + i;
+        const pid = uid + '-p' + i;
+        const isActive = tab.id === activeId;
+        radios +=
+          '<input type="radio" class="cx-tab-radio" name="' + uid + '-tabs" ' +
+            'id="' + rid + '"' + (isActive ? ' checked' : '') + '>';
+        labels +=
+          '<label class="cx-tab" for="' + rid + '">' + esc(tab.label) + '</label>';
+        panels +=
+          '<div class="cx-tab-panel" id="' + pid + '">' + tab.content + '</div>';
+        rules +=
+          '#' + uid + ' #' + rid + ':checked ~ .cx-tab-bar label[for="' + rid + '"]{' +
+            'color:' + primary + ';font-weight:600;border-bottom-color:' + primary + ';}' +
+          '#' + uid + ' #' + rid + ':checked ~ .cx-tab-panels #' + pid + '{display:block;}' +
+          '#' + uid + ' #' + rid + ':focus-visible ~ .cx-tab-bar label[for="' + rid + '"]{' +
+            'outline:2px solid ' + primary + ';outline-offset:-2px;}';
+      });
+
+      const css =
+        '#' + uid + '{position:relative;border:1px solid ' + border + ';' +
+          'border-radius:' + radius + ';overflow:hidden;margin:8px 0;}' +
+        '#' + uid + ' .cx-tab-radio{position:absolute;width:1px;height:1px;' +
+          'opacity:0;pointer-events:none;}' +
+        '#' + uid + ' .cx-tab-bar{display:flex;border-bottom:1px solid ' + border + ';' +
+          'background:' + surface + ';overflow-x:auto;}' +
+        '#' + uid + ' .cx-tab{padding:8px 16px;border:none;' +
+          'border-bottom:2px solid transparent;background:none;cursor:pointer;' +
+          'font-family:' + font + ';font-size:14px;font-weight:400;' +
+          'color:' + muted + ';white-space:nowrap;}' +
+        '#' + uid + ' .cx-tab:hover{color:' + primary + ';}' +
+        '#' + uid + ' .cx-tab-panel{display:none;padding:16px;' +
+          'font-family:' + font + ';color:' + text + ';}' +
+        rules;
+
+      container.innerHTML =
+        '<div id="' + uid + '">' +
+          '<style>' + css + '</style>' +
+          radios +
+          '<div class="cx-tab-bar" role="tablist">' + labels + '</div>' +
+          '<div class="cx-tab-panels">' + panels + '</div>' +
+        '</div>';
+    }
+
     edit(data) {
       this._openEditModal(data);
     }

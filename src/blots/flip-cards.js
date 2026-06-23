@@ -204,6 +204,117 @@
         '</div>';
     }
 
+    renderExportNoJS(container, data, ctx) {
+      const uid = (ctx && ctx.uid) || ('fc' + Math.random().toString(36).slice(2, 7));
+      const root    = getComputedStyle(document.documentElement);
+      const primary = root.getPropertyValue('--color-primary').trim()        || '#2563eb';
+      const border  = root.getPropertyValue('--color-border').trim()         || '#e2e8f0';
+      const surface = root.getPropertyValue('--color-surface').trim()        || '#f8fafc';
+      const text    = root.getPropertyValue('--color-text').trim()           || '#1e293b';
+      const font    = root.getPropertyValue('--font-family-body').trim()     || 'Georgia, serif';
+      const radius  = root.getPropertyValue('--widget-border-radius').trim() || '0.5rem';
+      const cols    = data.columns || 3;
+
+      // Visually hide the checkbox but keep it keyboard-focusable so native
+      // Space/Enter toggle the flip. NEVER display:none / visibility:hidden.
+      const toggleStyle =
+        'position:absolute;width:1px;height:1px;opacity:0;' +
+        'margin:0;padding:0;border:0;pointer-events:none;';
+
+      const frontFaceStyle =
+        'position:absolute;inset:0;' +
+        'backface-visibility:hidden;-webkit-backface-visibility:hidden;' +
+        'border-radius:' + radius + ';' +
+        'display:flex;flex-direction:column;align-items:center;justify-content:center;' +
+        'padding:16px;overflow-y:auto;text-align:center;' +
+        'background:' + primary + ';color:#fff;';
+
+      const backFaceStyle =
+        'position:absolute;inset:0;' +
+        'backface-visibility:hidden;-webkit-backface-visibility:hidden;' +
+        'border-radius:' + radius + ';' +
+        'display:flex;flex-direction:column;align-items:center;justify-content:center;' +
+        'padding:16px;overflow-y:auto;text-align:center;' +
+        'background:' + surface + ';color:' + text + ';' +
+        'border:1px solid ' + border + ';' +
+        'transform:rotateY(180deg);';
+
+      let cardsHtml = '';
+      data.cards.forEach(function (card, i) {
+        const cbId = uid + '-c' + i;
+
+        let imgHtml = '';
+        if (card.frontImage) {
+          const w = card.frontImageWidth && card.frontImageWidth !== '100%'
+            ? card.frontImageWidth
+            : '100%';
+          imgHtml =
+            '<img src="' + card.frontImage + '" ' +
+                'style="width:' + w + ';max-width:100%;max-height:80px;' +
+                'object-fit:contain;margin-bottom:8px;display:block;" alt="">';
+        }
+
+        cardsHtml +=
+          '<div class="hce-fc-card" ' +
+              'style="perspective:1000px;height:200px;cursor:pointer;border-radius:' + radius + ';">' +
+            '<input type="checkbox" class="cx-flip-toggle" id="' + cbId + '" ' +
+                'aria-label="Flip card: ' + esc(card.front) + '" ' +
+                'style="' + toggleStyle + '">' +
+            '<label class="hce-fc-label" for="' + cbId + '" ' +
+                'style="position:absolute;inset:0;z-index:2;cursor:pointer;' +
+                  'border-radius:' + radius + ';">' +
+            '</label>' +
+            '<div class="hce-fc-inner" ' +
+                'style="position:relative;width:100%;height:100%;' +
+                  'transform-style:preserve-3d;transition:transform 0.5s ease;">' +
+              '<div style="' + frontFaceStyle + '">' +
+                imgHtml +
+                '<div style="font-family:' + font + ';font-size:15px;font-weight:600;line-height:1.4;">' +
+                  esc(card.front) +
+                '</div>' +
+                (card.frontBody
+                  ? '<div style="font-family:' + font + ';font-size:13px;line-height:1.5;margin-top:6px;">' +
+                      card.frontBody + '</div>'
+                  : '') +
+              '</div>' +
+              '<div style="' + backFaceStyle + '">' +
+                '<div style="font-family:' + font + ';font-size:14px;font-weight:600;line-height:1.4;">' +
+                  esc(card.back) +
+                '</div>' +
+                (card.backBody
+                  ? '<div style="font-family:' + font + ';font-size:13px;line-height:1.5;margin-top:6px;">' +
+                      card.backBody + '</div>'
+                  : '') +
+              '</div>' +
+            '</div>' +
+          '</div>';
+      });
+
+      const styleBlock =
+        '<style>' +
+          // Sticky click-to-flip: checked checkbox rotates its sibling inner face.
+          '#' + uid + ' .hce-fc-card:has(.cx-flip-toggle:checked) .hce-fc-inner{transform:rotateY(180deg);}' +
+          // Keyboard focus ring on the visible label when the hidden checkbox is focused.
+          '#' + uid + ' .cx-flip-toggle:focus-visible + .hce-fc-label{outline:2px solid ' + primary + ';outline-offset:2px;}' +
+          // Once flipped, the back face should sit above the label so its content scrolls/reads,
+          // while the label still covers the card for the next toggle.
+          '#' + uid + ' .hce-fc-card{position:relative;}' +
+          '@media(prefers-reduced-motion:reduce){#' + uid + ' .hce-fc-inner{transition:none !important;}}' +
+        '</style>';
+
+      container.innerHTML =
+        '<div id="' + uid + '">' +
+          styleBlock +
+          '<div style="' +
+            'display:grid;' +
+            'grid-template-columns:repeat(' + cols + ',1fr);' +
+            'gap:16px;margin:8px 0;' +
+          '">' +
+            cardsHtml +
+          '</div>' +
+        '</div>';
+    }
+
     edit(data) {
       this._openEditModal(data);
     }

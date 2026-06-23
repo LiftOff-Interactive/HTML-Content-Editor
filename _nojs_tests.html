@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>No-JS Export — Verification Suite</title>
+  <link rel="stylesheet" href="src/styles/theme-defaults.css">
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 0; padding: 20px 28px; background: #f1f5f9; color: #0f172a; }
+    h1 { margin: 0 0 4px; }
+    #summary { font-size: 18px; font-weight: 700; margin: 10px 0 18px; padding: 8px 14px; border-radius: 8px; display: inline-block; }
+    .ok { background: #dcfce7; color: #166534; } .bad { background: #fee2e2; color: #991b1b; }
+    table { border-collapse: collapse; width: 100%; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+    th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid #e2e8f0; font-size: 13px; vertical-align: top; }
+    th { background: #f8fafc; }
+    .p { color: #166534; font-weight: 700; } .f { color: #991b1b; font-weight: 700; }
+    td.cat { font-weight: 700; color: #475569; }
+    code { background: #e2e8f0; padding: 1px 4px; border-radius: 3px; }
+  </style>
+
+  <script src="vendor/quill/dist/quill.js"></script>
+  <script src="src/ui/modal.js"></script>
+  <script src="src/ui/image-upload-field.js"></script>
+  <script src="src/ui/rich-text-field.js"></script>
+  <script src="src/registry.js"></script>
+  <script src="src/blots/base.js"></script>
+  <script src="src/blots/image.js"></script>
+  <script src="src/blots/callout.js"></script>
+  <script src="src/blots/tabs.js"></script>
+  <script src="src/blots/accordion.js"></script>
+  <script src="src/blots/quote.js"></script>
+  <script src="src/blots/timeline.js"></script>
+  <script src="src/blots/flip-cards.js"></script>
+  <script src="src/blots/click-reveal.js"></script>
+  <script src="src/blots/carousel.js"></script>
+  <script src="src/blots/hotspot.js"></script>
+  <script src="src/blots/knowledge-check.js"></script>
+  <script src="src/export.js"></script>
+</head>
+<body>
+  <h1>No-JS Export — Verification Suite</h1>
+  <div id="summary">running…</div>
+  <table><thead><tr><th>#</th><th>Criterion</th><th>Result</th><th>Detail</th></tr></thead><tbody id="rows"></tbody></table>
+
+  <script>
+  window.addEventListener('load', function () {
+    var WR = window.WidgetRegistry;
+    var EX = window.HCEExport;
+    var GREEN = 'rgb(220, 252, 231)';   // #dcfce7
+    var RED   = 'rgb(254, 226, 226)';   // #fee2e2
+
+    // ── data builders (based on each widget's real defaultData) ───────────────
+    function D(name, over){ return Object.assign({}, JSON.parse(JSON.stringify((WR.get(name)||{}).defaultData || {})), over || {}); }
+    var svg = 'data:image/svg+xml;base64,' + btoa('<svg xmlns="http://www.w3.org/2000/svg" width="480" height="270"><rect width="480" height="270" fill="#cbd5e1"/></svg>');
+
+    function tabsData(){ return D('tabs', { tabs: [
+      { id:'t1', label:'Over<view> & "A"', content:'<p>Panel <strong>one</strong></p>' },
+      { id:'t2', label:'Details', content:'<p>Panel two</p>' },
+      { id:'t3', label:'More', content:'<p>three</p>' } ], activeTab:'t2' }); }
+    function tabsNasty(){ return D('tabs', { tabs:[
+      { id:'t1', label:'<b>x</b>&"<img src=x onerror="alert(1)">', content:'<p>a</p>' },
+      { id:'t2', label:'Two', content:'<p>b</p>' } ], activeTab:'t1' }); }
+    function accData(multi){ return D('accordion', { allowMultiple:multi, items:[
+      { id:'a1', header:'First', content:'<p>c1</p>', open:false },
+      { id:'a2', header:'Second', content:'<p>c2</p>', open:false },
+      { id:'a3', header:'Third', content:'<p>c3</p>', open:false } ] }); }
+    function flipData(){ return D('flip-cards', { columns:2, cards:[
+      { front:'F1', frontBody:'<p>fb</p>', back:'B1', backBody:'<p>bb</p>', frontImage:'', frontImageWidth:'100%' },
+      { front:'F2', frontBody:'', back:'B2', backBody:'<p>b2</p>' } ] }); }
+    function crData(){ return D('click-reveal', { items:[
+      { id:'r1', triggerLabel:'Reveal A', content:'<p>hid A</p>', triggerStyle:'button' },
+      { id:'r2', triggerLabel:'Reveal B', content:'<p>hid B</p>', triggerStyle:'card' } ] }); }
+    function carData(){ return D('carousel', { showArrows:true, showDots:true, slides:[
+      { textContent:'<p>S1</p>', imageData:'', altText:'', caption:'', imageWidth:'100%' },
+      { textContent:'<p>S2</p>', imageData:'', altText:'', caption:'', imageWidth:'100%' },
+      { textContent:'<p>S3</p>', imageData:'', altText:'', caption:'', imageWidth:'100%' } ] }); }
+    function hsData(){ return D('hotspot', { imageData:svg, altText:'diagram', pins:[
+      { x:25, y:30, label:'Pin A', content:'<p>A body</p>' },
+      { x:70, y:60, label:'Pin B', content:'<p>B body</p>' } ] }); }
+    function kcData(){ return D('knowledge-check', {
+      question:'<p>Capital of France?</p>', questionType:'multiple-choice',
+      hint:'<p>has a tower</p>', allowRetry:true, options:[
+        { text:'Paris', correct:true, feedback:'<p>Yes</p>' },
+        { text:'London', correct:false, feedback:'<p>No</p>' },
+        { text:'Berlin', correct:false, feedback:'<p>No</p>' } ] }); }
+
+    function emb(name, data){ return { ops:[ { insert:{ [name]:data } }, { insert:'\n' } ] }; }
+    function emb2(name, a, b){ return { ops:[ { insert:{ [name]:a } }, { insert:'\n' }, { insert:{ [name]:b } }, { insert:'\n' } ] }; }
+    function nojs(delta){ return EX.buildExportHtml(delta, 'T', { noJs:true }); }
+    function jsx(delta){ return EX.buildExportHtml(delta, 'T', { noJs:false }); }
+    function bodyOf(html){ return html.replace(/^[\s\S]*?<body>/i,'').replace(/<\/body>[\s\S]*$/i,''); }
+
+    // mount an export in an isolated iframe, kill transitions/animations, return doc
+    function mount(html){
+      return new Promise(function(resolve){
+        var ifr = document.createElement('iframe');
+        ifr.style.cssText = 'position:absolute;left:-10000px;top:0;width:980px;height:780px;border:0;';
+        var settled = false;
+        ifr.addEventListener('load', function(){
+          var doc = ifr.contentDocument;
+          if (settled) return;
+          if (!doc || !doc.body || doc.body.children.length === 0) return; // skip the initial about:blank load
+          settled = true;
+          try { var s = doc.createElement('style'); s.textContent='*{transition:none !important;animation:none !important;}'; doc.head.appendChild(s); } catch(e){}
+          resolve({ doc:doc, win:ifr.contentWindow, ifr:ifr });
+        });
+        ifr.srcdoc = html;
+        document.body.appendChild(ifr);
+      });
+    }
+    async function withExport(html, fn){ var m = await mount(html); try { return await fn(m.doc, m.win); } finally { m.ifr.remove(); } }
+    var disp = function(doc, sel){ var el = doc.querySelector(sel); return el ? getComputedStyle(el).display : '(missing)'; };
+    var bg   = function(el){ return el ? getComputedStyle(el).backgroundColor : '(none)'; };
+
+    // ── test registry ─────────────────────────────────────────────────────────
+    var T = [];
+    function test(id, name, fn){ T.push({ id:id, name:name, fn:fn }); }
+
+    // A. Zero-JS invariant (kitchen sink with ALL widgets populated, incl. a nasty label)
+    function kitchen(){ return { ops:[
+      { insert:{ callout:D('callout',{type:'warning',title:'Note<x>',body:'<p>b</p>'}) } }, { insert:'\n' },
+      { insert:{ tabs:tabsNasty() } }, { insert:'\n' },
+      { insert:{ accordion:accData(false) } }, { insert:'\n' },
+      { insert:{ quote:D('quote',{}) } }, { insert:'\n' },
+      { insert:{ timeline:D('timeline',{}) } }, { insert:'\n' },
+      { insert:{ 'flip-cards':flipData() } }, { insert:'\n' },
+      { insert:{ 'click-reveal':crData() } }, { insert:'\n' },
+      { insert:{ carousel:carData() } }, { insert:'\n' },
+      { insert:{ hotspot:hsData() } }, { insert:'\n' },
+      { insert:{ 'knowledge-check':kcData() } }, { insert:'\n' },
+      { insert:{ tabs:tabsData() } }, { insert:'\n' } ] }; }
+
+    test('A1', 'No-JS export: zero &lt;script&gt; in body', async function(){
+      var b = bodyOf(nojs(kitchen()));
+      return { pass: !/<script/i.test(b), detail: /<script/i.test(b) ? 'found <script' : 'none' };
+    });
+    test('A2', 'No-JS export: zero on*= handler attributes (live DOM, ignores escaped text)', async function(){
+      return withExport(nojs(kitchen()), function(doc){
+        var bad = [];
+        doc.querySelectorAll('*').forEach(function(el){
+          el.getAttributeNames().forEach(function(n){ if (/^on/i.test(n)) bad.push(el.tagName.toLowerCase()+'['+n+']'); });
+        });
+        var scripts = doc.querySelectorAll('script').length;
+        return { pass: bad.length===0 && scripts===0, detail: bad.length ? bad.join(',') : (scripts? scripts+' <script> els' : 'no on* attrs, no <script> els') };
+      });
+    });
+    test('A3', 'No-JS export: zero javascript: URLs', async function(){
+      var h = nojs(kitchen());
+      return { pass: !/javascript:/i.test(h), detail: /javascript:/i.test(h) ? 'found' : 'none' };
+    });
+    test('A4', 'No-JS export: no addEventListener artifacts', async function(){
+      var b = bodyOf(nojs(kitchen()));
+      return { pass: !/addEventListener/.test(b), detail: 'none' };
+    });
+
+    // B. Functional interactivity
+    test('B1', 'Tabs switch (and honor non-default activeTab)', async function(){
+      return withExport(nojs(emb('tabs', tabsData())), function(doc){
+        var initP1 = disp(doc,'#wx1-p1'), initP0 = disp(doc,'#wx1-p0');           // active=t2 -> p1 visible
+        doc.querySelector('#wx1 label[for="wx1-t0"]').click();
+        var aft0 = disp(doc,'#wx1-p0'), aft1 = disp(doc,'#wx1-p1');
+        var pass = initP1==='block' && initP0==='none' && aft0==='block' && aft1==='none';
+        return { pass:pass, detail:'init p1='+initP1+' p0='+initP0+' → afterClickT0 p0='+aft0+' p1='+aft1 };
+      });
+    });
+    test('B2', 'Accordion multi-open: two panels stay open together', async function(){
+      return withExport(nojs(emb('accordion', accData(true))), function(doc){
+        var d = doc.querySelectorAll('#wx1 details');
+        d[0].querySelector('summary').click(); d[1].querySelector('summary').click();
+        return { pass: d[0].open && d[1].open, detail:'d0.open='+d[0].open+' d1.open='+d[1].open };
+      });
+    });
+    test('B3', 'Accordion single-open: opening 2nd closes 1st (native &lt;details name&gt;)', async function(){
+      return withExport(nojs(emb('accordion', accData(false))), function(doc){
+        var d = doc.querySelectorAll('#wx1 details');
+        var hasName = d[0].getAttribute('name') === 'acc-wx1';
+        d[0].querySelector('summary').click(); d[1].querySelector('summary').click();
+        return { pass: hasName && d[1].open && !d[0].open, detail:'name='+d[0].getAttribute('name')+' d0.open='+d[0].open+' d1.open='+d[1].open };
+      });
+    });
+    test('B4', 'Flip card toggles on and back off', async function(){
+      return withExport(nojs(emb('flip-cards', flipData())), function(doc){
+        var t = doc.querySelector('#wx1 .cx-flip-toggle');
+        var inner = t.closest('.hce-fc-card').querySelector('.hce-fc-inner');
+        var lab = doc.querySelector('#wx1 label[for="'+t.id+'"]') || t.closest('.hce-fc-card').querySelector('label');
+        lab.click(); var on = getComputedStyle(inner).transform;
+        lab.click(); var off = getComputedStyle(inner).transform;
+        var pass = /matrix3d\(-1/.test(on) && (off==='none' || /matrix3d\(1, 0, 0, 0/.test(off) || off==='matrix(1, 0, 0, 1, 0, 0)');
+        return { pass:pass, detail:'flippedOn='+on.slice(0,22)+' flippedOff='+off.slice(0,22) };
+      });
+    });
+    test('B5', 'Click &amp; Reveal opens (native details)', async function(){
+      return withExport(nojs(emb('click-reveal', crData())), function(doc){
+        var d = doc.querySelector('#wx1 details');
+        d.querySelector('summary').click();
+        return { pass: d.open === true, detail:'open='+d.open };
+      });
+    });
+    test('B6', 'Carousel: default active dot + :target tracks navigation', async function(){
+      return withExport(nojs(emb('carousel', carData())), function(doc, win){
+        var d0i = bg(doc.querySelector('#wx1 .hce-car-dots a[href="#wx1-s0"]'));
+        var d1i = bg(doc.querySelector('#wx1 .hce-car-dots a[href="#wx1-s1"]'));
+        win.location.hash = 'wx1-s1';
+        var d0a = bg(doc.querySelector('#wx1 .hce-car-dots a[href="#wx1-s0"]'));
+        var d1a = bg(doc.querySelector('#wx1 .hce-car-dots a[href="#wx1-s1"]'));
+        var pass = d0i !== d1i && d1a === d0i && d0a === d1i;   // active color swaps from dot0 to dot1
+        return { pass:pass, detail:'init d0='+d0i+' d1='+d1i+' | afterHash d0='+d0a+' d1='+d1a };
+      });
+    });
+    test('B7', 'Hotspot: open / single-open / dismiss', async function(){
+      return withExport(nojs(emb('hotspot', hsData())), function(doc){
+        var pins = doc.querySelectorAll('#wx1 .hce-hs-pin'), tips = doc.querySelectorAll('#wx1 .hce-hs-tip');
+        pins[0].click(); var a1 = getComputedStyle(tips[0]).display, b1 = getComputedStyle(tips[1]).display;
+        pins[1].click(); var a2 = getComputedStyle(tips[0]).display, b2 = getComputedStyle(tips[1]).display;
+        tips[1].querySelector('.hce-hs-close').click(); var b3 = getComputedStyle(tips[1]).display;
+        var pass = a1==='block'&&b1==='none' && a2==='none'&&b2==='block' && b3==='none';
+        return { pass:pass, detail:'openA('+a1+','+b1+') openB('+a2+','+b2+') close('+b3+')' };
+      });
+    });
+    test('B8', 'Knowledge Check: grade correct=green, wrong=red, feedback+lock', async function(){
+      return withExport(nojs(emb('knowledge-check', kcData())), function(doc){
+        doc.querySelectorAll('#wx1 .cx-kc-opt input')[1].click();   // pick wrong (London)
+        doc.querySelector('#wx1 label[for="wx1-submit"]').click();
+        var correct = doc.querySelector('#wx1 .cx-kc-opt[data-correct]');
+        var selected = doc.querySelector('#wx1 .cx-kc-opt:has(input:checked)');
+        var fb = selected.querySelector('.cx-kc-fb');
+        var optsBox = doc.querySelector('#wx1 .cx-kc-options');
+        var submit = doc.querySelector('#wx1 label[for="wx1-submit"]');
+        var pass = bg(correct)===GREEN && bg(selected)===RED && getComputedStyle(fb).display==='block'
+                && getComputedStyle(optsBox).pointerEvents==='none' && getComputedStyle(submit).display==='none';
+        return { pass:pass, detail:'correctBg='+bg(correct)+' wrongBg='+bg(selected)+' fb='+getComputedStyle(fb).display+' lock='+getComputedStyle(optsBox).pointerEvents+' submit='+getComputedStyle(submit).display };
+      });
+    });
+
+    // C. Multi-instance isolation
+    test('C1', 'Two Tabs widgets are independent', async function(){
+      return withExport(nojs(emb2('tabs', tabsData(), tabsData())), function(doc){
+        doc.querySelector('#wx2 label[for="wx2-t0"]').click();   // switch instance 2 to tab 0
+        var i1 = disp(doc,'#wx1-p1');   // instance 1 still on its active (t2)
+        var i2a = disp(doc,'#wx2-p0'), i2b = disp(doc,'#wx2-p1');
+        return { pass: i1==='block' && i2a==='block' && i2b==='none', detail:'inst1 p1='+i1+' inst2 p0='+i2a+' p1='+i2b };
+      });
+    });
+    test('C2', 'Two single-open Accordions are scoped (both can be open)', async function(){
+      return withExport(nojs(emb2('accordion', accData(false), accData(false))), function(doc){
+        var d1 = doc.querySelectorAll('#wx1 details'), d2 = doc.querySelectorAll('#wx2 details');
+        var n1 = d1[0].getAttribute('name'), n2 = d2[0].getAttribute('name');
+        d1[0].querySelector('summary').click(); d2[0].querySelector('summary').click();
+        return { pass: n1!==n2 && d1[0].open && d2[0].open, detail:'names '+n1+'/'+n2+' open '+d1[0].open+'/'+d2[0].open };
+      });
+    });
+    test('C3', 'Two Hotspots are independent', async function(){
+      return withExport(nojs(emb2('hotspot', hsData(), hsData())), function(doc){
+        doc.querySelector('#wx1 .hce-hs-pin').click();
+        doc.querySelector('#wx2 .hce-hs-pin').click();
+        var t1 = getComputedStyle(doc.querySelector('#wx1 .hce-hs-tip')).display;
+        var t2 = getComputedStyle(doc.querySelector('#wx2 .hce-hs-tip')).display;
+        return { pass: t1==='block' && t2==='block', detail:'tip1='+t1+' tip2='+t2 };
+      });
+    });
+    test('C4', 'Two Knowledge Checks: submitting one does not grade the other', async function(){
+      return withExport(nojs(emb2('knowledge-check', kcData(), kcData())), function(doc){
+        doc.querySelectorAll('#wx2 .cx-kc-opt input')[0].click();
+        doc.querySelector('#wx2 label[for="wx2-submit"]').click();
+        var other = doc.querySelector('#wx1 .cx-kc-opt[data-correct]');
+        var otherBox = doc.querySelector('#wx1 .cx-kc-options');
+        var pass = bg(other)!==GREEN && getComputedStyle(otherBox).pointerEvents!=='none';
+        return { pass:pass, detail:'inst1 correctBg='+bg(other)+' lock='+getComputedStyle(otherBox).pointerEvents };
+      });
+    });
+    test('C5', 'All element ids unique across a full document', async function(){
+      var html = nojs(kitchen()); var ids = {}; var dup = [];
+      (html.match(/\sid="([^"]+)"/g) || []).forEach(function(m){ var v = m.slice(5,-1); if (ids[v]) { if (dup.indexOf(v)<0) dup.push(v); } ids[v]=1; });
+      return { pass: dup.length===0, detail: dup.length ? 'dups: '+dup.join(',') : Object.keys(ids).length+' unique ids' };
+    });
+    test('C6', 'Two Flip-card widgets are independent', async function(){
+      return withExport(nojs(emb2('flip-cards', flipData(), flipData())), function(doc){
+        var t2 = doc.querySelector('#wx2 .cx-flip-toggle');
+        (doc.querySelector('#wx2 label[for="'+t2.id+'"]') || t2.closest('.hce-fc-card').querySelector('label')).click();
+        var i1 = getComputedStyle(doc.querySelector('#wx1 .hce-fc-inner')).transform;
+        var i2 = getComputedStyle(doc.querySelector('#wx2 .hce-fc-inner')).transform;
+        var pass = !/matrix3d\(-1/.test(i1) && /matrix3d\(-1/.test(i2);
+        return { pass:pass, detail:'inst1='+i1.slice(0,16)+' inst2='+i2.slice(0,16) };
+      });
+    });
+
+    // D. Visual fidelity
+    test('D1', 'No-JS and JS exports bake the same theme primary color', async function(){
+      var primary = getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim();
+      var n = nojs(emb('tabs', tabsData())), j = jsx(emb('tabs', tabsData()));
+      return { pass: !!primary && n.indexOf(primary)>=0 && j.indexOf(primary)>=0, detail:'primary='+primary+' inNoJS='+(n.indexOf(primary)>=0)+' inJS='+(j.indexOf(primary)>=0) };
+    });
+
+    // E. Content & escaping
+    test('E1', 'Rich-text content injected verbatim (element preserved)', async function(){
+      return withExport(nojs(emb('tabs', tabsData())), function(doc){
+        var strongInPanel = doc.querySelector('#wx1-p0 strong');   // tab t1 content has <strong>
+        return { pass: !!strongInPanel, detail: strongInPanel ? '<strong> preserved' : 'rich element lost' };
+      });
+    });
+    test('E2', 'Plain-text label escaped (no live markup / handler from label)', async function(){
+      return withExport(nojs(emb('tabs', tabsNasty())), function(doc){
+        var lab = doc.querySelector('#wx1 label[for="wx1-t0"]');
+        var noLiveB = !lab.querySelector('b');
+        var noLiveImg = !lab.querySelector('img');
+        var literal = lab.textContent.indexOf('<b>') >= 0;
+        return { pass: noLiveB && noLiveImg && literal, detail:'liveB='+!noLiveB+' liveImg='+!noLiveImg+' literalText='+literal };
+      });
+    });
+    test('E3', 'Empty/edge data does not throw (0 slides / 0 pins / 0 items)', async function(){
+      var ok = true, msg = [];
+      try { nojs(emb('carousel', D('carousel',{slides:[]}))); } catch(e){ ok=false; msg.push('carousel:'+e.message); }
+      try { var h = nojs(emb('hotspot', D('hotspot',{pins:[],imageData:''}))); if (h.indexOf('No image')<0) msg.push('hotspot:no placeholder'); } catch(e){ ok=false; msg.push('hotspot:'+e.message); }
+      try { nojs(emb('accordion', D('accordion',{items:[]}))); } catch(e){ ok=false; msg.push('accordion:'+e.message); }
+      return { pass: ok && msg.length===0, detail: msg.length ? msg.join('; ') : 'all rendered without throwing' };
+    });
+
+    // F. Accessibility
+    test('F1', 'State inputs stay focusable (not display:none)', async function(){
+      return withExport(nojs(kitchen()), function(doc){
+        var sels = ['.cx-tab-radio', '.cx-flip-toggle', '.hce-hs-radio', '.cx-kc-radio'];
+        var bad = [];
+        sels.forEach(function(s){ var el = doc.querySelector(s); if (!el) { bad.push(s+':missing'); return; }
+          var cs = getComputedStyle(el); if (cs.display==='none' || cs.visibility==='hidden') bad.push(s+':'+cs.display+'/'+cs.visibility); });
+        return { pass: bad.length===0, detail: bad.length ? bad.join(', ') : 'all inputs focusable (clip-hidden)' };
+      });
+    });
+    test('F3', 'Labels associated with inputs via for/id', async function(){
+      return withExport(nojs(emb('tabs', tabsData())), function(doc){
+        var lab = doc.querySelector('#wx1 label[for="wx1-t0"]');
+        var inp = doc.querySelector('#wx1 input#wx1-t0');
+        return { pass: !!lab && !!inp, detail:'label[for=wx1-t0]='+!!lab+' input#wx1-t0='+!!inp };
+      });
+    });
+
+    // G. Non-regression
+    test('G1', 'JS Export still emits onclick (JS path unchanged)', async function(){
+      var h = jsx(emb('tabs', tabsData()));
+      return { pass: /onclick=/.test(h), detail: /onclick=/.test(h) ? 'onclick present in JS export' : 'JS path regressed!' };
+    });
+    test('G2', 'Static widgets fall back to renderExport and stay JS-free in no-JS mode', async function(){
+      var bad = [];
+      ['callout','quote','timeline'].forEach(function(n){
+        var b = bodyOf(nojs(emb(n, D(n,{}))));
+        if (b.replace(/\s/g,'').length < 20) bad.push(n+':empty');
+        if (/<script|\son[a-z]+\s*=/i.test(b)) bad.push(n+':hasJS');
+      });
+      return { pass: bad.length===0, detail: bad.length ? bad.join(', ') : 'callout/quote/timeline render, JS-free' };
+    });
+    test('G5', 'buildExportHtml(delta, title) 2-arg still works (backward compat)', async function(){
+      var ok = true, msg = '';
+      try { var h = EX.buildExportHtml(emb('tabs', tabsData()), 'X'); ok = /onclick=/.test(h); msg = ok ? 'defaults to JS, no throw' : 'produced but no onclick'; }
+      catch(e){ ok = false; msg = 'threw: '+e.message; }
+      return { pass: ok, detail: msg };
+    });
+
+    // ── run ──
+    var CAT = { A:'A · Zero-JS', B:'B · Interactivity', C:'C · Isolation', D:'D · Fidelity', E:'E · Content', F:'F · A11y', G:'G · Non-regression' };
+    (async function(){
+      var results = [];
+      for (var i=0;i<T.length;i++){
+        var t = T[i], r;
+        try { r = await t.fn(); } catch(e){ r = { pass:false, detail:'THREW: '+(e && e.message) }; }
+        results.push({ id:t.id, name:t.name, pass:!!r.pass, detail:r.detail });
+      }
+      window.__testResults = results;
+      var passed = results.filter(function(r){ return r.pass; }).length;
+      var sum = document.getElementById('summary');
+      sum.textContent = passed+' / '+results.length+' passed';
+      sum.className = passed===results.length ? 'ok' : 'bad';
+      var rows = document.getElementById('rows');
+      results.forEach(function(r){
+        var tr = document.createElement('tr');
+        tr.innerHTML = '<td class="cat">'+r.id+'</td><td>'+r.name+'</td>'+
+          '<td class="'+(r.pass?'p':'f')+'">'+(r.pass?'PASS':'FAIL')+'</td>'+
+          '<td><code>'+String(r.detail).replace(/</g,'&lt;')+'</code></td>';
+        rows.appendChild(tr);
+      });
+    })();
+  });
+  </script>
+</body>
+</html>

@@ -181,6 +181,93 @@
         '</div>';
     }
 
+    renderExportNoJS(container, data, ctx) {
+      const uid = (ctx && ctx.uid) || ('cr' + Math.random().toString(36).slice(2, 7));
+
+      const root    = getComputedStyle(document.documentElement);
+      const primary = root.getPropertyValue('--color-primary').trim()        || '#2563eb';
+      const border  = root.getPropertyValue('--color-border').trim()         || '#e2e8f0';
+      const surface = root.getPropertyValue('--color-surface').trim()        || '#f8fafc';
+      const text    = root.getPropertyValue('--color-text').trim()           || '#1e293b';
+      const muted   = root.getPropertyValue('--color-text-muted').trim()     || '#64748b';
+      const font    = root.getPropertyValue('--font-family-body').trim()     || 'Georgia, serif';
+      const radius  = root.getPropertyValue('--widget-border-radius').trim() || '0.5rem';
+
+      let itemsHtml = '';
+      (data.items || []).forEach(function (item) {
+        const style = item.triggerStyle || 'button';
+
+        let triggerStyle = '';
+        if (style === 'button') {
+          triggerStyle =
+            'display:flex;align-items:center;justify-content:space-between;' +
+            'width:100%;padding:12px 16px;' +
+            'background:' + primary + ';color:#fff;' +
+            'border:none;border-radius:' + radius + ';' +
+            'font-family:' + font + ';font-size:15px;font-weight:600;' +
+            'cursor:pointer;text-align:left;';
+        } else if (style === 'label') {
+          triggerStyle =
+            'display:flex;align-items:center;justify-content:space-between;' +
+            'width:100%;padding:10px 4px;' +
+            'background:none;border:none;border-bottom:1px solid ' + border + ';' +
+            'font-family:' + font + ';font-size:15px;' +
+            'color:' + primary + ';text-decoration:underline;' +
+            'cursor:pointer;text-align:left;';
+        } else {
+          // card
+          triggerStyle =
+            'display:flex;align-items:center;justify-content:space-between;' +
+            'width:100%;padding:14px 16px;' +
+            'background:' + surface + ';' +
+            'border:1px solid ' + border + ';border-radius:' + radius + ';' +
+            'font-family:' + font + ';font-size:15px;' +
+            'color:' + text + ';' +
+            'cursor:pointer;text-align:left;';
+        }
+
+        const arrowStyle =
+          'display:inline-block;transition:transform 0.3s ease;' +
+          'font-size:12px;margin-left:8px;flex-shrink:0;';
+
+        const contentStyle =
+          'font-family:' + font + ';font-size:15px;color:' + text + ';';
+
+        const contentInnerStyle = 'padding:12px 4px 4px;line-height:1.6;';
+
+        // Native <details>/<summary>: independent (non-exclusive) items, no name group.
+        // The summary is the visible clickable trigger; content lives inside the
+        // <details> after the summary. Native semantics replace aria-expanded flips.
+        itemsHtml +=
+          '<details class="hce-cr-details" style="margin-bottom:8px;">' +
+            '<summary style="' + triggerStyle + '">' +
+              '<span>' + esc(item.triggerLabel) + '</span>' +
+              '<span class="hce-cr-arrow" style="' + arrowStyle + '">&#9660;</span>' +
+            '</summary>' +
+            '<div class="hce-cr-content" style="' + contentStyle + '">' +
+              '<div style="' + contentInnerStyle + '">' +
+                item.content +
+              '</div>' +
+            '</div>' +
+          '</details>';
+      });
+
+      container.innerHTML =
+        '<div id="' + uid + '">' +
+          '<style>' +
+            '#' + uid + ' summary{list-style:none;}' +
+            '#' + uid + ' summary::-webkit-details-marker{display:none;}' +
+            '#' + uid + ' summary{outline:none;}' +
+            '#' + uid + ' summary:focus-visible{outline:2px solid ' + primary + ';outline-offset:2px;}' +
+            '#' + uid + ' details[open] .hce-cr-arrow{transform:rotate(180deg);}' +
+            '@media(prefers-reduced-motion:reduce){#' + uid + ' .hce-cr-arrow{transition:none !important;}}' +
+          '</style>' +
+          '<div style="margin:8px 0;">' +
+            itemsHtml +
+          '</div>' +
+        '</div>';
+    }
+
     edit(data) {
       this._openEditModal(data);
     }

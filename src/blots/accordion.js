@@ -163,6 +163,94 @@
         script;
     }
 
+    renderExportNoJS(container, data, ctx) {
+      const uid  = (ctx && ctx.uid) || ('ae' + Math.random().toString(36).slice(2, 7));
+      const root = getComputedStyle(document.documentElement);
+
+      const primary = root.getPropertyValue('--color-primary').trim()        || '#2563eb';
+      const border  = root.getPropertyValue('--color-border').trim()         || '#e2e8f0';
+      const surface = root.getPropertyValue('--color-surface').trim()        || '#f8fafc';
+      const text    = root.getPropertyValue('--color-text').trim()           || '#1e293b';
+      const muted   = root.getPropertyValue('--color-text-muted').trim()     || '#64748b';
+      const font    = root.getPropertyValue('--font-family-body').trim()     || 'Georgia, serif';
+      const radius  = root.getPropertyValue('--widget-border-radius').trim() || '0.5rem';
+
+      // Scoped animation CSS for this accordion instance
+      const styles =
+        '<style>' +
+          '#' + uid + ' .acc-body{' +
+            'display:grid;grid-template-rows:0fr;' +
+            'transition:grid-template-rows 0.25s ease;' +
+          '}' +
+          '#' + uid + ' details[open]>.acc-body{' +
+            'grid-template-rows:1fr;' +
+          '}' +
+          '#' + uid + ' .acc-inner{overflow:hidden;}' +
+          '#' + uid + ' .acc-chevron{' +
+            'display:inline-block;font-size:10px;' +
+            'color:' + muted + ';' +
+            'transition:transform 0.25s ease,color 0.25s ease;' +
+          '}' +
+          '#' + uid + ' details[open] .acc-chevron{' +
+            'transform:rotate(180deg);color:' + primary + ';' +
+          '}' +
+          '#' + uid + ' summary{list-style:none;}' +
+          '#' + uid + ' summary::-webkit-details-marker{display:none;}' +
+        '</style>';
+
+      const sumStyle =
+        'display:flex;justify-content:space-between;align-items:center;' +
+        'padding:12px 16px;cursor:pointer;user-select:none;list-style:none;' +
+        'background:' + surface + ';' +
+        'font-family:' + font + ';font-size:14px;font-weight:600;color:' + text + ';';
+
+      const innerStyle =
+        'padding:12px 16px;font-family:' + font + ';font-size:14px;' +
+        'color:' + muted + ';line-height:1.6;';
+
+      // In single-open mode, the browser enforces exclusivity natively via the
+      // shared name attribute (native exclusive-accordion). Only the FIRST open
+      // item keeps its open attribute so the initial state is valid.
+      const single = !data.allowMultiple;
+      const nameAttr = single ? (' name="acc-' + uid + '"') : '';
+      let firstOpenUsed = false;
+
+      let items = '';
+      data.items.forEach(function (item, i) {
+        let openAttr = '';
+        if (item.open) {
+          if (!single) {
+            openAttr = ' open';
+          } else if (!firstOpenUsed) {
+            openAttr = ' open';
+            firstOpenUsed = true;
+          }
+        }
+        items +=
+          '<details' + nameAttr + openAttr + ' style="' +
+            'border-top:' + (i === 0 ? '0' : '1px solid ' + border) + ';' +
+          '">' +
+            '<summary style="' + sumStyle + '">' +
+              '<span>' + esc(item.header) + '</span>' +
+              '<span class="acc-chevron">&#9660;</span>' +
+            '</summary>' +
+            '<div class="acc-body">' +
+              '<div class="acc-inner" style="' + innerStyle + '">' + item.content + '</div>' +
+            '</div>' +
+          '</details>';
+      });
+
+      container.innerHTML =
+        styles +
+        '<div id="' + uid + '" data-accordion-id="' + uid + '" style="' +
+          'border:1px solid ' + border + ';' +
+          'border-radius:' + radius + ';' +
+          'overflow:hidden;margin:8px 0;' +
+        '">' +
+          items +
+        '</div>';
+    }
+
     edit(data) {
       this._openEditModal(data);
     }

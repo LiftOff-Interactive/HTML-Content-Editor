@@ -379,6 +379,138 @@
         '<' + 'script>' + script + '</' + 'script>';
     }
 
+    renderExportNoJS(container, data, ctx) {
+      const cs      = getComputedStyle(document.documentElement);
+      const primary = cs.getPropertyValue('--color-primary').trim()        || '#2563eb';
+      const border  = cs.getPropertyValue('--color-border').trim()         || '#e2e8f0';
+      const surface = cs.getPropertyValue('--color-surface').trim()        || '#f8fafc';
+      const text    = cs.getPropertyValue('--color-text').trim()           || '#1e293b';
+      const muted   = cs.getPropertyValue('--color-text-muted').trim()     || '#64748b';
+      const font    = cs.getPropertyValue('--font-family-body').trim()     || 'Georgia, serif';
+      const radius  = cs.getPropertyValue('--widget-border-radius').trim() || '0.5rem';
+      const ui      = cs.getPropertyValue('--font-family-ui').trim() || 'system-ui,sans-serif';
+
+      const uid  = (ctx && ctx.uid) || ('kc' + Math.random().toString(36).slice(2, 7));
+      const opts = data.options || [];
+      const isTF = data.questionType === 'true-false';
+
+      // Determine correct option indices the same way renderExport does
+      const correctIndices = [];
+      opts.forEach(function (opt, idx) { if (opt.correct) correctIndices.push(idx); });
+
+      // Visually-hidden-but-focusable pattern (keeps Tab + arrow-key selection working)
+      const clipStyle =
+        'position:absolute;width:1px;height:1px;opacity:0;' +
+        'margin:0;padding:0;border:0;pointer-events:none;';
+
+      const radioName = 'kcq-' + uid;
+      let optionsHtml = '';
+      opts.forEach(function (opt, idx) {
+        const rid = uid + '-o' + idx;
+        const isCorrect = correctIndices.indexOf(idx) !== -1;
+
+        if (isTF) {
+          const btnStyle =
+            'display:block;width:100%;padding:14px 20px;margin-bottom:8px;' +
+            'font-family:' + font + ';font-size:1em;color:' + text + ';' +
+            'background:' + surface + ';border:2px solid ' + border + ';' +
+            'border-radius:' + radius + ';cursor:pointer;text-align:left;' +
+            'transition:border-color 0.15s,background 0.15s;';
+          optionsHtml +=
+            '<label class="cx-kc-opt" for="' + rid + '"' +
+                (isCorrect ? ' data-correct' : '') + ' style="' + btnStyle + '">' +
+              '<input type="radio" class="cx-kc-radio" name="' + radioName + '" id="' + rid + '" ' +
+                  'value="' + idx + '" style="' + clipStyle + '">' +
+              esc(opt.text) +
+              '<div class="cx-kc-fb" style="display:none;margin-top:8px;font-size:0.875em;' +
+                  'color:' + muted + ';font-style:italic;">' +
+                (opt.feedback || '') +
+              '</div>' +
+            '</label>';
+        } else {
+          const labelStyle =
+            'display:flex;align-items:flex-start;gap:10px;padding:12px 14px;margin-bottom:8px;' +
+            'border:2px solid ' + border + ';border-radius:' + radius + ';cursor:pointer;' +
+            'font-family:' + font + ';font-size:1em;color:' + text + ';' +
+            'background:' + surface + ';transition:border-color 0.15s,background 0.15s;';
+          optionsHtml +=
+            '<label class="cx-kc-opt" for="' + rid + '"' +
+                (isCorrect ? ' data-correct' : '') + ' style="' + labelStyle + '">' +
+              '<input type="radio" class="cx-kc-radio" name="' + radioName + '" id="' + rid + '" ' +
+                  'value="' + idx + '" style="' + clipStyle + 'accent-color:' + primary + ';"> ' +
+              '<span style="flex:1;">' + esc(opt.text) + '</span>' +
+              '<div class="cx-kc-fb" style="display:none;margin-top:6px;flex-basis:100%;padding-left:0;' +
+                  'font-size:0.875em;color:' + muted + ';font-style:italic;">' +
+                (opt.feedback || '') +
+              '</div>' +
+            '</label>';
+        }
+      });
+
+      const hintHtml = data.hint
+        ? '<details class="cx-kc-hint" style="margin-bottom:14px;">' +
+            '<summary style="font-family:' + ui + ';font-size:13px;color:' + primary + ';' +
+              'background:none;border:1px solid ' + primary + ';border-radius:4px;cursor:pointer;' +
+              'padding:4px 10px;display:inline-block;list-style:none;">' +
+              'Show Hint' +
+            '</summary>' +
+            '<div style="margin-top:8px;padding:10px 14px;' +
+              'background:' + surface + ';border:1px solid ' + border + ';' +
+              'border-radius:' + radius + ';font-family:' + font + ';font-size:0.9em;' +
+              'color:' + muted + ';font-style:italic;">' +
+              (data.hint || '') +
+            '</div>' +
+          '</details>'
+        : '';
+
+      const submitStyle =
+        'font-family:' + ui + ';font-size:14px;font-weight:600;' +
+        'background:' + primary + ';color:#fff;border:none;' +
+        'border-radius:' + radius + ';cursor:pointer;padding:10px 24px;' +
+        'display:inline-block;';
+
+      // Scoped style block — every selector prefixed with #<uid>
+      const styleBlock =
+        '<style>' +
+          '#' + uid + ' .cx-kc-submit-cb{' + clipStyle + '}' +
+          '#' + uid + ' .cx-kc-fb{display:none;}' +
+          '#' + uid + ' summary::-webkit-details-marker{display:none;}' +
+          // Grade once the submit gate is checked
+          // !important: the option labels carry inline border/background/display
+          // styles, and inline always beats a stylesheet selector — so the grade
+          // and feedback-reveal overrides must be !important to take effect.
+          '#' + uid + ':has(#' + uid + '-submit:checked) .cx-kc-opt:has(input:checked):not([data-correct]){border-color:#dc2626 !important;background:#fee2e2 !important;}' +
+          '#' + uid + ':has(#' + uid + '-submit:checked) .cx-kc-opt[data-correct]{border-color:#16a34a !important;background:#dcfce7 !important;}' +
+          '#' + uid + ':has(#' + uid + '-submit:checked) .cx-kc-opt:has(input:checked) .cx-kc-fb{display:block !important;}' +
+          '#' + uid + ':has(#' + uid + '-submit:checked) .cx-kc-opt[data-correct] .cx-kc-fb{display:block !important;}' +
+          '#' + uid + ':has(#' + uid + '-submit:checked) .cx-kc-options{pointer-events:none;}' +
+          '#' + uid + ':has(#' + uid + '-submit:checked) .cx-kc-submit{display:none !important;}' +
+          // Keyboard focus affordance for the visually-hidden radios
+          '#' + uid + ' .cx-kc-opt:has(input:focus-visible){outline:2px solid ' + primary + ';outline-offset:2px;}' +
+          '#' + uid + ' .cx-kc-submit:has(.cx-kc-submit-cb:focus-visible){outline:2px solid ' + primary + ';outline-offset:2px;}' +
+        '</style>';
+
+      container.innerHTML =
+        '<div id="' + uid + '" style="border:1px solid ' + border + ';' +
+            'border-radius:' + radius + ';padding:20px 24px;margin:8px 0;' +
+            'background:' + surface + ';">' +
+          styleBlock +
+          '<fieldset style="border:none;padding:0;margin:0;">' +
+            '<legend style="font-family:' + font + ';font-size:1.1em;font-weight:600;' +
+                'color:' + text + ';margin-bottom:16px;display:block;' +
+                'border:none;padding:0;width:100%;">' +
+              (data.question || '') +
+            '</legend>' +
+            hintHtml +
+            '<div class="cx-kc-options">' + optionsHtml + '</div>' +
+            '<div style="margin-top:16px;">' +
+              '<input type="checkbox" class="cx-kc-submit-cb" id="' + uid + '-submit">' +
+              '<label class="cx-kc-submit" for="' + uid + '-submit" style="' + submitStyle + '">Submit</label>' +
+            '</div>' +
+          '</fieldset>' +
+        '</div>';
+    }
+
     edit(data) {
       this._openEditModal(data);
     }

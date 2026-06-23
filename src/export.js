@@ -32,8 +32,10 @@
   // Inline attrs (bold, italic, underline) live on text ops.
   // The two never mix on the same op in a well-formed Quill delta.
 
-  function deltaToHtml(delta) {
-    const ops = (delta && delta.ops) || [];
+  function deltaToHtml(delta, opts) {
+    const ops  = (delta && delta.ops) || [];
+    const noJs = !!(opts && opts.noJs);
+    let widgetSeq   = 0;
     let html        = '';
     let lineBuffer  = '';
     let currentList = null;
@@ -95,10 +97,18 @@
         if (Blot) {
           const container = document.createElement('div');
           const instance  = Object.create(Blot.prototype);
+          // ctx.uid is the ONLY identity source in export — the instance is a
+          // bare prototype object, so this._uid (set in attach()) is unavailable.
+          const ctx       = { uid: 'wx' + (++widgetSeq), noJs: noJs };
+          const useNoJs   = noJs && typeof instance.renderExportNoJS === 'function';
           try {
-            instance.renderExport(container, data);
+            if (useNoJs) {
+              instance.renderExportNoJS(container, data, ctx);
+            } else {
+              instance.renderExport(container, data, ctx);
+            }
           } catch (err) {
-            console.warn('[HCEExport] renderExport failed for', blotName, err);
+            console.warn('[HCEExport] render failed for', blotName, err);
             container.innerHTML =
               '<div style="padding:1em;background:#fef2f2;border:1px solid #fecaca;' +
               'border-radius:0.5rem;color:#dc2626;font-family:system-ui,sans-serif;' +
@@ -216,8 +226,11 @@
 
   // ── Main export pipeline ──────────────────────────────────────────────────
 
-  function exportHtml() {
-    const btn = document.getElementById('export-btn');
+  function exportHtml(opts) {
+    opts = opts || {};
+    const btnId = opts.noJs ? 'export-sharepoint-btn' : 'export-btn';
+    const label = opts.noJs ? 'Export for SharePoint' : 'Export HTML';
+    const btn = document.getElementById(btnId);
     if (btn) {
       btn.disabled    = true;
       btn.textContent = 'Exporting…';
@@ -226,21 +239,21 @@
     // Yield to the browser so the button state repaints before synchronous work.
     setTimeout(function () {
       try {
-        _runExport();
+        _runExport(opts);
       } catch (err) {
         showToast('Export failed — check the console for details.');
         console.error('[HCEExport]', err);
       } finally {
         if (btn) {
           btn.disabled    = false;
-          btn.textContent = 'Export HTML';
+          btn.textContent = label;
         }
       }
     }, 20);
   }
 
-  function buildExportHtml(delta, title) {
-    const bodyHtml = deltaToHtml(delta);
+  function buildExportHtml(delta, title, opts) {
+    const bodyHtml = deltaToHtml(delta, opts);
     const css      = buildExportCSS();
 
     return [
@@ -263,7 +276,8 @@
     ].join('\n');
   }
 
-  function _runExport() {
+  function _runExport(opts) {
+    opts = opts || {};
     const editor = window.contentEditor;
     if (!editor || !editor.quill) {
       console.error('[HCEExport] contentEditor not ready');
@@ -272,7 +286,7 @@
 
     const delta = editor.quill.getContents();
     const title = (editor.getDocumentTitle && editor.getDocumentTitle()) || 'Exported Document';
-    const html  = buildExportHtml(delta, title);
+    const html  = buildExportHtml(delta, title, opts);
 
     const sizeBytes = new Blob([html]).size;
     if (sizeBytes > 5 * 1024 * 1024) {
@@ -282,15 +296,25 @@
       );
     }
 
-    triggerDownload(html, slugify(title));
+    const filename = opts.noJs
+      ? slugify(title).replace(/\.html$/, '') + '-sharepoint.html'
+      : slugify(title);
+    triggerDownload(html, filename);
   }
 
   // ── Init ──────────────────────────────────────────────────────────────────
 
   document.addEventListener('DOMContentLoaded', function () {
     var btn = document.getElementById('export-btn');
-    if (btn) btn.addEventListener('click', exportHtml);
+    if (btn) btn.addEventListener('click', function () { exportHtml(); });
+
+    var sbtn = document.getElementById('export-sharepoint-btn');
+    if (sbtn) sbtn.addEventListener('click', function () { exportHtml({ noJs: true }); });
   });
 
-  window.HCEExport = { exportHtml, buildExportHtml };
+  window.HCEExport = {
+    exportHtml: exportHtml,
+    exportHtmlNoJs: function () { exportHtml({ noJs: true }); },
+    buildExportHtml: buildExportHtml,
+  };
 })();
