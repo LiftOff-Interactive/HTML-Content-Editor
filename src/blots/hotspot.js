@@ -109,7 +109,8 @@
       const surface = root.getPropertyValue('--color-surface').trim()        || '#f8fafc';
       const text    = root.getPropertyValue('--color-text').trim()           || '#1e293b';
       const font    = root.getPropertyValue('--font-family-body').trim()     || 'Georgia, serif';
-      const radius  = root.getPropertyValue('--widget-border-radius').trim() || '0.5rem';
+      const radius  = root.getPropertyValue('--widget-border-radius').trim() || '0.75rem';
+      const shadow  = root.getPropertyValue('--widget-shadow').trim()        || '0 12px 30px rgba(0,0,0,0.08)';
 
       // Index-based onclick — pairs pins[idx] with tips[idx] in DOM order
       const onClickHandler =
@@ -191,7 +192,7 @@
           '@media(prefers-reduced-motion:reduce){.hce-hs-pin::after{animation:none;}}' +
         '</style>' +
         (data.imageData
-          ? '<div data-hs style="position:relative;line-height:0;border-radius:' + radius + ';margin:8px 0;">' +
+          ? '<div data-hs style="position:relative;line-height:0;border-radius:' + radius + ';margin:8px 0;box-shadow:' + shadow + ';">' +
               '<img src="' + data.imageData + '" alt="' + esc(data.altText) + '" ' +
                   'style="width:100%;height:auto;display:block;border-radius:' + radius + ';">' +
               pinsHtml +
@@ -209,7 +210,8 @@
       const surface = root.getPropertyValue('--color-surface').trim()        || '#f8fafc';
       const text    = root.getPropertyValue('--color-text').trim()           || '#1e293b';
       const font    = root.getPropertyValue('--font-family-body').trim()     || 'Georgia, serif';
-      const radius  = root.getPropertyValue('--widget-border-radius').trim() || '0.5rem';
+      const radius  = root.getPropertyValue('--widget-border-radius').trim() || '0.75rem';
+      const shadow  = root.getPropertyValue('--widget-shadow').trim()        || '0 12px 30px rgba(0,0,0,0.08)';
 
       // Visually hide the state radios but keep them keyboard-focusable
       // (NOT display:none — that would break Tab focus + Enter/Space toggle).
@@ -305,7 +307,7 @@
         '</style>';
 
       const inner = data.imageData
-        ? '<div style="position:relative;line-height:0;border-radius:' + radius + ';margin:8px 0;">' +
+        ? '<div style="position:relative;line-height:0;border-radius:' + radius + ';margin:8px 0;box-shadow:' + shadow + ';">' +
             '<img src="' + data.imageData + '" alt="' + esc(data.altText) + '" ' +
                 'style="width:100%;height:auto;display:block;border-radius:' + radius + ';">' +
             pinsHtml +

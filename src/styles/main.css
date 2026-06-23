@@ -18,6 +18,25 @@
   /* Motion */
   --duration-fast: 120ms;
   --ease:          cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Chrome radii & shadows — editor UI only; never serialized, never exported.
+     Free to use color-mix()/gradients here since these styles don't ship in exports. */
+  --radius-pill:      999px;
+  --radius-md:        10px;
+  --radius-lg:        14px;
+  --shadow-chrome-sm: 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-chrome:    0 12px 30px rgba(0, 0, 0, 0.10), 0 0 0 1px rgba(0, 0, 0, 0.04);
+  --header-gradient:  linear-gradient(115deg,
+                        color-mix(in srgb, var(--color-primary) 5%, #ffffff) 0%,
+                        color-mix(in srgb, var(--color-primary) 11%, #ffffff) 100%);
+
+  /* Spacing scale layered atop --space-unit */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
 }
 
 /* ============================================================
@@ -62,8 +81,9 @@ body {
   justify-content: space-between;
   height: var(--header-height);
   padding: 0 calc(var(--space-unit) * 2);
-  background: var(--color-header-bg);
-  border-bottom: 1px solid var(--color-border);
+  background: var(--header-gradient);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-primary) 14%, var(--color-border));
+  box-shadow: var(--shadow-chrome-sm);
 }
 
 .header-brand {
@@ -96,20 +116,43 @@ body {
 }
 
 .header-btn {
-  padding: 5px 12px;
+  padding: 6px 16px;
   font-size: 12px;
   font-family: var(--font-family-ui);
-  font-weight: 500;
+  font-weight: 600;
   background: var(--color-primary);
   color: #fff;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--radius-pill);
   cursor: pointer;
-  transition: filter var(--duration-fast) var(--ease);
+  box-shadow: var(--shadow-chrome-sm);
+  transition:
+    transform var(--duration-fast) var(--ease),
+    box-shadow var(--duration-fast) var(--ease),
+    filter var(--duration-fast) var(--ease);
 }
 
 .header-btn:hover {
-  filter: brightness(1.1);
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--color-primary) 32%, transparent);
+}
+
+.header-btn:active {
+  transform: translateY(0);
+  box-shadow: var(--shadow-chrome-sm);
+}
+
+.header-btn:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--color-primary) 55%, #ffffff);
+  outline-offset: 2px;
+}
+
+/* Accent button (Export for SharePoint) — gradient fill that tracks the theme */
+.header-btn--accent {
+  background: linear-gradient(120deg,
+    var(--color-primary) 0%,
+    color-mix(in srgb, var(--color-primary) 62%, var(--color-accent)) 100%);
 }
 
 /* ---- Body ---- */
@@ -176,33 +219,42 @@ body {
    Theme Panel
    ============================================================ */
 .theme-presets {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
   gap: 6px;
   padding: calc(var(--space-unit) * 2);
   border-bottom: 1px solid var(--color-border);
 }
 
 .preset-btn {
-  flex: 1;
-  padding: 5px 0;
+  padding: 6px 0;
   font-size: 11px;
   font-family: var(--font-family-ui);
   font-weight: 500;
   background: var(--color-sidebar-bg);
   border: 1px solid var(--color-border);
-  border-radius: 4px;
+  border-radius: var(--radius-md);
   color: var(--color-text);
   cursor: pointer;
   transition:
     background var(--duration-fast) var(--ease),
     border-color var(--duration-fast) var(--ease),
+    box-shadow var(--duration-fast) var(--ease),
     color var(--duration-fast) var(--ease);
 }
 
 .preset-btn:hover {
-  background: #eef2ff;
+  background: color-mix(in srgb, var(--color-primary) 8%, transparent);
   border-color: var(--color-primary);
   color: var(--color-primary);
+}
+
+.preset-btn.is-active {
+  background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  font-weight: 600;
+  box-shadow: 0 0 0 1px var(--color-primary) inset;
 }
 
 .theme-section {
@@ -380,8 +432,8 @@ body {
 .widget-modal {
   background: var(--color-header-bg);
   border: 1px solid var(--color-border);
-  border-radius: var(--border-radius);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-chrome), 0 24px 60px rgba(0, 0, 0, 0.18);
   width: 420px;
   max-width: calc(100vw - 32px);
   max-height: calc(100vh - 80px);
@@ -473,14 +525,25 @@ body {
 }
 
 .widget-modal-btn {
-  padding: 6px 14px;
+  padding: 7px 18px;
   font-size: 13px;
   font-family: var(--font-family-ui);
-  font-weight: 500;
-  border-radius: 4px;
+  font-weight: 600;
+  border-radius: var(--radius-pill);
   cursor: pointer;
   transition: background var(--duration-fast) var(--ease),
-              border-color var(--duration-fast) var(--ease);
+              border-color var(--duration-fast) var(--ease),
+              box-shadow var(--duration-fast) var(--ease),
+              filter var(--duration-fast) var(--ease);
+}
+
+.widget-modal-btn--save {
+  box-shadow: var(--shadow-chrome-sm);
+}
+
+.widget-modal-btn:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--color-primary) 55%, #ffffff);
+  outline-offset: 2px;
 }
 
 .widget-modal-btn--cancel {

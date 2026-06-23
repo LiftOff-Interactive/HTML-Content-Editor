@@ -25,6 +25,7 @@
   --section-padding:   2rem;
 
   /* Widgets */
-  --widget-border-radius: 0.5rem;
-  --widget-shadow:        0 1px 3px rgba(0, 0, 0, 0.1);
+  --widget-border-radius: 0.75rem;
+  --widget-shadow:        0 12px 30px rgba(0, 0, 0, 0.08);
+  --widget-shadow-ring:   0 0 0 1px rgba(0, 0, 0, 0.04);
 }

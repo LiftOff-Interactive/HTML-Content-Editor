@@ -35,6 +35,10 @@
   function deltaToHtml(delta, opts) {
     const ops  = (delta && delta.ops) || [];
     const noJs = !!(opts && opts.noJs);
+    // Read the widget radius once so exported images share the card aesthetic.
+    // (No box-shadow on images — a drop shadow looks wrong on logos / transparent PNGs.)
+    const imgRadius = getComputedStyle(document.documentElement)
+      .getPropertyValue('--widget-border-radius').trim() || '0.75rem';
     let widgetSeq   = 0;
     let html        = '';
     let lineBuffer  = '';
@@ -87,7 +91,8 @@
             '<div style="display:block;margin:8px 0;">' +
               '<img src="' + esc(data.src || '') + '" ' +
                   'alt="' + esc(data.alt || '') + '" ' +
-                  'style="width:' + (data.width || 480) + 'px;max-width:100%;height:auto;display:block;">' +
+                  'style="width:' + (data.width || 480) + 'px;max-width:100%;height:auto;display:block;' +
+                  'border-radius:' + imgRadius + ';">' +
             '</div>';
           lineBuffer = '';
           continue;

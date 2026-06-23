@@ -109,7 +109,8 @@
       const surface = root.getPropertyValue('--color-surface').trim()        || '#f8fafc';
       const text    = root.getPropertyValue('--color-text').trim()           || '#1e293b';
       const font    = root.getPropertyValue('--font-family-body').trim()     || 'Georgia, serif';
-      const radius  = root.getPropertyValue('--widget-border-radius').trim() || '0.5rem';
+      const radius  = root.getPropertyValue('--widget-border-radius').trim() || '0.75rem';
+      const shadow  = root.getPropertyValue('--widget-shadow').trim()        || '0 12px 30px rgba(0,0,0,0.08)';
       const cols    = data.columns || 3;
 
       const onClickHandler =
@@ -163,7 +164,7 @@
               'data-back="' + esc(card.back) + '" ' +
               'onclick="' + esc(onClickHandler) + '" ' +
               'onkeydown="' + onKeyHandler + '" ' +
-              'style="perspective:1000px;height:200px;cursor:pointer;border-radius:' + radius + ';">' +
+              'style="perspective:1000px;height:200px;cursor:pointer;border-radius:' + radius + ';box-shadow:' + shadow + ';">' +
             '<div class="hce-fc-inner" ' +
                 'style="position:relative;width:100%;height:100%;' +
                   'transform-style:preserve-3d;transition:transform 0.5s ease;">' +
@@ -212,7 +213,8 @@
       const surface = root.getPropertyValue('--color-surface').trim()        || '#f8fafc';
       const text    = root.getPropertyValue('--color-text').trim()           || '#1e293b';
       const font    = root.getPropertyValue('--font-family-body').trim()     || 'Georgia, serif';
-      const radius  = root.getPropertyValue('--widget-border-radius').trim() || '0.5rem';
+      const radius  = root.getPropertyValue('--widget-border-radius').trim() || '0.75rem';
+      const shadow  = root.getPropertyValue('--widget-shadow').trim()        || '0 12px 30px rgba(0,0,0,0.08)';
       const cols    = data.columns || 3;
 
       // Visually hide the checkbox but keep it keyboard-focusable so native
@@ -256,7 +258,7 @@
 
         cardsHtml +=
           '<div class="hce-fc-card" ' +
-              'style="perspective:1000px;height:200px;cursor:pointer;border-radius:' + radius + ';">' +
+              'style="perspective:1000px;height:200px;cursor:pointer;border-radius:' + radius + ';box-shadow:' + shadow + ';">' +
             '<input type="checkbox" class="cx-flip-toggle" id="' + cbId + '" ' +
                 'aria-label="Flip card: ' + esc(card.front) + '" ' +
                 'style="' + toggleStyle + '">' +

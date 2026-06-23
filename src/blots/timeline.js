@@ -57,6 +57,8 @@
       const muted   = root.getPropertyValue('--color-text-muted').trim()     || '#64748b';
       const font    = root.getPropertyValue('--font-family-body').trim()     || 'Georgia, serif';
       const uiFont  = root.getPropertyValue('--font-family-ui').trim()       || 'system-ui, sans-serif';
+      const radius  = root.getPropertyValue('--widget-border-radius').trim() || '0.75rem';
+      const shadow  = root.getPropertyValue('--widget-shadow').trim()        || '0 12px 30px rgba(0,0,0,0.08)';
 
       const dotStyle =
         'position:absolute;left:0;top:4px;width:28px;height:28px;border-radius:50%;' +
@@ -91,7 +93,8 @@
       });
 
       container.innerHTML =
-        '<ol style="list-style:none;padding:8px 0;margin:0;">' + items + '</ol>';
+        '<ol style="list-style:none;padding:8px 16px;margin:0;' +
+            'border-radius:' + radius + ';box-shadow:' + shadow + ';">' + items + '</ol>';
     }
 
     edit(data) {

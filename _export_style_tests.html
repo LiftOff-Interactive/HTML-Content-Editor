@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>F4 — Export Style Self-Test (shadow/radius reaches exports)</title>
+<style>
+  body { margin:0; font:14px/1.5 system-ui, sans-serif; background:#0f1226; color:#e7e9f3; }
+  header { padding:14px 20px; border-bottom:1px solid #2a2f55; position:sticky; top:0; background:#0f1226; }
+  h1 { font-size:16px; margin:0 0 4px; }
+  #banner { font-weight:700; font-size:15px; padding:6px 12px; border-radius:999px; display:inline-block; }
+  .pending{background:#444;color:#fff} .ok{background:#18794e;color:#fff} .bad{background:#b4232f;color:#fff}
+  table{border-collapse:collapse;width:calc(100% - 40px);margin:16px 20px;font-size:12.5px}
+  th,td{border:1px solid #2a2f55;padding:5px 8px;text-align:left;vertical-align:top}
+  th{background:#1b1f40}
+  td.p{color:#4ade80;font-weight:700} td.f{color:#f87171;font-weight:700}
+  .ev{color:#9aa0c7;font-size:11px;font-family:ui-monospace,monospace}
+  iframe{position:fixed;width:1024px;height:700px;left:-3000px;top:0}
+  #note{color:#9aa0c7;font-size:11px;margin:0 20px}
+</style>
+</head>
+<body>
+<header>
+  <h1>F4 — Export Style Self-Test</h1>
+  <span id="banner" class="pending">Running…</span>
+  <span id="sub" class="ev"></span>
+</header>
+<table id="tbl"><thead><tr>
+  <th>Widget</th>
+  <th title="Interactive export card has box-shadow">JS·shadow</th>
+  <th title="Interactive export card has border-radius">JS·radius</th>
+  <th title="No-JS export card has box-shadow">noJS·shadow</th>
+  <th title="No-JS export card has border-radius">noJS·radius</th>
+  <th title="No-JS export has zero <script>/on*=/javascript:">noJS·clean</th>
+  <th>Result</th><th>Evidence</th>
+</tr></thead><tbody></tbody></table>
+<p id="note"></p>
+<iframe id="frame"></iframe>
+
+<script>
+(function () {
+  'use strict';
+  var frame = document.getElementById('frame');
+  var tbody = document.querySelector('#tbl tbody');
+  var banner = document.getElementById('banner');
+  var sub = document.getElementById('sub');
+
+  // image (resizable-image) is intentionally shadow-exempt: a drop shadow looks
+  // wrong on logos / transparent PNGs. It must still pick up border-radius.
+  var SHADOW_EXEMPT = { 'resizable-image': true };
+
+  function waitForEditor() {
+    return new Promise(function (resolve, reject) {
+      var n = 0;
+      (function poll() {
+        n++;
+        var w = frame.contentWindow;
+        try {
+          if (w && w.HCEExport && w.WidgetRegistry && w.Quill && w.contentEditor) return resolve(w);
+        } catch (e) {}
+        if (n > 200) return reject(new Error('editor never booted'));
+        setTimeout(poll, 50);
+      })();
+    });
+  }
+
+  function makeEmbed(name, data) { var o = {}; o[name] = data; return o; }
+
+  // count occurrences
+  function has(re, s) { return re.test(s); }
+
+  function rowFor(name, c) {
+    var tr = document.createElement('tr');
+    function cell(v, naLabel) {
+      if (v === 'NA') return '<td class="ev">' + (naLabel || 'n/a') + '</td>';
+      return '<td class="' + (v ? 'p' : 'f') + '">' + (v ? 'PASS' : 'FAIL') + '</td>';
+    }
+    tr.innerHTML = '<td>' + name + '</td>' +
+      cell(c.jsShadow) + cell(c.jsRadius) + cell(c.nojsShadow) + cell(c.nojsRadius) + cell(c.nojsClean) +
+      '<td class="' + (c.pass ? 'p' : 'f') + '">' + (c.pass ? 'PASS' : 'FAIL') + '</td>' +
+      '<td class="ev">' + c.ev + '</td>';
+    tbody.appendChild(tr);
+  }
+
+  async function run() {
+    var win;
+    try { win = await waitForEditor(); }
+    catch (e) { banner.className='bad'; banner.textContent='BOOT FAILED'; sub.textContent=e.message; return; }
+
+    var Delta = win.Quill.import('delta');
+
+    // Match the EXACT theme values the blots inline (not just any box-shadow:,
+    // which would false-positive on e.g. hotspot's pin-ring state rule).
+    var cs = win.getComputedStyle(win.document.documentElement);
+    var themeShadow = cs.getPropertyValue('--widget-shadow').trim();
+    var themeRadius = cs.getPropertyValue('--widget-border-radius').trim();
+    var radiusLiteral = 'border-radius:' + themeRadius;
+
+    // Some widgets only present a card surface with representative content:
+    //   quote → 'highlight' is the card style (pull/sidebar are card-less typography);
+    //   hotspot → the card is the image frame (empty default shows a no-image note).
+    var TINY = 'data:image/gif;base64,R0lGODlhAQABAAAAACw=';
+    var OVERRIDES = {
+      quote:   { style: 'highlight' },
+      hotspot: { imageData: TINY, altText: 'x', pins: [] },
+    };
+
+    var widgets = win.WidgetRegistry.getAll().map(function (B) {
+      var data = JSON.parse(JSON.stringify(B.defaultData || {}));
+      if (OVERRIDES[B.blotName]) data = Object.assign(data, OVERRIDES[B.blotName]);
+      return { name: B.blotName, data: data };
+    });
+    // include the resizable image (registered directly, not via WidgetRegistry)
+    widgets.push({ name: 'resizable-image', data: { src: TINY, alt: 'x', width: 240 } });
+
+    var reScript = /<script/i;
+    var reOn = /\son[a-z]+\s*=/i;
+    var reJs = /javascript:/i;
+
+    var total = 0, passed = 0;
+    for (var i = 0; i < widgets.length; i++) {
+      var wdef = widgets[i];
+      total++;
+      var c = { ev: '' };
+      try {
+        var delta = new Delta().insert(makeEmbed(wdef.name, wdef.data)).insert('\n');
+        var jsHtml = win.HCEExport.buildExportHtml(delta, 'T', { noJs: false });
+        var njHtml = win.HCEExport.buildExportHtml(delta, 'T', { noJs: true });
+        var exempt = !!SHADOW_EXEMPT[wdef.name];
+
+        c.jsShadow   = exempt ? 'NA' : (jsHtml.indexOf(themeShadow) !== -1);
+        c.jsRadius   = jsHtml.indexOf(radiusLiteral) !== -1;
+        c.nojsShadow = exempt ? 'NA' : (njHtml.indexOf(themeShadow) !== -1);
+        c.nojsRadius = njHtml.indexOf(radiusLiteral) !== -1;
+        c.nojsClean  = !has(reScript, njHtml) && !has(reOn, njHtml) && !has(reJs, njHtml);
+
+        var checks = [c.jsShadow, c.jsRadius, c.nojsShadow, c.nojsRadius, c.nojsClean]
+          .filter(function (v) { return v !== 'NA'; });
+        c.pass = checks.every(Boolean);
+        if (c.pass) passed++;
+        c.ev = 'shadow="' + themeShadow + '" radius="' + themeRadius + '"' +
+               (exempt ? ' (shadow-exempt image; radius required)' : '') +
+               (c.nojsClean ? '' : ' · NOJS-UNSAFE!');
+      } catch (e) {
+        c.pass = false; c.jsShadow=c.jsRadius=c.nojsShadow=c.nojsRadius=c.nojsClean=false;
+        c.ev = 'ERROR: ' + e.message;
+      }
+      rowFor(wdef.name, c);
+    }
+
+    var allPass = passed === total && total > 0;
+    banner.className = allPass ? 'ok' : 'bad';
+    banner.textContent = (allPass ? 'ALL GREEN' : 'FAILURES') + ' — ' + passed + '/' + total;
+    sub.textContent = ' export-grep over ' + total + ' widgets (interactive + no-JS)';
+    window.__F4_EXPORT_RESULTS__ = { passed: passed, total: total, allPass: allPass };
+  }
+
+  // Load index.html via srcdoc with cache-busted asset URLs so this test always
+  // reflects the CURRENT source on disk (the browser memory-caches sub-scripts
+  // across navigations, which otherwise yields stale false-negatives).
+  async function boot() {
+    var cb = 'cb=' + Date.now();
+    var html = await (await fetch('index.html?' + cb, { cache: 'no-store' })).text();
+    // Append the cache-bust query to every relative src=/href= (scripts, styles).
+    html = html.replace(/\b(src|href)="([^"]+)"/g, function (m, attr, url) {
+      if (/^(https?:|data:|#|mailto:)/i.test(url)) return m;
+      var sep = url.indexOf('?') === -1 ? '?' : '&';
+      return attr + '="' + url + sep + cb + '"';
+    });
+    document.getElementById('note').textContent = 'iframe loaded with cache-bust ' + cb;
+    frame.addEventListener('load', function () { run(); });
+    frame.srcdoc = html;
+  }
+  boot();
+})();
+</script>
+</body>
+</html>
