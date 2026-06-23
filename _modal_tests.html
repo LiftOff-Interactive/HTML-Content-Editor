@@ -40,7 +40,7 @@
     <th title="Overflow contained by dialog: body scrolls internally, footer not clipped (dialog.scrollHeight ≤ clientHeight)">D·contain</th>
     <th>Result</th><th>Evidence</th>
   </tr></thead><tbody></tbody></table></div>
-  <div id="stage"><div class="lbl">live editor under test (height = simulated viewport)</div><iframe id="frame" src="index.html"></iframe></div>
+  <div id="stage"><div class="lbl">live editor under test (height = simulated viewport)</div><iframe id="frame"></iframe></div>
 </main>
 
 <script>
@@ -239,7 +239,18 @@
     window.__F1_RESULTS__ = { passed: passed, total: total, allPass: allPass, cases: results };
   }
 
-  frame.addEventListener('load', function () { run(); });
+  // Load index.html via cache-busted srcdoc so this test always exercises the
+  // CURRENT source (the browser otherwise serves stale memory-cached sub-scripts).
+  (async function boot() {
+    var cb = 'cb=' + Date.now();
+    var html = await (await fetch('index.html?' + cb, { cache: 'no-store' })).text();
+    html = html.replace(/\b(src|href)="([^"]+)"/g, function (m, attr, url) {
+      if (/^(https?:|data:|#|mailto:)/i.test(url)) return m;
+      return attr + '="' + url + (url.indexOf('?') === -1 ? '?' : '&') + cb + '"';
+    });
+    frame.addEventListener('load', function () { run(); });
+    frame.srcdoc = html;
+  })();
 })();
 </script>
 </body>

@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>No-JS Export — Verification Suite</title>
-  <link rel="stylesheet" href="src/styles/theme-defaults.css">
   <style>
     body { font-family: system-ui, sans-serif; margin: 0; padding: 20px 28px; background: #f1f5f9; color: #0f172a; }
     h1 { margin: 0 0 4px; }
@@ -17,25 +16,8 @@
     td.cat { font-weight: 700; color: #475569; }
     code { background: #e2e8f0; padding: 1px 4px; border-radius: 3px; }
   </style>
-
-  <script src="vendor/quill/dist/quill.js"></script>
-  <script src="src/ui/modal.js"></script>
-  <script src="src/ui/image-upload-field.js"></script>
-  <script src="src/ui/rich-text-field.js"></script>
-  <script src="src/registry.js"></script>
-  <script src="src/blots/base.js"></script>
-  <script src="src/blots/image.js"></script>
-  <script src="src/blots/callout.js"></script>
-  <script src="src/blots/tabs.js"></script>
-  <script src="src/blots/accordion.js"></script>
-  <script src="src/blots/quote.js"></script>
-  <script src="src/blots/timeline.js"></script>
-  <script src="src/blots/flip-cards.js"></script>
-  <script src="src/blots/click-reveal.js"></script>
-  <script src="src/blots/carousel.js"></script>
-  <script src="src/blots/hotspot.js"></script>
-  <script src="src/blots/knowledge-check.js"></script>
-  <script src="src/export.js"></script>
+  <!-- App scripts + theme CSS are loaded cache-busted by the bootstrap at the
+       bottom of <body> so this suite always verifies the CURRENT source on disk. -->
 </head>
 <body>
   <h1>No-JS Export — Verification Suite</h1>
@@ -43,7 +25,7 @@
   <table><thead><tr><th>#</th><th>Criterion</th><th>Result</th><th>Detail</th></tr></thead><tbody id="rows"></tbody></table>
 
   <script>
-  window.addEventListener('load', function () {
+  function __runSuite() {
     var WR = window.WidgetRegistry;
     var EX = window.HCEExport;
     var GREEN = 'rgb(220, 252, 231)';   // #dcfce7
@@ -377,7 +359,35 @@
         rows.appendChild(tr);
       });
     })();
-  });
+  }
+
+  // ── cache-busted app loader (sequential; preserves dependency order) ──
+  // Bare-URL caching otherwise lets the browser run STALE source, silently
+  // verifying old code. Unique ?cb= URLs + the no-cache server guarantee fresh.
+  (function () {
+    var cb = '?cb=' + Date.now();
+    var ASSETS = [
+      'vendor/quill/dist/quill.js',
+      'src/ui/modal.js', 'src/ui/image-upload-field.js', 'src/ui/rich-text-field.js',
+      'src/registry.js', 'src/blots/base.js', 'src/blots/image.js',
+      'src/blots/callout.js', 'src/blots/tabs.js', 'src/blots/accordion.js', 'src/blots/quote.js',
+      'src/blots/timeline.js', 'src/blots/flip-cards.js', 'src/blots/click-reveal.js',
+      'src/blots/carousel.js', 'src/blots/hotspot.js', 'src/blots/knowledge-check.js',
+      'src/export.js'
+    ];
+    var link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = 'src/styles/theme-defaults.css' + cb;
+    document.head.appendChild(link);
+    (function next(i) {
+      if (i >= ASSETS.length) { __runSuite(); return; }
+      var s = document.createElement('script');
+      s.src = ASSETS[i] + cb;
+      s.onload = function () { next(i + 1); };
+      s.onerror = function () { document.getElementById('summary').textContent = 'FAILED to load ' + ASSETS[i]; };
+      document.head.appendChild(s);
+    })(0);
+  })();
   </script>
 </body>
 </html>

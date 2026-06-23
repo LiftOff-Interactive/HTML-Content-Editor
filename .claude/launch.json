@@ -4,7 +4,7 @@
     {
       "name": "hce",
       "runtimeExecutable": "python",
-      "runtimeArgs": ["-m", "http.server", "8137"],
+      "runtimeArgs": ["_serve_nocache.py", "8137"],
       "port": 8137
     }
   ]
