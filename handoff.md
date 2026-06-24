@@ -1,5 +1,7 @@
 # Handoff — HTML Content Editor
-_Last updated: 2026-06-23 · Current stage: **v3.0.0 foundation on branch `stage-9-v3-foundation`. F1 ✅ + F4 ✅ + F2 ✅ + F3 Phase 1 ✅ done & verified (all 4 fixtures import; IRCC 5.4MB in 200ms). Next: course-mode foundation (F3 Phase 2 start).**_
+_Last updated: 2026-06-23 · Current stage: **v3.0.0 foundation COMPLETE & merged to `main` (merge commit `c98e375`, NOT pushed to origin yet). F1 ✅ + F4 ✅ + F2 ✅ + F3 Phase 1 ✅ — all verified (4 fixtures import; IRCC 5.4MB in 200ms; main 27/27 green). Branch `stage-9-v3-foundation` retained. Next: course-mode foundation (F3 Phase 2, the v3.x arc) on a new branch.**_
+
+> Two open human-only / decision items: (1) push `main` to `origin` (public — needs your go-ahead); (2) the kickoff DoD's SharePoint check — click the real "Export for SharePoint" button and confirm a file renders inside an actual SharePoint Embed web part.
 
 ## Goals
 ~~Get the project to a public v1 release on GitHub.~~ **Done.** v1.0.0 is live.
