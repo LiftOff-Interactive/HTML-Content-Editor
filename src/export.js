@@ -347,6 +347,7 @@
     exportHtml: exportHtml,
     exportHtmlNoJs: function () { exportHtml({ noJs: true }); },
     buildExportHtml: buildExportHtml,
+    buildExportCSS: buildExportCSS,
     walkDelta: walkDelta,
     esc: esc,
     safeUrl: safeUrl,

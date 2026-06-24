@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Course-mode foundation — Self-Test</title>
+<style>
+  body { margin:0; font:14px/1.5 system-ui, sans-serif; background:#0f1226; color:#e7e9f3; }
+  header { padding:14px 20px; border-bottom:1px solid #2a2f55; position:sticky; top:0; background:#0f1226; }
+  h1 { font-size:16px; margin:0 0 4px; }
+  #banner { font-weight:700; font-size:15px; padding:6px 12px; border-radius:999px; display:inline-block; }
+  .pending{background:#444;color:#fff} .ok{background:#18794e;color:#fff} .bad{background:#b4232f;color:#fff}
+  table{border-collapse:collapse;width:calc(100% - 40px);margin:16px 20px;font-size:12.5px}
+  th,td{border:1px solid #2a2f55;padding:6px 9px;text-align:left;vertical-align:top}
+  td.p{color:#4ade80;font-weight:700} td.f{color:#f87171;font-weight:700}
+  .ev{color:#9aa0c7;font-size:11px;font-family:ui-monospace,monospace;white-space:pre-wrap;word-break:break-word}
+  iframe{position:fixed;width:1100px;height:760px;left:-4000px;top:0}
+</style>
+</head>
+<body>
+<header>
+  <h1>Course-mode foundation — detectors + CourseDoc + no-JS course export</h1>
+  <span id="banner" class="pending">Running…</span>
+</header>
+<table id="tbl"><thead><tr><th>#</th><th>Check</th><th>Result</th><th>Evidence</th></tr></thead><tbody></tbody></table>
+<iframe id="frame"></iframe>
+
+<script>
+(function () {
+  'use strict';
+  var frame = document.getElementById('frame');
+  var tbody = document.querySelector('#tbl tbody');
+  var banner = document.getElementById('banner');
+  var results = [];
+  function add(name, pass, ev) {
+    results.push({ name: name, pass: !!pass, ev: ev || '' });
+    var tr = document.createElement('tr');
+    tr.innerHTML = '<td>' + results.length + '</td><td>' + name + '</td>' +
+      '<td class="' + (pass ? 'p' : 'f') + '">' + (pass ? 'PASS' : 'FAIL') + '</td>' +
+      '<td class="ev">' + String(ev || '').replace(/</g, '&lt;') + '</td>';
+    tbody.appendChild(tr);
+  }
+  function clean(s){ return !/<script/i.test(s) && !/\son[a-z]+\s*=/i.test(s.replace(/^[\s\S]*?<body>/i,'')) && !/javascript:/i.test(s); }
+
+  function waitForApp() {
+    return new Promise(function (resolve, reject) {
+      var n = 0;
+      (function poll() {
+        n++;
+        var w = frame.contentWindow;
+        try {
+          if (w && w.HCEDetectors && w.HCECourse && w.HCECourse.buildCourseDoc && w.HCECourse.buildCourseHtml &&
+              w.HCESanitize && w.WidgetRegistry && w.HCEExport) return resolve(w);
+        } catch (e) {}
+        if (n > 240) return reject(new Error('app never booted'));
+        setTimeout(poll, 50);
+      })();
+    });
+  }
+  function el(w, html){ var d = w.document.createElement('div'); d.innerHTML = html; return d.firstElementChild; }
+  function courseHtmlOfWidget(w, blotName, data){
+    return w.HCECourse.buildCourseHtml({ title:'t', head:{}, sections:[{kind:'matched-widget', widget:{blotName:blotName, data:data}}] }, {noJs:true});
+  }
+
+  async function run() {
+    var w;
+    try { w = await waitForApp(); }
+    catch (e) { banner.className='bad'; banner.textContent='BOOT FAILED — '+e.message; return; }
+    var D = w.HCEDetectors;
+
+    // 1 — detectTabs on synthetic ARIA tabs
+    var tabsEl = el(w,
+      '<div class="tabs"><div role="tablist">' +
+      '<button role="tab" id="t1" aria-controls="p1" aria-selected="true">Alpha</button>' +
+      '<button role="tab" id="t2" aria-controls="p2" aria-selected="false">Beta</button>' +
+      '<button role="tab" id="t3" aria-controls="p3" aria-selected="false">Gamma</button></div>' +
+      '<section role="tabpanel" id="p1"><p>Panel A body</p></section>' +
+      '<section role="tabpanel" id="p2"><p>Panel B body</p></section>' +
+      '<section role="tabpanel" id="p3"><p>Panel C body</p></section></div>');
+    var td = D.detectTabs(tabsEl);
+    var tabsOk = td && td.blotName==='tabs' && td.data.tabs.length===3 &&
+      td.data.tabs[0].label==='Alpha' && /Panel A body/.test(td.data.tabs[0].content) && td.data.activeTab==='tab-1';
+    add('detectTabs → 3 tabs, labels, content, activeTab', tabsOk, td ? JSON.stringify(td.data.tabs.map(function(t){return t.label;})) : 'null');
+
+    // 2 — converted tabs export as working no-JS tabs (radio + labels + zero JS)
+    var tabsExp = td ? courseHtmlOfWidget(w, 'tabs', td.data) : '';
+    var tabsExpOk = /Alpha/.test(tabsExp) && /Gamma/.test(tabsExp) && /Panel C body/.test(tabsExp) &&
+      /<input[^>]+type="radio"/i.test(tabsExp) && clean(tabsExp);
+    add('converted tabs → no-JS export (radio + all labels + content, zero JS)', tabsExpOk,
+      'radio=' + /<input[^>]+type="radio"/i.test(tabsExp) + ' clean=' + clean(tabsExp) + ' len=' + tabsExp.length);
+
+    // 3 — detectAccordion on a <details> group (shared name → single-open)
+    var accEl = el(w, '<div><details name="g"><summary>One</summary><p>first</p></details>' +
+      '<details name="g"><summary>Two</summary><p>second</p></details></div>');
+    var ad = D.detectAccordion(accEl);
+    var accOk = ad && ad.blotName==='accordion' && ad.data.items.length===2 &&
+      ad.data.items[0].header==='One' && /first/.test(ad.data.items[0].content) && ad.data.allowMultiple===false;
+    add('detectAccordion → 2 items, headers, single-open (shared name)', accOk, ad ? JSON.stringify({n:ad.data.items.length, mult:ad.data.allowMultiple}) : 'null');
+
+    // 4 — converted accordion exports as no-JS <details>, zero JS
+    var accExp = ad ? courseHtmlOfWidget(w, 'accordion', ad.data) : '';
+    var accExpOk = /<details/i.test(accExp) && /One/.test(accExp) && /second/.test(accExp) && clean(accExp);
+    add('converted accordion → no-JS <details> export, zero JS', accExpOk, 'details=' + /<details/i.test(accExp) + ' clean=' + clean(accExp));
+
+    // 5 — scroll-reveal safety: class hidden in CSS + revealed by stripped JS → forced visible
+    var sr = D.scrollRevealSafety('.reveal{opacity:0;transform:translateY(20px)} .other{color:red}',
+      'el.classList.add("reveal"); foo();');
+    var srOk = sr.classes.indexOf('reveal')!==-1 && sr.classes.indexOf('other')===-1 && /opacity:1 !important/.test(sr.css);
+    add('scroll-reveal safety forces JS-revealed hidden class visible', srOk, 'classes=' + JSON.stringify(sr.classes));
+
+    // 6 — real fixture: soccer Tabs → CourseDoc with a matched tabs section
+    var soccer = await (await fetch('fixtures/' + encodeURIComponent('soccer Tabs.html'), {cache:'no-store'})).text();
+    var sDoc = w.HCECourse.buildCourseDoc(soccer);
+    var hasTabs = sDoc.sections.some(function(s){ return s.kind==='matched-widget' && s.widget.blotName==='tabs'; });
+    add('soccer Tabs → CourseDoc has a converted tabs section', hasTabs,
+      'sections=' + sDoc.sections.length + ' widgets=' + sDoc.import.report.counts.widget + ' static=' + sDoc.import.report.counts.static);
+
+    // 7 — soccer course export: working no-JS tabs with real country labels, self-contained
+    var sExp = w.HCECourse.buildCourseHtml(sDoc, {noJs:true});
+    var sExpOk = /Canada/.test(sExp) && /Mexico/.test(sExp) && /United States/.test(sExp) &&
+      /<input[^>]+type="radio"/i.test(sExp) && clean(sExp) &&
+      !/@import/i.test(sExp) && !/<link[^>]+stylesheet/i.test(sExp);
+    add('soccer course export → no-JS tabs (3 countries, radio), self-contained', sExpOk,
+      'radio=' + /<input[^>]+type="radio"/i.test(sExp) + ' clean=' + clean(sExp) +
+      ' @import=' + /@import/i.test(sExp) + ' extLink=' + /<link[^>]+stylesheet/i.test(sExp) + ' len=' + sExp.length);
+
+    // 7b — NO CONTENT LOSS: intro + notes survive alongside the converted tabs
+    var sText = (function () {
+      var d = w.document.createElement('div');
+      d.innerHTML = sExp.replace(/^[\s\S]*?<body>/i, '').replace(/<\/body>[\s\S]*$/i, '');
+      return (d.textContent || '').replace(/\s+/g, ' ');
+    })();
+    var noLoss = /Three host nations/.test(sText) && /design notes/i.test(sText) && /fast-growing football nation/.test(sText);
+    add('soccer course export → intro + notes preserved (NO content loss)', noLoss,
+      'intro=' + /Three host nations/.test(sText) + ' notes=' + /design notes/i.test(sText) +
+      ' tabBody=' + /fast-growing football nation/.test(sText) + ' widgets=' + sDoc.import.report.counts.widget +
+      ' static=' + sDoc.import.report.counts.static);
+
+    // 8 — IRCC 5.4MB: buildCourseDoc within budget + export no throw + zero JS
+    var ircc = await (await fetch('fixtures/' + encodeURIComponent('IRCC_Mandatory_Training_Roadmap_Bilingual_Accessible_TOC_v2 (4).html'), {cache:'no-store'})).text();
+    var t0 = performance.now();
+    var iDoc, ierr=null;
+    try { iDoc = w.HCECourse.buildCourseDoc(ircc); } catch(e){ ierr = e.message; }
+    var ms = Math.round(performance.now()-t0);
+    add('IRCC → buildCourseDoc no throw within budget (<10s)', !ierr && ms<10000, ierr ? ierr : (iDoc.sections.length + ' sections in ' + ms + 'ms'));
+    if (iDoc) {
+      var iExp='', ie2=null;
+      try { iExp = w.HCECourse.buildCourseHtml(iDoc, {noJs:true}); } catch(e){ ie2 = e.message; }
+      add('IRCC → course export no throw + zero JS', !ie2 && clean(iExp), ie2 ? ie2 : ('clean=' + clean(iExp) + ' len=' + iExp.length));
+    }
+
+    var passed = results.filter(function(r){ return r.pass; }).length;
+    var all = passed === results.length;
+    banner.className = all ? 'ok' : 'bad';
+    banner.textContent = (all ? 'ALL GREEN' : 'FAILURES') + ' — ' + passed + '/' + results.length;
+    window.__COURSE_RESULTS__ = { passed: passed, total: results.length, allPass: all, cases: results };
+  }
+
+  (async function boot() {
+    var cb = 'cb=' + Date.now();
+    var html = await (await fetch('index.html?' + cb, { cache: 'no-store' })).text();
+    html = html.replace(/\b(src|href)="([^"]+)"/g, function (m, attr, url) {
+      if (/^(https?:|data:|#|mailto:)/i.test(url)) return m;
+      return attr + '="' + url + (url.indexOf('?') === -1 ? '?' : '&') + cb + '"';
+    });
+    frame.addEventListener('load', function () { run(); });
+    frame.srcdoc = html;
+  })();
+})();
+</script>
+</body>
+</html>

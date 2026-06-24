@@ -136,6 +136,7 @@
   function clear() { set(empty()); }
 
   window.DocStyles = {
-    set: set, get: get, getCss: getCss, getLinkRefs: getLinkRefs, clear: clear, scopeCss: scopeCss,
+    set: set, get: get, getCss: getCss, getLinkRefs: getLinkRefs, clear: clear,
+    scopeCss: scopeCss, neutralizeExternal: neutralizeExternal,
   };
 })();
