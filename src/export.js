@@ -11,6 +11,20 @@
       .replace(/"/g, '&quot;');
   }
 
+  // Allow only safe URL schemes. The JSON/HTML-roundtrip load path is NOT routed
+  // through the import sanitizer, so a tampered project file could carry a
+  // javascript:/data:text/html/vbscript: image src. esc() does not validate
+  // schemes — this does. Drops anything that isn't http(s)/mailto/data:image/*
+  // or a relative/anchor reference.
+  function safeUrl(url) {
+    var v = String(url == null ? '' : url).trim();
+    if (v === '') return '';
+    if (/^(https?:|mailto:)/i.test(v)) return v;
+    if (/^data:image\//i.test(v)) return v;
+    if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(v)) return '';   // any other scheme → drop
+    return v;                                              // relative / #anchor
+  }
+
   // ── Inline format application ─────────────────────────────────────────────
 
   function applyInlineFormats(text, attrs) {
@@ -114,7 +128,7 @@
       // ResizableImageBlot is registered directly with Quill, not WidgetRegistry.
       if (blotName === 'resizable-image') {
         return '<div style="display:block;margin:8px 0;">' +
-            '<img src="' + esc(data.src || '') + '" ' +
+            '<img src="' + esc(safeUrl(data.src || '')) + '" ' +
                 'alt="' + esc(data.alt || '') + '" ' +
                 'style="width:' + (data.width || 480) + 'px;max-width:100%;height:auto;display:block;' +
                 'border-radius:' + imgRadius + ';">' +
@@ -266,6 +280,12 @@
   function buildExportHtml(delta, title, opts) {
     const bodyHtml = deltaToHtml(delta, opts);
     const css      = buildExportCSS();
+    // Imported document styles (captured by F3 import) are re-emitted UNSCOPED so
+    // the imported look survives. External CSS links are never fetched/emitted, so
+    // the file stays self-contained with zero external references.
+    const docCss   = (window.DocStyles && window.DocStyles.getCss())
+      ? '\n\n/* ── imported document styles ── */\n' + window.DocStyles.getCss()
+      : '';
 
     return [
       '<!DOCTYPE html>',
@@ -275,7 +295,7 @@
       '  <meta name="viewport" content="width=device-width, initial-scale=1.0">',
       '  <title>' + esc(title) + '</title>',
       '  <style>',
-      css,
+      css + docCss,
       '  </style>',
       '</head>',
       '<body>',
@@ -329,5 +349,6 @@
     buildExportHtml: buildExportHtml,
     walkDelta: walkDelta,
     esc: esc,
+    safeUrl: safeUrl,
   };
 })();

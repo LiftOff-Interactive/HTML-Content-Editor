@@ -19,6 +19,8 @@
     var theme = window.ThemePanel ? window.ThemePanel.getCurrentTheme() : {};
 
     var payload    = { version: SAVE_VERSION, kind: 'widgets', content: delta, theme: theme };
+    var docStyles  = window.DocStyles && window.DocStyles.get();
+    if (docStyles) payload.docStyles = docStyles;
     // Escape any </script> in the JSON so the HTML parser doesn't close the tag early.
     // JSON allows \/ as an escape for /, so JSON.parse round-trips it correctly.
     var projectJson = JSON.stringify(payload).replace(/<\/script>/gi, '<\\/script>');

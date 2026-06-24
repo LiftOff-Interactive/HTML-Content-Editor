@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>F3 Phase 1 — HTML Import Self-Test</title>
+<style>
+  body { margin:0; font:14px/1.5 system-ui, sans-serif; background:#0f1226; color:#e7e9f3; }
+  header { padding:14px 20px; border-bottom:1px solid #2a2f55; position:sticky; top:0; background:#0f1226; }
+  h1 { font-size:16px; margin:0 0 4px; }
+  #banner { font-weight:700; font-size:15px; padding:6px 12px; border-radius:999px; display:inline-block; }
+  .pending{background:#444;color:#fff} .ok{background:#18794e;color:#fff} .bad{background:#b4232f;color:#fff}
+  table{border-collapse:collapse;width:calc(100% - 40px);margin:16px 20px;font-size:12.5px}
+  th,td{border:1px solid #2a2f55;padding:6px 9px;text-align:left;vertical-align:top}
+  th{background:#1b1f40}
+  td.p{color:#4ade80;font-weight:700} td.f{color:#f87171;font-weight:700}
+  .ev{color:#9aa0c7;font-size:11px;font-family:ui-monospace,monospace;white-space:pre-wrap;word-break:break-word}
+  iframe{position:fixed;width:1100px;height:760px;left:-4000px;top:0}
+</style>
+</head>
+<body>
+<header>
+  <h1>F3 Phase 1 — HTML Import Self-Test (4 real fixtures + scope-leak)</h1>
+  <span id="banner" class="pending">Running…</span>
+</header>
+<table id="tbl"><thead><tr><th>#</th><th>Check</th><th>Result</th><th>Evidence</th></tr></thead><tbody></tbody></table>
+<iframe id="frame"></iframe>
+
+<script>
+(function () {
+  'use strict';
+  var frame = document.getElementById('frame');
+  var tbody = document.querySelector('#tbl tbody');
+  var banner = document.getElementById('banner');
+  var results = [];
+
+  var FIXTURES = [
+    'soccer Tabs.html',
+    'Interactive components (1).html',
+    'M19-claude-code-for-elearning.html',
+    'IRCC_Mandatory_Training_Roadmap_Bilingual_Accessible_TOC_v2 (4).html',
+  ];
+
+  function add(name, pass, ev) {
+    results.push({ name: name, pass: !!pass, ev: ev || '' });
+    var tr = document.createElement('tr');
+    tr.innerHTML = '<td>' + results.length + '</td><td>' + name + '</td>' +
+      '<td class="' + (pass ? 'p' : 'f') + '">' + (pass ? 'PASS' : 'FAIL') + '</td>' +
+      '<td class="ev">' + String(ev || '').replace(/</g, '&lt;') + '</td>';
+    tbody.appendChild(tr);
+  }
+  function norm(s) { return String(s || '').replace(/\s+/g, ' ').trim(); }
+
+  function waitForApp() {
+    return new Promise(function (resolve, reject) {
+      var n = 0;
+      (function poll() {
+        n++;
+        var w = frame.contentWindow;
+        try {
+          if (w && w.HCEImport && w.HCESanitize && w.DocStyles && w.HCEExport &&
+              w.contentEditor && w.contentEditor.quill && w.Quill) return resolve(w);
+        } catch (e) {}
+        if (n > 240) return reject(new Error('app never booted'));
+        setTimeout(poll, 50);
+      })();
+    });
+  }
+
+  // Reconstruct visible text from an imported delta (string inserts + raw-html text).
+  function deltaText(w, ops) {
+    var div = w.document.createElement('div');
+    var out = '';
+    ops.forEach(function (o) {
+      if (typeof o.insert === 'string') out += o.insert;
+      else if (o.insert && o.insert['raw-html']) { div.innerHTML = o.insert['raw-html'].html || ''; out += ' ' + div.textContent + ' '; }
+    });
+    return out;
+  }
+
+  async function run() {
+    var w;
+    try { w = await waitForApp(); }
+    catch (e) { banner.className = 'bad'; banner.textContent = 'BOOT FAILED — ' + e.message; return; }
+
+    for (var fi = 0; fi < FIXTURES.length; fi++) {
+      var fname = FIXTURES[fi];
+      var text;
+      try {
+        var resp = await fetch('fixtures/' + encodeURIComponent(fname), { cache: 'no-store' });
+        if (!resp.ok) { add(fname + ' — fetch', false, 'HTTP ' + resp.status); continue; }
+        text = await resp.text();
+      } catch (e) { add(fname + ' — fetch', false, e.message); continue; }
+
+      var sizeKB = Math.round(text.length / 1024);
+      var t0 = performance.now();
+      var imported, threw = null;
+      try { imported = w.HCEImport.importArbitraryHtml(text); }
+      catch (e) { threw = e.message; }
+      var ms = Math.round(performance.now() - t0);
+
+      // 1 — import does not throw
+      add(fname + ' (' + sizeKB + 'KB) — import no throw', !threw, threw ? threw : 'imported in ' + ms + 'ms');
+      if (threw) continue;
+
+      var rep = imported._report;
+      var ops = imported.content.ops;
+
+      // 2 — no silent content loss: every sanitized top-level child became an op,
+      //     and the visible text is preserved (whitespace-normalized superset).
+      var sanitized = w.HCESanitize.clean(new DOMParser().parseFromString(text, 'text/html').body.innerHTML);
+      var holder = w.document.createElement('div'); holder.innerHTML = sanitized;
+      var childCount = holder.children.length;
+      var mappedUnits = rep.counts.recognized + rep.counts.raw + rep.counts.textBlocks;
+      var srcText = norm(holder.textContent);
+      var gotText = norm(deltaText(w, ops));
+      // every non-empty source word should be present in the imported text
+      var lossOk = (mappedUnits >= childCount) && (srcText.length === 0 || gotText.length >= srcText.length * 0.98);
+      add(fname + ' — no content loss', lossOk,
+        'children=' + childCount + ' mapped=' + mappedUnits +
+        ' (recognized ' + rep.counts.recognized + ', raw ' + rep.counts.raw + ') · srcTextLen=' + srcText.length + ' gotTextLen=' + gotText.length);
+
+      // apply DocStyles for this file so export reflects captured CSS
+      w.DocStyles.set(imported.docStyles);
+
+      // 3 — no-JS export is clean (zero script/on*/javascript:) + no external CSS deps
+      var nj = w.HCEExport.buildExportHtml({ ops: ops }, fname, { noJs: true });
+      var njBody = nj.replace(/^[\s\S]*?<body>/i, '');
+      var clean = !/<script/i.test(nj) && !/\son[a-z]+\s*=/i.test(njBody) && !/javascript:/i.test(nj);
+      var noExternalCss = !/<link[^>]+stylesheet/i.test(nj) && !/@import\s+url\(\s*['"]?https?:/i.test(nj);
+      add(fname + ' — no-JS export clean + self-contained CSS', clean && noExternalCss,
+        'script=' + /<script/i.test(nj) + ' on*=' + /\son[a-z]+\s*=/i.test(njBody) +
+        ' javascript:=' + /javascript:/i.test(nj) + ' externalCss=' + !noExternalCss +
+        ' droppedLinks=' + imported.docStyles.linkRefs.length);
+
+      // 4 — interactive export does not throw
+      var interactiveOk = true, ierr = '';
+      try { w.HCEExport.buildExportHtml({ ops: ops }, fname, { noJs: false }); }
+      catch (e) { interactiveOk = false; ierr = e.message; }
+      add(fname + ' — interactive export no throw', interactiveOk, ierr || 'ok');
+
+      // 5 — performance budget (import call): under 8s, no hard freeze
+      add(fname + ' — import within budget (<8s)', ms < 8000, ms + 'ms for ' + sizeKB + 'KB');
+
+      w.DocStyles.clear();
+    }
+
+    // 6 — scope-leak: imported body/universal rules must NOT restyle app chrome,
+    //     but MUST appear in the export.
+    var leakHtml = '<style>body{background:rgb(255,0,0) !important} .imp-foo{color:rgb(0,0,255)}</style>' +
+      '<div class="imp-foo">scoped content</div>';
+    var leakImp = w.HCEImport.importArbitraryHtml(leakHtml);
+    w.DocStyles.set(leakImp.docStyles);
+    var bodyBg = w.getComputedStyle(w.document.body).backgroundColor;
+    var chromeSafe = bodyBg !== 'rgb(255, 0, 0)';
+    var exp = w.HCEExport.buildExportHtml({ ops: leakImp.content.ops }, 'leak', { noJs: true });
+    var cssInExport = /\.imp-foo/.test(exp) && /background/i.test(exp);
+    add('Scope-leak: imported CSS does not restyle app chrome', chromeSafe, 'document.body background = ' + bodyBg);
+    add('Scope-leak: imported CSS still present in export', cssInExport, 'export contains .imp-foo rule: ' + cssInExport);
+    w.DocStyles.clear();
+
+    // 7 — captured CSS: @import + remote url() neutralized (self-contained), legit rule kept
+    var extImp = w.HCEImport.importArbitraryHtml(
+      '<style>@import url("https://evil.example/x.css");' +
+      'body{background:url(https://evil.example/p.png)}' +
+      '@font-face{font-family:X;src:url(https://evil.example/f.woff)}' +
+      '.keepme{color:red}</style><div class="keepme">z</div>');
+    w.DocStyles.set(extImp.docStyles);
+    var extExp = w.HCEExport.buildExportHtml({ ops: extImp.content.ops }, 't', { noJs: true });
+    var secCss = !/@import/i.test(extExp) && extExp.indexOf('evil.example') === -1 && /\.keepme/.test(extExp);
+    add('Security: captured CSS @import/remote url() neutralized in export', secCss,
+      '@import=' + /@import/i.test(extExp) + ' evilRef=' + (extExp.indexOf('evil.example') !== -1) +
+      ' keptLegitRule=' + /\.keepme/.test(extExp));
+    w.DocStyles.clear();
+
+    // 8 — tampered project file: javascript:/data:text/html image src must not reach export
+    var Delta = w.Quill.import('delta');
+    var tamper = new Delta()
+      .insert({ 'resizable-image': { src: 'javascript:alert(1)', alt: 'x', width: 200 } })
+      .insert({ 'resizable-image': { src: 'data:text/html,<x>', alt: 'y', width: 200 } })
+      .insert('\n');
+    var tamperExp = w.HCEExport.buildExportHtml(tamper, 't', { noJs: true });
+    var secUrl = !/javascript:/i.test(tamperExp) && !/data:text\/html/i.test(tamperExp);
+    add('Security: tampered img javascript:/data:text/html src dropped in export', secUrl,
+      'javascript:=' + /javascript:/i.test(tamperExp) + ' dataHtml=' + /data:text\/html/i.test(tamperExp));
+
+    var passed = results.filter(function (r){ return r.pass; }).length;
+    var all = passed === results.length;
+    banner.className = all ? 'ok' : 'bad';
+    banner.textContent = (all ? 'ALL GREEN' : 'FAILURES') + ' — ' + passed + '/' + results.length;
+    window.__F3_RESULTS__ = { passed: passed, total: results.length, allPass: all, cases: results };
+  }
+
+  (async function boot() {
+    var cb = 'cb=' + Date.now();
+    var html = await (await fetch('index.html?' + cb, { cache: 'no-store' })).text();
+    html = html.replace(/\b(src|href)="([^"]+)"/g, function (m, attr, url) {
+      if (/^(https?:|data:|#|mailto:)/i.test(url)) return m;
+      return attr + '="' + url + (url.indexOf('?') === -1 ? '?' : '&') + cb + '"';
+    });
+    frame.addEventListener('load', function () { run(); });
+    frame.srcdoc = html;
+  })();
+})();
+</script>
+</body>
+</html>

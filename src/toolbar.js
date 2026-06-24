@@ -135,7 +135,7 @@
 
   ToolbarDropdown.prototype._renderItems = function () {
     var list    = this._dropdown.querySelector('.toolbar-widget-dropdown-list');
-    var widgets = WidgetRegistry.getAll();
+    var widgets = WidgetRegistry.getVisible();
     list.innerHTML = '';
 
     if (widgets.length === 0) {

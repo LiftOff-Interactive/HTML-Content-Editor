@@ -13,7 +13,10 @@
       node.classList.add('hce-image-wrapper');
 
       const img = document.createElement('img');
-      img.src            = value.src   || '';
+      const safeSrc = (window.HCEExport && window.HCEExport.safeUrl)
+        ? window.HCEExport.safeUrl(value.src || '')
+        : (value.src || '');
+      img.src            = safeSrc;
       img.alt            = value.alt   || '';
       img.style.width    = Number(value.width || 480) + 'px';
       img.style.height   = 'auto';

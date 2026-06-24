@@ -149,6 +149,12 @@
     if (payload.theme && window.ThemePanel) {
       window.ThemePanel.deserialize(JSON.stringify(payload.theme));
     }
+    // Imported document styles (F3): apply if present, otherwise clear any from a
+    // previous import so a fresh load never inherits stale styles.
+    if (window.DocStyles) {
+      if (payload.docStyles) window.DocStyles.set(payload.docStyles);
+      else window.DocStyles.clear();
+    }
 
     setStatus('');
     showToast('Project loaded.');
@@ -169,6 +175,8 @@
       content: quill.getContents(),
       theme:   window.ThemePanel ? window.ThemePanel.getCurrentTheme() : {},
     };
+    var docStyles = window.DocStyles && window.DocStyles.get();
+    if (docStyles) payload.docStyles = docStyles;
 
     var json = JSON.stringify(payload, null, 2);
     var blob = new Blob([json], { type: 'application/json' });
@@ -232,10 +240,25 @@
       reader.onload = function (e) {
         try {
           var payload = window.HCERoundtrip.loadFromHtml(e.target.result);
-          applyPayload(payload);
+          applyPayload(payload);                       // our own round-trip file
         } catch (err) {
           if (err.message === 'NO_EMBED') {
-            showToast("This HTML file doesn't contain editor project data. Use Export HTML to create view-only files.");
+            // Foreign HTML — import it (F3): sanitize, map recognized nodes, wrap
+            // the rest as raw-html. Never throws away content.
+            try {
+              var imported = window.HCEImport.importArbitraryHtml(e.target.result);
+              applyPayload(imported);
+              var r = imported._report;
+              if (r) {
+                showToast('Imported HTML — ' + r.counts.recognized + ' block(s) recognized, ' +
+                  r.counts.raw + ' kept as raw HTML' +
+                  (imported.docStyles && imported.docStyles.linkRefs.length
+                    ? '. ' + imported.docStyles.linkRefs.length + ' external stylesheet link(s) dropped (not fetched).'
+                    : '.'));
+              }
+            } catch (e2) {
+              showToast('Could not import this HTML file: ' + (e2 && e2.message));
+            }
           } else {
             showToast('Could not load file — it may be corrupt or from an incompatible version.');
           }

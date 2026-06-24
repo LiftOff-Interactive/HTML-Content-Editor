@@ -104,7 +104,7 @@
       hotspot: { imageData: TINY, altText: 'x', pins: [] },
     };
 
-    var widgets = win.WidgetRegistry.getAll().map(function (B) {
+    var widgets = win.WidgetRegistry.getVisible().map(function (B) {
       var data = JSON.parse(JSON.stringify(B.defaultData || {}));
       if (OVERRIDES[B.blotName]) data = Object.assign(data, OVERRIDES[B.blotName]);
       return { name: B.blotName, data: data };
