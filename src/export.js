@@ -32,14 +32,12 @@
   // Inline attrs (bold, italic, underline) live on text ops.
   // The two never mix on the same op in a well-formed Quill delta.
 
-  function deltaToHtml(delta, opts) {
+  // Shared delta walker. Handles all text/heading/list/inline formatting; defers
+  // every embed op to a pluggable renderEmbed(blotName, data) → HTML string. This
+  // is the single seam reused by deltaToHtml (export) and SourceView.buildSourceHtml
+  // (code view), so the two can never drift on the text vocabulary.
+  function walkDelta(delta, renderEmbed) {
     const ops  = (delta && delta.ops) || [];
-    const noJs = !!(opts && opts.noJs);
-    // Read the widget radius once so exported images share the card aesthetic.
-    // (No box-shadow on images — a drop shadow looks wrong on logos / transparent PNGs.)
-    const imgRadius = getComputedStyle(document.documentElement)
-      .getPropertyValue('--widget-border-radius').trim() || '0.75rem';
-    let widgetSeq   = 0;
     let html        = '';
     let lineBuffer  = '';
     let currentList = null;
@@ -78,49 +76,12 @@
     }
 
     for (const op of ops) {
-
-      // Widget embed — renderExport on a detached container (scripts don't execute)
+      // Embed op — defer to the caller's renderer.
       if (typeof op.insert === 'object' && op.insert !== null) {
         const blotName = Object.keys(op.insert)[0];
         const data     = op.insert[blotName];
         closeList();
-
-        // ResizableImageBlot is registered directly with Quill, not WidgetRegistry.
-        if (blotName === 'resizable-image') {
-          html +=
-            '<div style="display:block;margin:8px 0;">' +
-              '<img src="' + esc(data.src || '') + '" ' +
-                  'alt="' + esc(data.alt || '') + '" ' +
-                  'style="width:' + (data.width || 480) + 'px;max-width:100%;height:auto;display:block;' +
-                  'border-radius:' + imgRadius + ';">' +
-            '</div>';
-          lineBuffer = '';
-          continue;
-        }
-
-        const Blot = WidgetRegistry.get(blotName);
-        if (Blot) {
-          const container = document.createElement('div');
-          const instance  = Object.create(Blot.prototype);
-          // ctx.uid is the ONLY identity source in export — the instance is a
-          // bare prototype object, so this._uid (set in attach()) is unavailable.
-          const ctx       = { uid: 'wx' + (++widgetSeq), noJs: noJs };
-          const useNoJs   = noJs && typeof instance.renderExportNoJS === 'function';
-          try {
-            if (useNoJs) {
-              instance.renderExportNoJS(container, data, ctx);
-            } else {
-              instance.renderExport(container, data, ctx);
-            }
-          } catch (err) {
-            console.warn('[HCEExport] render failed for', blotName, err);
-            container.innerHTML =
-              '<div style="padding:1em;background:#fef2f2;border:1px solid #fecaca;' +
-              'border-radius:0.5rem;color:#dc2626;font-family:system-ui,sans-serif;' +
-              'font-size:0.875rem;">⚠ Widget could not be exported (' + blotName + ')</div>';
-          }
-          html += container.innerHTML;
-        }
+        html += renderEmbed(blotName, data) || '';
         lineBuffer = '';
         continue;
       }
@@ -139,6 +100,51 @@
 
     closeList();
     return html;
+  }
+
+  function deltaToHtml(delta, opts) {
+    const noJs = !!(opts && opts.noJs);
+    // Read the widget radius once so exported images share the card aesthetic.
+    // (No box-shadow on images — a drop shadow looks wrong on logos / transparent PNGs.)
+    const imgRadius = getComputedStyle(document.documentElement)
+      .getPropertyValue('--widget-border-radius').trim() || '0.75rem';
+    let widgetSeq = 0;
+
+    return walkDelta(delta, function renderEmbed(blotName, data) {
+      // ResizableImageBlot is registered directly with Quill, not WidgetRegistry.
+      if (blotName === 'resizable-image') {
+        return '<div style="display:block;margin:8px 0;">' +
+            '<img src="' + esc(data.src || '') + '" ' +
+                'alt="' + esc(data.alt || '') + '" ' +
+                'style="width:' + (data.width || 480) + 'px;max-width:100%;height:auto;display:block;' +
+                'border-radius:' + imgRadius + ';">' +
+          '</div>';
+      }
+
+      const Blot = WidgetRegistry.get(blotName);
+      if (!Blot) return '';
+
+      const container = document.createElement('div');
+      const instance  = Object.create(Blot.prototype);
+      // ctx.uid is the ONLY identity source in export — the instance is a
+      // bare prototype object, so this._uid (set in attach()) is unavailable.
+      const ctx       = { uid: 'wx' + (++widgetSeq), noJs: noJs };
+      const useNoJs   = noJs && typeof instance.renderExportNoJS === 'function';
+      try {
+        if (useNoJs) {
+          instance.renderExportNoJS(container, data, ctx);
+        } else {
+          instance.renderExport(container, data, ctx);
+        }
+      } catch (err) {
+        console.warn('[HCEExport] render failed for', blotName, err);
+        container.innerHTML =
+          '<div style="padding:1em;background:#fef2f2;border:1px solid #fecaca;' +
+          'border-radius:0.5rem;color:#dc2626;font-family:system-ui,sans-serif;' +
+          'font-size:0.875rem;">⚠ Widget could not be exported (' + blotName + ')</div>';
+      }
+      return container.innerHTML;
+    });
   }
 
   // ── Export CSS ────────────────────────────────────────────────────────────
@@ -321,5 +327,7 @@
     exportHtml: exportHtml,
     exportHtmlNoJs: function () { exportHtml({ noJs: true }); },
     buildExportHtml: buildExportHtml,
+    walkDelta: walkDelta,
+    esc: esc,
   };
 })();

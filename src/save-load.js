@@ -1,7 +1,8 @@
 (function () {
   'use strict';
 
-  var SAVE_VERSION = 2;
+  // Shared with html-roundtrip.js via constants.js so the two never drift (R4).
+  var SAVE_VERSION = window.HCE_SAVE_VERSION || 3;
 
   // ── Toast ─────────────────────────────────────────────────────────────────
 
@@ -97,18 +98,47 @@
     return payload;
   }
 
+  // v2 → v3: a pure tag. Stamp kind:'widgets' (existing files are widgets-mode);
+  // content/theme are untouched, so v2 files load byte-identically. Also fill any
+  // theme tokens added since the file was saved (e.g. --widget-shadow-ring) with
+  // their current defaults so an upgraded v2 doc renders identically (F4 caveat).
+  function migrateV2toV3(payload) {
+    payload.kind = payload.kind || 'widgets';
+    var DEFAULTS = window.ThemePanel && window.ThemePanel.DEFAULT_THEME;
+    if (payload.theme && DEFAULTS) {
+      // saved values win over defaults; absent keys adopt the current default.
+      payload.theme = Object.assign({}, DEFAULTS, payload.theme);
+    }
+    payload.version = 3;
+    return payload;
+  }
+
   // ── Apply payload (shared by JSON and HTML load paths) ────────────────────
+  // Router on payload.kind: 'widgets' → Quill delta; 'course' → course mode
+  // (added in F3 Phase 2). Migration chain: v1 → v2 → v3.
 
   function applyPayload(payload) {
     if (!payload || !payload.version) {
       showToast('Incompatible file — saved with a different version of Content Editor.');
       return;
     }
-    if (payload.version === 1) {
-      migrateV1toV2(payload);
-    }
+    if (payload.version === 1) migrateV1toV2(payload);
+    if (payload.version === 2) migrateV2toV3(payload);
     if (payload.version !== SAVE_VERSION) {
       showToast('Incompatible file — saved with a different version of Content Editor.');
+      return;
+    }
+
+    var kind = payload.kind || 'widgets';
+    if (kind === 'course') {
+      // Course-mode documents are loaded by F3 Phase 2; not available yet.
+      if (window.HCECourse && typeof window.HCECourse.loadDocument === 'function') {
+        window.HCECourse.loadDocument(payload);
+        setStatus('');
+        showToast('Course project loaded.');
+        return;
+      }
+      showToast('This file uses course mode, which this version cannot open yet.');
       return;
     }
 
@@ -135,6 +165,7 @@
 
     var payload = {
       version: SAVE_VERSION,
+      kind:    'widgets',
       content: quill.getContents(),
       theme:   window.ThemePanel ? window.ThemePanel.getCurrentTheme() : {},
     };
@@ -306,5 +337,5 @@
     setTimeout(trackChanges, 200);
   });
 
-  window.HCESaveLoad = { saveProject, loadProject };
+  window.HCESaveLoad = { saveProject, loadProject, applyPayload: applyPayload };
 })();
