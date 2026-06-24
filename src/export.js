@@ -11,6 +11,20 @@
       .replace(/"/g, '&quot;');
   }
 
+  // Allow only safe URL schemes. The JSON/HTML-roundtrip load path is NOT routed
+  // through the import sanitizer, so a tampered project file could carry a
+  // javascript:/data:text/html/vbscript: image src. esc() does not validate
+  // schemes — this does. Drops anything that isn't http(s)/mailto/data:image/*
+  // or a relative/anchor reference.
+  function safeUrl(url) {
+    var v = String(url == null ? '' : url).trim();
+    if (v === '') return '';
+    if (/^(https?:|mailto:)/i.test(v)) return v;
+    if (/^data:image\//i.test(v)) return v;
+    if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(v)) return '';   // any other scheme → drop
+    return v;                                              // relative / #anchor
+  }
+
   // ── Inline format application ─────────────────────────────────────────────
 
   function applyInlineFormats(text, attrs) {
@@ -32,10 +46,12 @@
   // Inline attrs (bold, italic, underline) live on text ops.
   // The two never mix on the same op in a well-formed Quill delta.
 
-  function deltaToHtml(delta, opts) {
+  // Shared delta walker. Handles all text/heading/list/inline formatting; defers
+  // every embed op to a pluggable renderEmbed(blotName, data) → HTML string. This
+  // is the single seam reused by deltaToHtml (export) and SourceView.buildSourceHtml
+  // (code view), so the two can never drift on the text vocabulary.
+  function walkDelta(delta, renderEmbed) {
     const ops  = (delta && delta.ops) || [];
-    const noJs = !!(opts && opts.noJs);
-    let widgetSeq   = 0;
     let html        = '';
     let lineBuffer  = '';
     let currentList = null;
@@ -74,48 +90,12 @@
     }
 
     for (const op of ops) {
-
-      // Widget embed — renderExport on a detached container (scripts don't execute)
+      // Embed op — defer to the caller's renderer.
       if (typeof op.insert === 'object' && op.insert !== null) {
         const blotName = Object.keys(op.insert)[0];
         const data     = op.insert[blotName];
         closeList();
-
-        // ResizableImageBlot is registered directly with Quill, not WidgetRegistry.
-        if (blotName === 'resizable-image') {
-          html +=
-            '<div style="display:block;margin:8px 0;">' +
-              '<img src="' + esc(data.src || '') + '" ' +
-                  'alt="' + esc(data.alt || '') + '" ' +
-                  'style="width:' + (data.width || 480) + 'px;max-width:100%;height:auto;display:block;">' +
-            '</div>';
-          lineBuffer = '';
-          continue;
-        }
-
-        const Blot = WidgetRegistry.get(blotName);
-        if (Blot) {
-          const container = document.createElement('div');
-          const instance  = Object.create(Blot.prototype);
-          // ctx.uid is the ONLY identity source in export — the instance is a
-          // bare prototype object, so this._uid (set in attach()) is unavailable.
-          const ctx       = { uid: 'wx' + (++widgetSeq), noJs: noJs };
-          const useNoJs   = noJs && typeof instance.renderExportNoJS === 'function';
-          try {
-            if (useNoJs) {
-              instance.renderExportNoJS(container, data, ctx);
-            } else {
-              instance.renderExport(container, data, ctx);
-            }
-          } catch (err) {
-            console.warn('[HCEExport] render failed for', blotName, err);
-            container.innerHTML =
-              '<div style="padding:1em;background:#fef2f2;border:1px solid #fecaca;' +
-              'border-radius:0.5rem;color:#dc2626;font-family:system-ui,sans-serif;' +
-              'font-size:0.875rem;">⚠ Widget could not be exported (' + blotName + ')</div>';
-          }
-          html += container.innerHTML;
-        }
+        html += renderEmbed(blotName, data) || '';
         lineBuffer = '';
         continue;
       }
@@ -134,6 +114,51 @@
 
     closeList();
     return html;
+  }
+
+  function deltaToHtml(delta, opts) {
+    const noJs = !!(opts && opts.noJs);
+    // Read the widget radius once so exported images share the card aesthetic.
+    // (No box-shadow on images — a drop shadow looks wrong on logos / transparent PNGs.)
+    const imgRadius = getComputedStyle(document.documentElement)
+      .getPropertyValue('--widget-border-radius').trim() || '0.75rem';
+    let widgetSeq = 0;
+
+    return walkDelta(delta, function renderEmbed(blotName, data) {
+      // ResizableImageBlot is registered directly with Quill, not WidgetRegistry.
+      if (blotName === 'resizable-image') {
+        return '<div style="display:block;margin:8px 0;">' +
+            '<img src="' + esc(safeUrl(data.src || '')) + '" ' +
+                'alt="' + esc(data.alt || '') + '" ' +
+                'style="width:' + (data.width || 480) + 'px;max-width:100%;height:auto;display:block;' +
+                'border-radius:' + imgRadius + ';">' +
+          '</div>';
+      }
+
+      const Blot = WidgetRegistry.get(blotName);
+      if (!Blot) return '';
+
+      const container = document.createElement('div');
+      const instance  = Object.create(Blot.prototype);
+      // ctx.uid is the ONLY identity source in export — the instance is a
+      // bare prototype object, so this._uid (set in attach()) is unavailable.
+      const ctx       = { uid: 'wx' + (++widgetSeq), noJs: noJs };
+      const useNoJs   = noJs && typeof instance.renderExportNoJS === 'function';
+      try {
+        if (useNoJs) {
+          instance.renderExportNoJS(container, data, ctx);
+        } else {
+          instance.renderExport(container, data, ctx);
+        }
+      } catch (err) {
+        console.warn('[HCEExport] render failed for', blotName, err);
+        container.innerHTML =
+          '<div style="padding:1em;background:#fef2f2;border:1px solid #fecaca;' +
+          'border-radius:0.5rem;color:#dc2626;font-family:system-ui,sans-serif;' +
+          'font-size:0.875rem;">⚠ Widget could not be exported (' + blotName + ')</div>';
+      }
+      return container.innerHTML;
+    });
   }
 
   // ── Export CSS ────────────────────────────────────────────────────────────
@@ -255,6 +280,12 @@
   function buildExportHtml(delta, title, opts) {
     const bodyHtml = deltaToHtml(delta, opts);
     const css      = buildExportCSS();
+    // Imported document styles (captured by F3 import) are re-emitted UNSCOPED so
+    // the imported look survives. External CSS links are never fetched/emitted, so
+    // the file stays self-contained with zero external references.
+    const docCss   = (window.DocStyles && window.DocStyles.getCss())
+      ? '\n\n/* ── imported document styles ── */\n' + window.DocStyles.getCss()
+      : '';
 
     return [
       '<!DOCTYPE html>',
@@ -264,7 +295,7 @@
       '  <meta name="viewport" content="width=device-width, initial-scale=1.0">',
       '  <title>' + esc(title) + '</title>',
       '  <style>',
-      css,
+      css + docCss,
       '  </style>',
       '</head>',
       '<body>',
@@ -316,5 +347,8 @@
     exportHtml: exportHtml,
     exportHtmlNoJs: function () { exportHtml({ noJs: true }); },
     buildExportHtml: buildExportHtml,
+    walkDelta: walkDelta,
+    esc: esc,
+    safeUrl: safeUrl,
   };
 })();

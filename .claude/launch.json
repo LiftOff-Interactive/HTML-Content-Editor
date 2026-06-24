@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "hce",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["_serve_nocache.py", "8137"],
+      "port": 8137
+    }
+  ]
+}

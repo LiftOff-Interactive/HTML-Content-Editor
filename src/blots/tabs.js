@@ -83,7 +83,8 @@
       const text     = root.getPropertyValue('--color-text').trim()          || '#1e293b';
       const muted    = root.getPropertyValue('--color-text-muted').trim()    || '#64748b';
       const font     = root.getPropertyValue('--font-family-body').trim()    || 'Georgia, serif';
-      const radius   = root.getPropertyValue('--widget-border-radius').trim()|| '0.5rem';
+      const radius   = root.getPropertyValue('--widget-border-radius').trim()|| '0.75rem';
+      const shadow   = root.getPropertyValue('--widget-shadow').trim()       || '0 12px 30px rgba(0,0,0,0.08)';
 
       // Self-contained onclick — scoped to this widget's container via data attribute
       const onclick =
@@ -134,6 +135,7 @@
         '<div data-tabs-id="' + uid + '" style="' +
           'border:1px solid ' + border + ';' +
           'border-radius:' + radius + ';' +
+          'box-shadow:' + shadow + ';' +
           'overflow:hidden;margin:8px 0;' +
         '">' +
           '<div role="tablist" style="' +
@@ -162,7 +164,8 @@
       const text    = root.getPropertyValue('--color-text').trim()           || '#1e293b';
       const muted   = root.getPropertyValue('--color-text-muted').trim()     || '#64748b';
       const font    = root.getPropertyValue('--font-family-body').trim()     || 'Georgia, serif';
-      const radius  = root.getPropertyValue('--widget-border-radius').trim() || '0.5rem';
+      const radius  = root.getPropertyValue('--widget-border-radius').trim() || '0.75rem';
+      const shadow  = root.getPropertyValue('--widget-shadow').trim()        || '0 12px 30px rgba(0,0,0,0.08)';
 
       let radios = '';
       let labels = '';
@@ -190,7 +193,7 @@
 
       const css =
         '#' + uid + '{position:relative;border:1px solid ' + border + ';' +
-          'border-radius:' + radius + ';overflow:hidden;margin:8px 0;}' +
+          'border-radius:' + radius + ';box-shadow:' + shadow + ';overflow:hidden;margin:8px 0;}' +
         '#' + uid + ' .cx-tab-radio{position:absolute;width:1px;height:1px;' +
           'opacity:0;pointer-events:none;}' +
         '#' + uid + ' .cx-tab-bar{display:flex;border-bottom:1px solid ' + border + ';' +
@@ -250,7 +253,7 @@
 
       // Two-column body
       const body = document.createElement('div');
-      body.style.cssText = 'display:flex;min-height:280px;';
+      body.style.cssText = 'display:flex;flex:1;min-height:0;overflow:hidden;';
 
       // Left: tab list
       const leftCol = document.createElement('div');
@@ -274,7 +277,7 @@
 
       // Right: edit fields for selected tab
       const rightCol = document.createElement('div');
-      rightCol.style.cssText = 'flex:1;padding:16px;display:flex;flex-direction:column;gap:12px;';
+      rightCol.style.cssText = 'flex:1;padding:16px;display:flex;flex-direction:column;gap:12px;min-height:0;overflow-y:auto;';
 
       body.appendChild(leftCol);
       body.appendChild(rightCol);

@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>HCE — fresh preview</title>
+<style>html,body{margin:0;height:100%;background:#fff}#f{border:0;width:100vw;height:100vh;display:block}</style>
+</head>
+<body>
+<iframe id="f" title="fresh editor"></iframe>
+<script>
+// Loads index.html with every asset URL cache-busted so the live editor always
+// reflects the current source on disk (the browser otherwise memory-caches
+// src/*.js and src/styles/*.css across reloads). Dev helper — not shipped.
+(async function () {
+  var cb = 'cb=' + Date.now();
+  var html = await (await fetch('index.html?' + cb, { cache: 'no-store' })).text();
+  html = html.replace(/\b(src|href)="([^"]+)"/g, function (m, attr, url) {
+    if (/^(https?:|data:|#|mailto:)/i.test(url)) return m;
+    return attr + '="' + url + (url.indexOf('?') === -1 ? '?' : '&') + cb + '"';
+  });
+  document.getElementById('f').srcdoc = html;
+})();
+</script>
+</body>
+</html>

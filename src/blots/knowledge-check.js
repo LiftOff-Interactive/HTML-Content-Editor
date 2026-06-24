@@ -199,7 +199,8 @@
       const text    = cs.getPropertyValue('--color-text').trim()           || '#1e293b';
       const muted   = cs.getPropertyValue('--color-text-muted').trim()     || '#64748b';
       const font    = cs.getPropertyValue('--font-family-body').trim()     || 'Georgia, serif';
-      const radius  = cs.getPropertyValue('--widget-border-radius').trim() || '0.5rem';
+      const radius  = cs.getPropertyValue('--widget-border-radius').trim() || '0.75rem';
+      const shadow  = cs.getPropertyValue('--widget-shadow').trim() || '0 12px 30px rgba(0,0,0,0.08)';
       const ui      = cs.getPropertyValue('--font-family-ui').trim() || 'system-ui,sans-serif';
 
       const uid  = this._uid || ('kc' + (++_instanceCount));
@@ -361,7 +362,7 @@
       container.innerHTML =
         '<div data-kc="' + uid + '" style="border:1px solid ' + border + ';' +
             'border-radius:' + radius + ';padding:20px 24px;margin:8px 0;' +
-            'background:' + surface + ';">' +
+            'background:' + surface + ';box-shadow:' + shadow + ';">' +
           '<fieldset style="border:none;padding:0;margin:0;">' +
             '<legend style="font-family:' + font + ';font-size:1.1em;font-weight:600;' +
                 'color:' + text + ';margin-bottom:16px;display:block;' +
@@ -387,7 +388,8 @@
       const text    = cs.getPropertyValue('--color-text').trim()           || '#1e293b';
       const muted   = cs.getPropertyValue('--color-text-muted').trim()     || '#64748b';
       const font    = cs.getPropertyValue('--font-family-body').trim()     || 'Georgia, serif';
-      const radius  = cs.getPropertyValue('--widget-border-radius').trim() || '0.5rem';
+      const radius  = cs.getPropertyValue('--widget-border-radius').trim() || '0.75rem';
+      const shadow  = cs.getPropertyValue('--widget-shadow').trim() || '0 12px 30px rgba(0,0,0,0.08)';
       const ui      = cs.getPropertyValue('--font-family-ui').trim() || 'system-ui,sans-serif';
 
       const uid  = (ctx && ctx.uid) || ('kc' + Math.random().toString(36).slice(2, 7));
@@ -493,7 +495,7 @@
       container.innerHTML =
         '<div id="' + uid + '" style="border:1px solid ' + border + ';' +
             'border-radius:' + radius + ';padding:20px 24px;margin:8px 0;' +
-            'background:' + surface + ';">' +
+            'background:' + surface + ';box-shadow:' + shadow + ';">' +
           styleBlock +
           '<fieldset style="border:none;padding:0;margin:0;">' +
             '<legend style="font-family:' + font + ';font-size:1.1em;font-weight:600;' +

@@ -52,7 +52,8 @@
       const fontFamily = root.getPropertyValue('--font-family-body').trim() || 'Georgia, serif';
       const textColor  = root.getPropertyValue('--color-text').trim()       || '#1e293b';
       const mutedColor = root.getPropertyValue('--color-text-muted').trim() || '#64748b';
-      const radius     = root.getPropertyValue('--widget-border-radius').trim() || '0.5rem';
+      const radius     = root.getPropertyValue('--widget-border-radius').trim() || '0.75rem';
+      const shadow     = root.getPropertyValue('--widget-shadow').trim() || '0 12px 30px rgba(0,0,0,0.08)';
 
       const titleHtml = data.title
         ? '<strong style="display:block;font-size:14px;font-weight:600;color:' + textColor + ';margin-bottom:4px;">' + escape(data.title) + '</strong>'
@@ -69,6 +70,7 @@
           'border-left:4px solid ' + borderColor + ';' +
           'background:' + cfg.bgColor + ';' +
           'border-radius:' + radius + ';' +
+          'box-shadow:' + shadow + ';' +
           'font-family:' + fontFamily + ';' +
           'margin:8px 0;' +
         '">' +

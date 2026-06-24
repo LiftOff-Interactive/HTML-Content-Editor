@@ -48,6 +48,7 @@
             <button class="preset-btn" data-preset="neutral">Neutral</button>
             <button class="preset-btn" data-preset="bold">Bold</button>
             <button class="preset-btn" data-preset="soft">Soft</button>
+            <button class="preset-btn" data-preset="showcase">Showcase</button>
           </div>
 
           <div class="theme-section">
@@ -175,6 +176,10 @@
   </div>
 
   <script src="vendor/quill/dist/quill.js"></script>
+  <script src="vendor/dompurify/dist/purify.min.js"></script>
+  <script src="src/constants.js"></script>
+  <script src="src/import/sanitize.js"></script>
+  <script src="src/doc-styles.js"></script>
   <script src="src/ui/modal.js"></script>
   <script src="src/ui/image-upload-field.js"></script>
   <script src="src/ui/rich-text-field.js"></script>
@@ -191,12 +196,15 @@
   <script src="src/blots/carousel.js"></script>
   <script src="src/blots/hotspot.js"></script>
   <script src="src/blots/knowledge-check.js"></script>
+  <script src="src/blots/raw-html.js"></script>
   <script src="src/editor.js"></script>
   <script src="src/slash-command.js"></script>
   <script src="src/toolbar.js"></script>
   <script src="src/theme.js"></script>
   <script src="src/export.js"></script>
   <script src="src/html-roundtrip.js"></script>
+  <script src="src/import/walk.js"></script>
   <script src="src/save-load.js"></script>
+  <script src="src/source-view.js"></script>
 </body>
 </html>

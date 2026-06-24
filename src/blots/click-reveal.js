@@ -90,7 +90,8 @@
       const text    = root.getPropertyValue('--color-text').trim()           || '#1e293b';
       const muted   = root.getPropertyValue('--color-text-muted').trim()     || '#64748b';
       const font    = root.getPropertyValue('--font-family-body').trim()     || 'Georgia, serif';
-      const radius  = root.getPropertyValue('--widget-border-radius').trim() || '0.5rem';
+      const radius  = root.getPropertyValue('--widget-border-radius').trim() || '0.75rem';
+      const shadow  = root.getPropertyValue('--widget-shadow').trim()        || '0 12px 30px rgba(0,0,0,0.08)';
 
       // Scoped via data-reveal-item — safe with multiple widgets on the same page
       const onClickHandler =
@@ -116,6 +117,7 @@
             'width:100%;padding:12px 16px;' +
             'background:' + primary + ';color:#fff;' +
             'border:none;border-radius:' + radius + ';' +
+            'box-shadow:' + shadow + ';' +
             'font-family:' + font + ';font-size:15px;font-weight:600;' +
             'cursor:pointer;text-align:left;';
         } else if (style === 'label') {
@@ -133,6 +135,7 @@
             'width:100%;padding:14px 16px;' +
             'background:' + surface + ';' +
             'border:1px solid ' + border + ';border-radius:' + radius + ';' +
+            'box-shadow:' + shadow + ';' +
             'font-family:' + font + ';font-size:15px;' +
             'color:' + text + ';' +
             'cursor:pointer;text-align:left;';
@@ -191,7 +194,8 @@
       const text    = root.getPropertyValue('--color-text').trim()           || '#1e293b';
       const muted   = root.getPropertyValue('--color-text-muted').trim()     || '#64748b';
       const font    = root.getPropertyValue('--font-family-body').trim()     || 'Georgia, serif';
-      const radius  = root.getPropertyValue('--widget-border-radius').trim() || '0.5rem';
+      const radius  = root.getPropertyValue('--widget-border-radius').trim() || '0.75rem';
+      const shadow  = root.getPropertyValue('--widget-shadow').trim()        || '0 12px 30px rgba(0,0,0,0.08)';
 
       let itemsHtml = '';
       (data.items || []).forEach(function (item) {
@@ -204,6 +208,7 @@
             'width:100%;padding:12px 16px;' +
             'background:' + primary + ';color:#fff;' +
             'border:none;border-radius:' + radius + ';' +
+            'box-shadow:' + shadow + ';' +
             'font-family:' + font + ';font-size:15px;font-weight:600;' +
             'cursor:pointer;text-align:left;';
         } else if (style === 'label') {
@@ -221,6 +226,7 @@
             'width:100%;padding:14px 16px;' +
             'background:' + surface + ';' +
             'border:1px solid ' + border + ';border-radius:' + radius + ';' +
+            'box-shadow:' + shadow + ';' +
             'font-family:' + font + ';font-size:15px;' +
             'color:' + text + ';' +
             'cursor:pointer;text-align:left;';
@@ -303,7 +309,7 @@
       header.appendChild(closeX);
 
       const body = document.createElement('div');
-      body.style.cssText = 'display:flex;min-height:320px;';
+      body.style.cssText = 'display:flex;flex:1;min-height:0;overflow:hidden;';
 
       const leftCol = document.createElement('div');
       leftCol.style.cssText =

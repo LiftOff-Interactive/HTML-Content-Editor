@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>F2 — Source View (code toggle) Self-Test</title>
+<style>
+  body { margin:0; font:14px/1.5 system-ui, sans-serif; background:#0f1226; color:#e7e9f3; }
+  header { padding:14px 20px; border-bottom:1px solid #2a2f55; position:sticky; top:0; background:#0f1226; }
+  h1 { font-size:16px; margin:0 0 4px; }
+  #banner { font-weight:700; font-size:15px; padding:6px 12px; border-radius:999px; display:inline-block; }
+  .pending{background:#444;color:#fff} .ok{background:#18794e;color:#fff} .bad{background:#b4232f;color:#fff}
+  table{border-collapse:collapse;width:calc(100% - 40px);margin:16px 20px;font-size:12.5px}
+  th,td{border:1px solid #2a2f55;padding:6px 9px;text-align:left;vertical-align:top}
+  th{background:#1b1f40}
+  td.p{color:#4ade80;font-weight:700} td.f{color:#f87171;font-weight:700}
+  .ev{color:#9aa0c7;font-size:11px;font-family:ui-monospace,monospace;white-space:pre-wrap;word-break:break-word}
+  iframe{position:fixed;width:1100px;height:760px;left:-4000px;top:0}
+</style>
+</head>
+<body>
+<header>
+  <h1>F2 — Source View (whole-document code toggle) Self-Test</h1>
+  <span id="banner" class="pending">Running…</span>
+</header>
+<table id="tbl"><thead><tr><th>#</th><th>Check</th><th>Result</th><th>Evidence</th></tr></thead><tbody></tbody></table>
+<iframe id="frame"></iframe>
+
+<script>
+(function () {
+  'use strict';
+  var frame = document.getElementById('frame');
+  var tbody = document.querySelector('#tbl tbody');
+  var banner = document.getElementById('banner');
+  var results = [];
+
+  function add(name, pass, ev) {
+    results.push({ name: name, pass: !!pass, ev: ev || '' });
+    var tr = document.createElement('tr');
+    tr.innerHTML = '<td>' + results.length + '</td><td>' + name + '</td>' +
+      '<td class="' + (pass ? 'p' : 'f') + '">' + (pass ? 'PASS' : 'FAIL') + '</td>' +
+      '<td class="ev">' + String(ev || '').replace(/</g, '&lt;') + '</td>';
+    tbody.appendChild(tr);
+  }
+
+  // Deep-equal via key-sorted JSON (Quill op attribute key order is incidental).
+  function stable(o) {
+    if (Array.isArray(o)) return '[' + o.map(stable).join(',') + ']';
+    if (o && typeof o === 'object') {
+      return '{' + Object.keys(o).sort().map(function (k) {
+        return JSON.stringify(k) + ':' + stable(o[k]);
+      }).join(',') + '}';
+    }
+    return JSON.stringify(o);
+  }
+  function eqOps(a, b) { return stable(a.ops || a) === stable(b.ops || b); }
+
+  function waitForApp() {
+    return new Promise(function (resolve, reject) {
+      var n = 0;
+      (function poll() {
+        n++;
+        var w = frame.contentWindow;
+        try {
+          if (w && w.SourceView && w.DOMPurify && w.contentEditor &&
+              w.contentEditor.quill && w.HCEExport && w.WidgetRegistry) return resolve(w);
+        } catch (e) {}
+        if (n > 200) return reject(new Error('app never booted'));
+        setTimeout(poll, 50);
+      })();
+    });
+  }
+
+  function buildFixtureDelta(w) {
+    var Delta = w.Quill.import('delta');
+    var d = new Delta()
+      .insert('Round-Trip Fixture').insert('\n', { header: 1 })
+      .insert('Intro with ').insert('bold', { bold: true }).insert(', ')
+      .insert('italic', { italic: true }).insert(' and ')
+      .insert('underline', { underline: true }).insert('.').insert('\n')
+      .insert('\n')                                  // empty paragraph
+      .insert('A subheading').insert('\n', { header: 2 })
+      .insert('bullet one').insert('\n', { list: 'bullet' })
+      .insert('bullet two').insert('\n', { list: 'bullet' })
+      .insert('step one').insert('\n', { list: 'ordered' })
+      .insert('step two').insert('\n', { list: 'ordered' })
+      .insert('Smaller head').insert('\n', { header: 3 });
+    // one of every registry widget + a resizable image
+    var reg = w.WidgetRegistry.getAll();
+    reg.forEach(function (B) {
+      var data = JSON.parse(JSON.stringify(B.defaultData || {}));
+      var op = {}; op[B.blotName] = data;
+      d.insert(op);
+    });
+    d.insert({ 'resizable-image': { src: 'data:image/gif;base64,R0lGODlhAQABAAAAACw=', alt: 'x', width: 200 } });
+    d.insert('Closing line with “quotes” & <angle> chars.').insert('\n');
+    return d;
+  }
+
+  function placeholder(type, b64) {
+    return '<div class="hce-widget" data-widget-type="' + type + '" data-widget-data="' + b64 + '" contenteditable="false">x</div>';
+  }
+  function throwsParse(w, html) {
+    try { w.SourceView.parseSourceToDelta(html); return false; }
+    catch (e) { return e.message || true; }
+  }
+
+  async function run() {
+    var w;
+    try { w = await waitForApp(); }
+    catch (e) { banner.className = 'bad'; banner.textContent = 'BOOT FAILED — ' + e.message; return; }
+
+    var SV = w.SourceView, q = w.contentEditor.quill;
+
+    // 0 — DOMPurify vendored + a known placeholder survives sanitize
+    try {
+      var probe = w.DOMPurify.sanitize('<div class="hce-widget" data-widget-type="callout" data-widget-data="e30=" contenteditable="false">x</div>',
+        { ADD_ATTR: ['data-widget-type','data-widget-data','contenteditable'] });
+      add('DOMPurify present + placeholder attrs survive sanitize',
+        /data-widget-type="callout"/.test(probe) && /data-widget-data="e30="/.test(probe),
+        'version ' + (w.DOMPurify.version || '?') + ' · ' + probe);
+    } catch (e) { add('DOMPurify present', false, e.message); }
+
+    // The toggle ALWAYS commits via setContents, which re-canonicalizes the delta.
+    // So the user-visible round-trip is: getContents → build → parse → setContents →
+    // getContents. We compare those Quill-canonical forms (clipboard.convert and
+    // getContents use different-but-equivalent encodings for line attributes; the
+    // proof of equivalence is byte-identical export + stable second pass below).
+    function applied(rawDelta) { q.setContents(rawDelta, 'silent'); return q.getContents(); }
+
+    q.setContents(buildFixtureDelta(w), 'silent');
+    var canon = q.getContents();
+
+    // 1 — golden idempotence (through the real toggle path)
+    var rt1;
+    try { rt1 = applied(SV.parseSourceToDelta(SV.buildSourceHtml(canon))); }
+    catch (e) { rt1 = null; add('round-trip #1 parses', false, e.message); }
+    if (rt1) {
+      add('Idempotence: toggle round-trip preserves the document', eqOps(canon, rt1),
+        eqOps(canon, rt1) ? 'ops byte-equal (' + (canon.ops.length) + ' ops)' :
+        'DRIFT\ncanon=' + stable(canon).slice(0,400) + '\nrt1=' + stable(rt1).slice(0,400));
+
+      // 2 — second-pass stability
+      var rt2 = applied(SV.parseSourceToDelta(SV.buildSourceHtml(rt1)));
+      add('Idempotence holds on 2nd pass', eqOps(rt1, rt2),
+        eqOps(rt1, rt2) ? 'stable' : 'DRIFT on second pass');
+
+      // 3 — widget-data byte equality (spot-check knowledge-check obfuscated answer + carousel base64)
+      function findEmbed(ops, name){ for (var i=0;i<ops.length;i++){ var v=ops[i].insert; if (v && typeof v==='object' && v[name]) return v[name]; } return null; }
+      var kcA = findEmbed(canon.ops,'knowledge-check'), kcB = findEmbed(rt1.ops,'knowledge-check');
+      add('Widget data byte-equal (knowledge-check)', kcA && kcB && stable(kcA)===stable(kcB),
+        kcA ? 'ok' : 'kc not found');
+      var carA = findEmbed(canon.ops,'carousel'), carB = findEmbed(rt1.ops,'carousel');
+      add('Widget data byte-equal (carousel w/ base64 slides)', carA && carB && stable(carA)===stable(carB),
+        carA ? 'ok' : 'carousel not found');
+
+      // 4 — no-JS export identical before vs after round-trip
+      var exp0 = w.HCEExport.buildExportHtml(canon, 'T', { noJs: true });
+      var exp1 = w.HCEExport.buildExportHtml(rt1, 'T', { noJs: true });
+      add('No-JS export unchanged across round-trip', exp0 === exp1,
+        exp0 === exp1 ? 'identical (' + exp0.length + ' bytes)' : 'differ: ' + exp0.length + ' vs ' + exp1.length);
+    }
+
+    // 5–7 — parse errors REFUSE the toggle (throw)
+    add('Refuse: unknown widget type', !!throwsParse(w, placeholder('does-not-exist', 'e30=')),
+      String(throwsParse(w, placeholder('does-not-exist', 'e30='))));
+    add('Refuse: corrupt base64', !!throwsParse(w, placeholder('callout', '!!!not base64!!!')),
+      String(throwsParse(w, placeholder('callout', '!!!not base64!!!'))));
+    add('Refuse: valid base64 but invalid JSON', !!throwsParse(w, placeholder('callout', w.btoa('not json{'))),
+      String(throwsParse(w, placeholder('callout', w.btoa('not json{')))));
+
+    // 8–9 — script / on* are stripped (parse SUCCEEDS, nothing executable survives)
+    try {
+      var d8 = SV.parseSourceToDelta('<p>safe</p><script>alert(1)</' + 'script>');
+      var s8 = SV.buildSourceHtml(d8);
+      add('Sanitize: <script> stripped, content kept', !/<script/i.test(s8) && /safe/.test(stable(d8)), s8.slice(0,120));
+    } catch (e) { add('Sanitize: <script> stripped', false, 'unexpected throw: ' + e.message); }
+    try {
+      var d9 = SV.parseSourceToDelta('<p onclick="alert(1)">click</p>');
+      var s9 = SV.buildSourceHtml(d9);
+      add('Sanitize: on* handler stripped', !/onclick/i.test(s9) && !/onclick/i.test(stable(d9)), s9.slice(0,120));
+    } catch (e) { add('Sanitize: on* stripped', false, 'unexpected throw: ' + e.message); }
+
+    // 10 — blank source → single empty paragraph
+    try {
+      var dBlank = SV.parseSourceToDelta('   ');
+      add('Blank source → one empty paragraph', stable(dBlank.ops) === stable([{ insert: '\n' }]), stable(dBlank.ops));
+    } catch (e) { add('Blank source → empty paragraph', false, e.message); }
+
+    // restore editor
+    q.setContents(new (w.Quill.import('delta'))().insert('\n'), 'silent');
+
+    var passed = results.filter(function (r){ return r.pass; }).length;
+    var all = passed === results.length;
+    banner.className = all ? 'ok' : 'bad';
+    banner.textContent = (all ? 'ALL GREEN' : 'FAILURES') + ' — ' + passed + '/' + results.length;
+    window.__F2_RESULTS__ = { passed: passed, total: results.length, allPass: all, cases: results };
+  }
+
+  // cache-busted load of the full app
+  (async function boot() {
+    var cb = 'cb=' + Date.now();
+    var html = await (await fetch('index.html?' + cb, { cache: 'no-store' })).text();
+    html = html.replace(/\b(src|href)="([^"]+)"/g, function (m, attr, url) {
+      if (/^(https?:|data:|#|mailto:)/i.test(url)) return m;
+      return attr + '="' + url + (url.indexOf('?') === -1 ? '?' : '&') + cb + '"';
+    });
+    frame.addEventListener('load', function () { run(); });
+    frame.srcdoc = html;
+  })();
+})();
+</script>
+</body>
+</html>

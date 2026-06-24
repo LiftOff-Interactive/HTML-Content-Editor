@@ -29,3 +29,7 @@ build/
 
 # Quill source repo (vendor build is in vendor/quill/dist/)
 /quill/
+
+# Import test fixtures — large user-supplied HTML (incl. the 5.4MB IRCC file).
+# Kept locally so the import/test harnesses can load them; not versioned.
+/fixtures/

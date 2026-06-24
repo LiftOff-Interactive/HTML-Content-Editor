@@ -107,7 +107,7 @@
       document.body.appendChild(this._palette);
     }
 
-    this._currentItems = WidgetRegistry.getAll();
+    this._currentItems = WidgetRegistry.getVisible();
     this._renderItems(this._currentItems);
     this._palette.classList.add('is-open');
     this._position();
@@ -155,7 +155,7 @@
   // ── Filtering ──────────────────────────────────────────────────────────────
 
   SlashCommand.prototype._filterWidgets = function (query) {
-    var all = WidgetRegistry.getAll();
+    var all = WidgetRegistry.getVisible();
     if (!query) return all;
     var lower = query.toLowerCase();
     return all.filter(function (W) {

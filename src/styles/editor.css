@@ -52,13 +52,13 @@
 
 .ql-snow.ql-toolbar button:hover,
 .ql-snow .ql-toolbar button:hover {
-  background: #eef2ff;
+  background: color-mix(in srgb, var(--color-primary) 10%, transparent);
   color: var(--color-primary);
 }
 
 .ql-snow.ql-toolbar button.ql-active,
 .ql-snow .ql-toolbar button.ql-active {
-  background: #e0e7ff;
+  background: color-mix(in srgb, var(--color-primary) 18%, transparent);
   color: var(--color-primary);
 }
 

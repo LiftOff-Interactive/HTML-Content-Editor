@@ -1,7 +1,8 @@
 (function () {
   'use strict';
 
-  var SAVE_VERSION = 2;
+  // Shared with html-roundtrip.js via constants.js so the two never drift (R4).
+  var SAVE_VERSION = window.HCE_SAVE_VERSION || 3;
 
   // ── Toast ─────────────────────────────────────────────────────────────────
 
@@ -97,18 +98,47 @@
     return payload;
   }
 
+  // v2 → v3: a pure tag. Stamp kind:'widgets' (existing files are widgets-mode);
+  // content/theme are untouched, so v2 files load byte-identically. Also fill any
+  // theme tokens added since the file was saved (e.g. --widget-shadow-ring) with
+  // their current defaults so an upgraded v2 doc renders identically (F4 caveat).
+  function migrateV2toV3(payload) {
+    payload.kind = payload.kind || 'widgets';
+    var DEFAULTS = window.ThemePanel && window.ThemePanel.DEFAULT_THEME;
+    if (payload.theme && DEFAULTS) {
+      // saved values win over defaults; absent keys adopt the current default.
+      payload.theme = Object.assign({}, DEFAULTS, payload.theme);
+    }
+    payload.version = 3;
+    return payload;
+  }
+
   // ── Apply payload (shared by JSON and HTML load paths) ────────────────────
+  // Router on payload.kind: 'widgets' → Quill delta; 'course' → course mode
+  // (added in F3 Phase 2). Migration chain: v1 → v2 → v3.
 
   function applyPayload(payload) {
     if (!payload || !payload.version) {
       showToast('Incompatible file — saved with a different version of Content Editor.');
       return;
     }
-    if (payload.version === 1) {
-      migrateV1toV2(payload);
-    }
+    if (payload.version === 1) migrateV1toV2(payload);
+    if (payload.version === 2) migrateV2toV3(payload);
     if (payload.version !== SAVE_VERSION) {
       showToast('Incompatible file — saved with a different version of Content Editor.');
+      return;
+    }
+
+    var kind = payload.kind || 'widgets';
+    if (kind === 'course') {
+      // Course-mode documents are loaded by F3 Phase 2; not available yet.
+      if (window.HCECourse && typeof window.HCECourse.loadDocument === 'function') {
+        window.HCECourse.loadDocument(payload);
+        setStatus('');
+        showToast('Course project loaded.');
+        return;
+      }
+      showToast('This file uses course mode, which this version cannot open yet.');
       return;
     }
 
@@ -118,6 +148,12 @@
     }
     if (payload.theme && window.ThemePanel) {
       window.ThemePanel.deserialize(JSON.stringify(payload.theme));
+    }
+    // Imported document styles (F3): apply if present, otherwise clear any from a
+    // previous import so a fresh load never inherits stale styles.
+    if (window.DocStyles) {
+      if (payload.docStyles) window.DocStyles.set(payload.docStyles);
+      else window.DocStyles.clear();
     }
 
     setStatus('');
@@ -135,9 +171,12 @@
 
     var payload = {
       version: SAVE_VERSION,
+      kind:    'widgets',
       content: quill.getContents(),
       theme:   window.ThemePanel ? window.ThemePanel.getCurrentTheme() : {},
     };
+    var docStyles = window.DocStyles && window.DocStyles.get();
+    if (docStyles) payload.docStyles = docStyles;
 
     var json = JSON.stringify(payload, null, 2);
     var blob = new Blob([json], { type: 'application/json' });
@@ -201,10 +240,25 @@
       reader.onload = function (e) {
         try {
           var payload = window.HCERoundtrip.loadFromHtml(e.target.result);
-          applyPayload(payload);
+          applyPayload(payload);                       // our own round-trip file
         } catch (err) {
           if (err.message === 'NO_EMBED') {
-            showToast("This HTML file doesn't contain editor project data. Use Export HTML to create view-only files.");
+            // Foreign HTML — import it (F3): sanitize, map recognized nodes, wrap
+            // the rest as raw-html. Never throws away content.
+            try {
+              var imported = window.HCEImport.importArbitraryHtml(e.target.result);
+              applyPayload(imported);
+              var r = imported._report;
+              if (r) {
+                showToast('Imported HTML — ' + r.counts.recognized + ' block(s) recognized, ' +
+                  r.counts.raw + ' kept as raw HTML' +
+                  (imported.docStyles && imported.docStyles.linkRefs.length
+                    ? '. ' + imported.docStyles.linkRefs.length + ' external stylesheet link(s) dropped (not fetched).'
+                    : '.'));
+              }
+            } catch (e2) {
+              showToast('Could not import this HTML file: ' + (e2 && e2.message));
+            }
           } else {
             showToast('Could not load file — it may be corrupt or from an incompatible version.');
           }
@@ -306,5 +360,5 @@
     setTimeout(trackChanges, 200);
   });
 
-  window.HCESaveLoad = { saveProject, loadProject };
+  window.HCESaveLoad = { saveProject, loadProject, applyPayload: applyPayload };
 })();

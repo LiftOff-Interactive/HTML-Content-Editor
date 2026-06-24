@@ -132,7 +132,8 @@
       const text    = root.getPropertyValue('--color-text').trim()           || '#1e293b';
       const muted   = root.getPropertyValue('--color-text-muted').trim()     || '#64748b';
       const font    = root.getPropertyValue('--font-family-body').trim()     || 'Georgia, serif';
-      const radius  = root.getPropertyValue('--widget-border-radius').trim() || '0.5rem';
+      const radius  = root.getPropertyValue('--widget-border-radius').trim() || '0.75rem';
+      const shadow  = root.getPropertyValue('--widget-shadow').trim()        || '0 12px 30px rgba(0,0,0,0.08)';
 
       const uid    = this._uid || ('car' + (++_instanceCount));
       const slides = data.slides || [];
@@ -237,7 +238,7 @@
           '@media(prefers-reduced-motion:reduce){.hce-car-track{transition:none !important;}}' +
         '</style>' +
         '<div data-carousel="' + uid + '" ' +
-            'style="border:1px solid ' + border + ';border-radius:' + radius + ';overflow:hidden;margin:8px 0;">' +
+            'style="border:1px solid ' + border + ';border-radius:' + radius + ';box-shadow:' + shadow + ';overflow:hidden;margin:8px 0;">' +
           '<div style="position:relative;overflow:hidden;">' +
             '<div class="hce-car-track" ' +
                 'style="display:flex;transition:transform 0.4s ease;will-change:transform;">' +
@@ -259,7 +260,8 @@
       const text    = root.getPropertyValue('--color-text').trim()           || '#1e293b';
       const muted   = root.getPropertyValue('--color-text-muted').trim()     || '#64748b';
       const font    = root.getPropertyValue('--font-family-body').trim()     || 'Georgia, serif';
-      const radius  = root.getPropertyValue('--widget-border-radius').trim() || '0.5rem';
+      const radius  = root.getPropertyValue('--widget-border-radius').trim() || '0.75rem';
+      const shadow  = root.getPropertyValue('--widget-shadow').trim()        || '0 12px 30px rgba(0,0,0,0.08)';
 
       const uid    = (ctx && ctx.uid) || ('car' + Math.random().toString(36).slice(2, 7));
       const slides = data.slides || [];
@@ -366,7 +368,7 @@
 
       container.innerHTML =
         '<div id="' + uid + '" data-carousel="' + uid + '" ' +
-            'style="border:1px solid ' + border + ';border-radius:' + radius + ';overflow:hidden;margin:8px 0;">' +
+            'style="border:1px solid ' + border + ';border-radius:' + radius + ';box-shadow:' + shadow + ';overflow:hidden;margin:8px 0;">' +
           styleBlock +
           '<div class="hce-car-scroll">' +
             slidesHtml +
@@ -436,7 +438,7 @@
       header.appendChild(closeX);
 
       const body = document.createElement('div');
-      body.style.cssText = 'display:flex;min-height:340px;';
+      body.style.cssText = 'display:flex;flex:1;min-height:0;overflow:hidden;';
 
       const leftCol = document.createElement('div');
       leftCol.style.cssText =

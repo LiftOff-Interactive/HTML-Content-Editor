@@ -55,11 +55,14 @@
       const text    = root.getPropertyValue('--color-text').trim()           || '#1e293b';
       const muted   = root.getPropertyValue('--color-text-muted').trim()     || '#64748b';
       const font    = root.getPropertyValue('--font-family-body').trim()     || 'Georgia, serif';
-      const radius  = root.getPropertyValue('--widget-border-radius').trim() || '0.5rem';
+      const radius  = root.getPropertyValue('--widget-border-radius').trim() || '0.75rem';
+      const shadow  = root.getPropertyValue('--widget-shadow').trim()         || '0 12px 30px rgba(0,0,0,0.08)';
 
       let blockStyle, markHtml, textStyle;
 
       if (style === 'pull') {
+        // Pull quote is a typographic treatment (no card surface) — a drop shadow
+        // around borderless centered text reads as a glitch, so no box-shadow here.
         blockStyle =
           'font-family:' + font + ';text-align:center;padding:24px 32px;margin:8px 0;';
         markHtml =
@@ -68,6 +71,7 @@
         textStyle =
           'font-size:1.4em;line-height:1.5;color:' + text + ';font-style:italic;margin:0;';
       } else if (style === 'sidebar') {
+        // Sidebar is a left-rule typographic treatment, not a card — no box-shadow.
         blockStyle =
           'font-family:' + font + ';padding:12px 16px 12px 20px;' +
           'border-left:4px solid ' + primary + ';margin:8px 0;';
@@ -76,7 +80,8 @@
       } else {
         blockStyle =
           'font-family:' + font + ';background:' + surface + ';' +
-          'border-radius:' + radius + ';padding:20px 24px;text-align:center;margin:8px 0;';
+          'border-radius:' + radius + ';padding:20px 24px;text-align:center;margin:8px 0;' +
+          'box-shadow:' + shadow + ';';
         markHtml = '';
         textStyle =
           'font-size:1.1em;color:' + primary + ';font-weight:600;line-height:1.5;margin:0;';
