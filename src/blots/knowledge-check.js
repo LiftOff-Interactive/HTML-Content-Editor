@@ -62,7 +62,7 @@
             }
           }
           const fbHtml = (self._submitted && opt.feedback)
-            ? '<div class="kc-opt-feedback">' + opt.feedback + '</div>'
+            ? '<div class="kc-opt-feedback">' + window.HCESanitize.rich(opt.feedback) + '</div>'
             : '';
           optionsHtml +=
             '<button type="button" class="kc-tf-btn' +
@@ -83,7 +83,7 @@
             }
           }
           const fbHtml = (self._submitted && opt.feedback)
-            ? '<div class="kc-opt-feedback">' + opt.feedback + '</div>'
+            ? '<div class="kc-opt-feedback">' + window.HCESanitize.rich(opt.feedback) + '</div>'
             : '';
           optionsHtml +=
             '<label class="kc-opt' + stateClass + '">' +
@@ -101,7 +101,7 @@
               (self._hintVisible ? 'Hide Hint' : 'Show Hint') +
             '</button>' +
             '<div class="kc-hint"' + (self._hintVisible ? '' : ' style="display:none;"') + '>' +
-              (data.hint || '') +
+              window.HCESanitize.rich(data.hint) +
             '</div>' +
           '</div>'
         : '';
@@ -124,7 +124,7 @@
           '</div>' +
           '<div class="kc-body">' +
             '<fieldset class="kc-fieldset">' +
-              '<legend class="kc-question">' + (data.question || '') + '</legend>' +
+              '<legend class="kc-question">' + window.HCESanitize.rich(data.question) + '</legend>' +
               hintHtml +
               '<div class="kc-options">' + optionsHtml + '</div>' +
               actionHtml +

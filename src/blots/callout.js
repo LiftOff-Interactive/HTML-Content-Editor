@@ -33,7 +33,7 @@
           '<span class="callout-preview-icon">' + cfg.icon + '</span>' +
           '<div class="callout-preview-body">' +
             (data.title ? '<strong>' + escape(data.title) + '</strong>' : '') +
-            (data.body  ? '<div class="callout-rich-body">' + data.body + '</div>' : '') +
+            (data.body  ? '<div class="callout-rich-body">' + window.HCESanitize.rich(data.body) + '</div>' : '') +
           '</div>' +
         '</div>';
     }

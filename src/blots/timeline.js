@@ -41,7 +41,7 @@
               ? '<div class="timeline-title">'   + esc(item.title)   + '</div>'
               : '') +
             (item.content
-              ? '<div class="timeline-content">' + item.content      + '</div>'
+              ? '<div class="timeline-content">' + window.HCESanitize.rich(item.content) + '</div>'
               : '') +
           '</div>';
       });

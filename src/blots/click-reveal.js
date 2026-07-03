@@ -45,7 +45,7 @@
               '<span class="reveal-arrow" aria-hidden="true">▼</span>' +
             '</button>' +
             '<div class="reveal-content" aria-hidden="true">' +
-              item.content +
+              window.HCESanitize.rich(item.content) +
             '</div>' +
           '</div>';
       });

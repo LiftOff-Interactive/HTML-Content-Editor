@@ -93,7 +93,7 @@
             '<strong>' + esc(data.label || 'Show details') + '</strong>' +
             '<span class="toggle-reveal-hint">reveals below when ' + (data.startOn ? 'off (starts on)' : 'on') + '</span>' +
           '</div>' +
-          '<div class="toggle-reveal-body">' + (data.content || '') + '</div>' +
+          '<div class="toggle-reveal-body">' + window.HCESanitize.rich(data.content) + '</div>' +
         '</div>';
     }
 

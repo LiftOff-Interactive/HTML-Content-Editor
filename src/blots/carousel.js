@@ -58,7 +58,7 @@
         const txt = slide.textContent || '';
         mediaHtml =
           '<div class="carousel-slide-text">' +
-            (txt || '<p class="carousel-placeholder">Upload an image or add text content via ✎ Edit.</p>') +
+            (txt ? window.HCESanitize.rich(txt) : '<p class="carousel-placeholder">Upload an image or add text content via ✎ Edit.</p>') +
           '</div>';
       }
 

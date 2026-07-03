@@ -44,7 +44,7 @@
               '<span class="accordion-chevron" aria-hidden="true">&#9660;</span>' +
             '</summary>' +
             '<div class="accordion-body">' +
-              '<div class="accordion-body-inner">' + item.content + '</div>' +
+              '<div class="accordion-body-inner">' + window.HCESanitize.rich(item.content) + '</div>' +
             '</div>' +
           '</details>';
       });

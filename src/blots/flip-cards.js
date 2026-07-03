@@ -60,11 +60,11 @@
               '<div class="flip-card-front">' +
                 imgHtml +
                 '<div class="flip-card-front-text">' + esc(card.front) + '</div>' +
-                (card.frontBody ? '<div class="flip-card-front-body">' + card.frontBody + '</div>' : '') +
+                (card.frontBody ? '<div class="flip-card-front-body">' + window.HCESanitize.rich(card.frontBody) + '</div>' : '') +
               '</div>' +
               '<div class="flip-card-back">' +
                 '<div class="flip-card-back-text">' + esc(card.back) + '</div>' +
-                (card.backBody ? '<div class="flip-card-back-body">' + card.backBody + '</div>' : '') +
+                (card.backBody ? '<div class="flip-card-back-body">' + window.HCESanitize.rich(card.backBody) + '</div>' : '') +
               '</div>' +
             '</div>' +
           '</div>';

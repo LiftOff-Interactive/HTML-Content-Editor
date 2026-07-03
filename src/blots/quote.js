@@ -39,7 +39,7 @@
           (style === 'pull'
             ? '<span class="quote-mark" aria-hidden="true">“</span>'
             : '') +
-          '<div class="quote-text">' + (data.quote || '') + '</div>' +
+          '<div class="quote-text">' + window.HCESanitize.rich(data.quote) + '</div>' +
           (attrHtml
             ? '<footer class="quote-attribution"><cite>' + attrHtml + '</cite></footer>'
             : '') +

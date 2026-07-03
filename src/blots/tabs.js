@@ -53,7 +53,7 @@
         panels +=
           '<div class="tab-panel' + (isActive ? ' tab-panel--active' : '') + '" ' +
             'role="tabpanel" id="' + panelId + '">' +
-            tab.content +
+            window.HCESanitize.rich(tab.content) +
           '</div>';
       });
 

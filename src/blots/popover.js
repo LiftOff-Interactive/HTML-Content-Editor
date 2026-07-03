@@ -89,7 +89,7 @@
             esc(data.buttonLabel || 'More info') + '</span>' +
           '<div class="popover-widget-preview">' +
             (data.title ? '<strong>' + esc(data.title) + '</strong>' : '') +
-            '<div>' + (data.content || '') + '</div>' +
+            '<div>' + window.HCESanitize.rich(data.content) + '</div>' +
           '</div>' +
         '</div>';
     }

@@ -48,7 +48,7 @@
               'style="left:' + pin.x + '%;top:' + pin.y + '%;" ' +
               'aria-hidden="true">' +
             '<strong class="hotspot-tooltip-label">' + esc(pin.label) + '</strong>' +
-            (pin.content ? '<div class="hotspot-tooltip-content">' + pin.content + '</div>' : '') +
+            (pin.content ? '<div class="hotspot-tooltip-content">' + window.HCESanitize.rich(pin.content) + '</div>' : '') +
           '</div>';
       });
 
