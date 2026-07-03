@@ -13,13 +13,37 @@
 
   // ── Inline format application ─────────────────────────────────────────────
 
+  // Allowlist scheme check for exported <a href> — mirrors delta-html.js's
+  // safeLinkHref (kept as a separate copy: export.js loads before
+  // delta-html.js and must not depend on it). 'about:blank' is included
+  // because Quill's own Link.sanitize rewrites pasted unsafe links to it.
+  function safeLinkHref(url) {
+    const u = String(url).trim();
+    if (u === 'about:blank') return true;
+    if (/^(https?:|mailto:|tel:|#|\.)/i.test(u)) return true;
+    if (/^\/(?!\/)/.test(u)) return true; // single leading slash; '//' (protocol-relative) refused
+    return false;
+  }
+
   function applyInlineFormats(text, attrs) {
     let html = esc(text);
     if (!attrs) return html;
     if (attrs.bold)      html = '<strong>' + html + '</strong>';
     if (attrs.italic)    html = '<em>' + html + '</em>';
     if (attrs.underline) html = '<u>' + html + '</u>';
+    if (attrs.strike)    html = '<s>' + html + '</s>';
+    if (attrs.link && safeLinkHref(attrs.link)) {
+      html = '<a href="' + esc(attrs.link) + '">' + html + '</a>';
+    }
     return html;
+  }
+
+  // ── Block-level alignment ───────────────────────────────────────────────
+
+  const ALIGN_VALUES = { center: true, right: true, justify: true };
+
+  function alignAttr(attrs) {
+    return (attrs && ALIGN_VALUES[attrs.align]) ? ' style="text-align:' + attrs.align + '"' : '';
   }
 
   // ── Delta → HTML ──────────────────────────────────────────────────────────
@@ -56,21 +80,22 @@
     function flushLine(attrs) {
       const inner = lineBuffer;
       lineBuffer = '';
+      const align = alignAttr(attrs);
 
       const list = attrs && attrs.list;
       if (list) {
         openList(list === 'ordered' ? 'ordered' : 'bullet');
-        html += '<li>' + (inner || '') + '</li>';
+        html += '<li' + align + '>' + (inner || '') + '</li>';
         return;
       }
 
       closeList();
 
-      if (attrs && attrs.header === 1) { html += '<h1>' + (inner || '') + '</h1>'; return; }
-      if (attrs && attrs.header === 2) { html += '<h2>' + (inner || '') + '</h2>'; return; }
-      if (attrs && attrs.header === 3) { html += '<h3>' + (inner || '') + '</h3>'; return; }
+      if (attrs && attrs.header === 1) { html += '<h1' + align + '>' + (inner || '') + '</h1>'; return; }
+      if (attrs && attrs.header === 2) { html += '<h2' + align + '>' + (inner || '') + '</h2>'; return; }
+      if (attrs && attrs.header === 3) { html += '<h3' + align + '>' + (inner || '') + '</h3>'; return; }
 
-      html += inner ? '<p>' + inner + '</p>' : '<p><br></p>';
+      html += inner ? '<p' + align + '>' + inner + '</p>' : '<p><br></p>';
     }
 
     for (const op of ops) {
@@ -151,6 +176,7 @@
     const maxWidth    = get('--content-max-width')   || '860px';
     const colorBg     = get('--color-background')    || '#ffffff';
     const colorText   = get('--color-text')          || '#1e293b';
+    const colorPrimary = get('--color-primary')      || '#2563eb';
 
     const base = [
       '*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }',
@@ -181,6 +207,8 @@
       'strong { font-weight: 700; }',
       'em { font-style: italic; }',
       'u { text-decoration: underline; }',
+      's { text-decoration: line-through; }',
+      'a { color: ' + colorPrimary + '; text-decoration: underline; text-underline-offset: 2px; }',
       'ul, ol { padding-left: 1.75em; margin: 0.75em 0; }',
       'li { margin: 0.25em 0; }',
       'img { max-width: 100%; height: auto; }',

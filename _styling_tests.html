@@ -33,7 +33,8 @@
   (function () {
     'use strict';
     var H = window.HCETestHarness;
-    var EDITOR_PAGE_SHA = '91fc4124af626c7c2a7e9518c50024c93746539258072dbcd3c11e1f1e9645c4';
+    // v3.1 editor-page baseline (post export align/link/strike fix, 2026-07-03).
+    var EDITOR_PAGE_SHA = '45aed5939bbe98e976d9545a0de156f750cffa0d874f79391135c9df4d2cf740';
 
     function selftestOps(WR) {
       var NAMES = ['callout','tabs','accordion','quote','timeline','flip-cards','click-reveal','carousel','hotspot','knowledge-check'];
@@ -109,6 +110,7 @@
         return html.slice(html.indexOf('<style>'), html.indexOf('</style>'));
       }
       var baseCss = exportCssBody(false);
+      var baseColorPrimary = w.getComputedStyle(doc.documentElement).getPropertyValue('--color-primary').trim();
 
       TP.applyTheme({ '--opt-heading-color': '#ff0000' });
       var headCss = exportCssBody(false);
@@ -119,9 +121,14 @@
 
       TP.applyTheme({ '--opt-link-color': '#00aa00' });
       var linkCss = exportCssBody(false);
-      H.addRow('opt link-color appends "a { color: #00aa00; }" (base emits no <a> rule)',
-        linkCss.indexOf('a { color: #00aa00; }') !== -1 && baseCss.indexOf('a {') === -1,
-        'appended=' + (linkCss.indexOf('#00aa00') !== -1) + ' baseHadLinkRule=' + (baseCss.indexOf('a {') !== -1));
+      // Base now has its own 'a { color: ...; }' rule (export align/link/strike
+      // fix, 2026-07-03) — the opt override must come AFTER it so equal-
+      // specificity cascade order lets the opt color win.
+      var baseIdx = linkCss.indexOf('a { color: ' + baseColorPrimary + ';');
+      var optIdx  = linkCss.indexOf('a { color: #00aa00; }');
+      H.addRow('opt link-color appends "a { color: #00aa00; }" AFTER the base link rule',
+        baseIdx !== -1 && optIdx !== -1 && optIdx > baseIdx,
+        'baseIdx=' + baseIdx + ' optIdx=' + optIdx);
       resetDefault();
 
       TP.applyTheme({ '--opt-paragraph-margin': '1.4em' });

@@ -35,11 +35,12 @@
     'use strict';
     var H = window.HCETestHarness;
     // Editor-page-environment no-JS hash for the 10-widget selftest document.
-    // Differs from the bare-page baseline (7c0a8363…) because the export reads
-    // theme vars from the hosting page and index.html+main.css resolve
-    // --font-family-ui to the full system stack (see docs/baselines/README).
-    // Recorded before F6; this guards that the original-10 export is unchanged.
-    var NOJS_EDITOR_PAGE_SHA = '91fc4124af626c7c2a7e9518c50024c93746539258072dbcd3c11e1f1e9645c4';
+    // Differs from the bare-page baseline because the export reads theme vars
+    // from the hosting page and index.html+main.css resolve --font-family-ui to
+    // the full system stack (see docs/baselines/README). v3.1 baseline (post
+    // export align/link/strike fix, 2026-07-03) — this guards that the
+    // original-10 export doesn't drift any further than that intentional change.
+    var NOJS_EDITOR_PAGE_SHA = '45aed5939bbe98e976d9545a0de156f750cffa0d874f79391135c9df4d2cf740';
 
     function bodyOf(html) { return html.replace(/^[\s\S]*?<body>/i, '').replace(/<\/body>[\s\S]*$/i, ''); }
 

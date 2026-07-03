@@ -47,11 +47,18 @@ the §3 contract itself (the export align/link/strike gap — parked, see follow
 - **Shared `_test_harness.js`** extracted for the new suites.
 - **Every suite green + frozen no-JS baseline byte-identical after all features.**
 
-**REMAINING FOR THE HUMAN (needs an explicit decision — touches §3):**
-Both export modes silently drop alignment/link/strike formatting that the code view now
-round-trips. Fixing changes protected export output, so it needs its own scoped task with
-baseline re-capture. Full follow-up list in the stage overview. Also: not merged to
-`main` or pushed to origin yet — awaiting your go.
+**Merged to `main` and pushed to origin (93ed2f5), 2026-07-03.**
+
+**Export align/link/strike gap — RESOLVED 2026-07-03** (human-authorized, explicitly
+scoped, independently reviewed). Both export modes now emit alignment, links (scheme-
+vetted), and strikethrough that were previously silently dropped. New protected-contract
+baseline **v3.1** — see `docs/baselines/README.md` "Baseline history". New regression
+suite `_export_format_tests.html` (21/21); every other suite re-verified green.
+
+Remaining smaller follow-ups (not blocking, not urgent) are listed in
+`staging/stage-9-v3-rebuild/overview.md`: shared toast/escaper consolidation, Quill
+tooltip containment in scrolling modal columns, shared modal skeleton before more widgets
+are added.
 
 **Stage 8 — No-JS / SharePoint export — ✅ complete, committed as `d9e0b96`.**
 The user deploys exports into SharePoint via the **Embed web part**, which strips `<script>`, `on*` handlers, and `javascript:` URLs — so the standard `Export HTML` widgets break there. Stage 8 adds a second **"Export for SharePoint"** button (`#export-sharepoint-btn`) that renders every widget JavaScript-free.

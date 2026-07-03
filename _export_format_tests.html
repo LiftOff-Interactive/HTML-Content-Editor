@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Export Format Fix — Align / Link / Strike Suite</title>
+  <link rel="stylesheet" href="src/styles/theme-defaults.css">
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 0; padding: 20px 28px; background: #f1f5f9; color: #0f172a; }
+    h1 { margin: 0 0 4px; }
+    p.note { margin: 0 0 12px; color: #475569; font-size: 13px; }
+    #summary { font-size: 18px; font-weight: 700; margin: 10px 0 18px; padding: 8px 14px; border-radius: 8px; display: inline-block; background: #e2e8f0; }
+    .ok { background: #dcfce7; color: #166534; } .bad { background: #fee2e2; color: #991b1b; }
+    table { border-collapse: collapse; width: 100%; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+    th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid #e2e8f0; font-size: 13px; vertical-align: top; }
+    th { background: #f8fafc; }
+    .p { color: #166534; font-weight: 700; } .f { color: #991b1b; font-weight: 700; }
+  </style>
+  <script src="vendor/quill/dist/quill.js"></script>
+  <script src="src/ui/modal.js"></script>
+  <script src="src/ui/image-upload-field.js"></script>
+  <script src="src/ui/rich-text-field.js"></script>
+  <script src="src/registry.js"></script>
+  <script src="src/blots/base.js"></script>
+  <script src="src/blots/image.js"></script>
+  <script src="src/blots/callout.js"></script>
+  <script src="src/blots/tabs.js"></script>
+  <script src="src/blots/accordion.js"></script>
+  <script src="src/blots/quote.js"></script>
+  <script src="src/blots/timeline.js"></script>
+  <script src="src/blots/flip-cards.js"></script>
+  <script src="src/blots/click-reveal.js"></script>
+  <script src="src/blots/carousel.js"></script>
+  <script src="src/blots/hotspot.js"></script>
+  <script src="src/blots/knowledge-check.js"></script>
+  <script src="src/export.js"></script>
+  <script src="_test_harness.js"></script>
+</head>
+<body>
+  <h1>Export Format Fix — Align / Link / Strike Suite</h1>
+  <p class="note">
+    Regression suite for the explicitly-scoped §3 change (2026-07-03): both export modes
+    previously silently dropped alignment/link/strikethrough. Verifies both modes now
+    emit them correctly, unsafe link schemes are still neutralized, and mixing formatted
+    text with widgets doesn't break the no-JS JS-free guarantee.
+  </p>
+  <div id="summary">running…</div>
+  <table><thead><tr><th>#</th><th>Case</th><th>Result</th><th>Evidence</th></tr></thead><tbody id="rows"></tbody></table>
+
+  <script>
+  (function () {
+    'use strict';
+    var H = window.HCETestHarness;
+
+    function bodyOf(html) { return html.replace(/^[\s\S]*?<body>/i, '').replace(/<\/body>[\s\S]*$/i, ''); }
+
+    function domClean(html) {
+      var tpl = document.createElement('template');
+      tpl.innerHTML = bodyOf(html);
+      var problems = [];
+      if (tpl.content.querySelector('script')) problems.push('live <script>');
+      var all = tpl.content.querySelectorAll('*');
+      for (var i = 0; i < all.length; i++) {
+        for (var j = 0; j < all[i].attributes.length; j++) {
+          var a = all[i].attributes[j];
+          if (/^on/i.test(a.name)) { problems.push('on* ' + a.name); break; }
+          if (/^href$/i.test(a.name) && /^\s*javascript:/i.test(a.value)) { problems.push('javascript: href'); break; }
+        }
+      }
+      return problems;
+    }
+
+    function fixture() {
+      return { ops: [
+        { insert: 'centered heading' }, { insert: '\n', attributes: { header: 2, align: 'center' } },
+        { insert: 'right paragraph' }, { insert: '\n', attributes: { align: 'right' } },
+        { insert: 'justified paragraph' }, { insert: '\n', attributes: { align: 'justify' } },
+        { insert: 'plain paragraph, no align\n' },
+        { insert: 'safe link', attributes: { link: 'https://example.com/x' } }, { insert: ' and ' },
+        { insert: 'struck text', attributes: { strike: true } }, { insert: ' and ' },
+        { insert: 'bold+strike', attributes: { bold: true, strike: true } },
+        { insert: '\n' },
+        { insert: { callout: { _v: 1, type: 'info', title: 'Note', body: '<p>widget body</p>' } } },
+      ] };
+    }
+
+    function run() {
+      H.init();
+      var delta = fixture();
+
+      ['js', 'noJs'].forEach(function (mode) {
+        var opts = mode === 'noJs' ? { noJs: true } : undefined;
+        var html = window.HCEExport.buildExportHtml(delta, 'fmt test', opts);
+        var body = bodyOf(html);
+
+        H.addRow(mode + ': align center on h2', /<h2 style="text-align:center">centered heading<\/h2>/.test(body), '');
+        H.addRow(mode + ': align right on p', /<p style="text-align:right">right paragraph<\/p>/.test(body), '');
+        H.addRow(mode + ': align justify on p', /<p style="text-align:justify">justified paragraph<\/p>/.test(body), '');
+        H.addRow(mode + ': unaligned p has no style attr', /<p>plain paragraph, no align<\/p>/.test(body), '');
+        H.addRow(mode + ': link renders as <a href>', /<a href="https:\/\/example\.com\/x">safe link<\/a>/.test(body), '');
+        H.addRow(mode + ': strike renders as <s>', /<s>struck text<\/s>/.test(body), '');
+        H.addRow(mode + ': combined bold+strike nests correctly',
+          /<s><strong>bold\+strike<\/strong><\/s>|<strong><s>bold\+strike<\/s><\/strong>/.test(body), body.match(/(<s>|<strong>)+bold\+strike(<\/s>|<\/strong>)+/) ? body.match(/(<s>|<strong>)+bold\+strike(<\/s>|<\/strong>)+/)[0] : 'not found');
+        H.addRow(mode + ': widget still renders alongside formatted text', /widget body/.test(body), '');
+        var problems = domClean(html);
+        H.addRow(mode + ': mixed formatted-text + widget doc is JS-free (live DOM)', problems.length === 0, problems.join(';') || 'clean');
+      });
+
+      // Unsafe link schemes: NEVER emitted as href (whole doc doesn't throw — a
+      // raw delta with an unsafe link isn't reachable through the live editor
+      // since Quill's own Link.sanitize rewrites it to about:blank before it
+      // reaches export; this proves export.js is safe even if that ever changes).
+      // The link degrades to plain, unlinked text — never dropped, never live.
+      (function () {
+        var d = { ops: [{ insert: 'bad link', attributes: { link: 'javascript:alert(1)' } }, { insert: '\n' }] };
+        var jsHtml = window.HCEExport.buildExportHtml(d, 't');
+        var noJsHtml = window.HCEExport.buildExportHtml(d, 't', { noJs: true });
+        var jsOk = /<p>bad link<\/p>/.test(bodyOf(jsHtml)) && !/<a /.test(bodyOf(jsHtml)) && !/javascript:alert/.test(jsHtml);
+        var noJsOk = /<p>bad link<\/p>/.test(bodyOf(noJsHtml)) && !/<a /.test(bodyOf(noJsHtml)) && !/javascript:alert/.test(noJsHtml);
+        H.addRow('javascript: link degrades to plain text (no <a>, no javascript: string), both modes', jsOk && noJsOk,
+          'js=' + jsOk + ' noJs=' + noJsOk);
+      })();
+
+      (function () {
+        var d = { ops: [{ insert: 'proto-relative', attributes: { link: '//evil.example/x' } }, { insert: '\n' }] };
+        var html = window.HCEExport.buildExportHtml(d, 't');
+        var ok = /proto-relative/.test(html) && !/href="\/\/evil\.example/.test(html);
+        H.addRow('protocol-relative link refused as href, text kept', ok, ok ? 'no bare href emitted' : 'LEAKED');
+      })();
+
+      // Regression: default document (no align/link/strike) still has the base a/s CSS rules
+      // (harmless — unused selectors) but no inline style attrs anywhere.
+      (function () {
+        var d = { ops: [{ insert: 'Plain doc' }, { insert: '\n', attributes: { header: 1 } }, { insert: 'plain text\n' }] };
+        var html = window.HCEExport.buildExportHtml(d, 't', { noJs: true });
+        var noAlignAttrs = !/style="text-align/.test(html);
+        var hasBaseRules = /s \{ text-decoration: line-through; \}/.test(html) && /^a \{ color:/m.test(html);
+        H.addRow('plain document: no stray align attrs; base a/s CSS rules present (harmless)',
+          noAlignAttrs && hasBaseRules, 'noAlignAttrs=' + noAlignAttrs + ' hasBaseRules=' + hasBaseRules);
+      })();
+
+      window.__fmtResults = H.finish();
+      window.__fmtDone = true;
+    }
+
+    window.addEventListener('load', function () {
+      try { run(); } catch (err) { window.__fmtResults = H.fatal(err); window.__fmtDone = true; }
+    });
+  })();
+  </script>
+</body>
+</html>

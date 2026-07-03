@@ -124,10 +124,17 @@ Re-check after every feature. no-JS hash must match byte-for-byte.
 
 From F2's independent review:
 
-6. **Export align/link/strike gap (needs explicit human go — touches §3)**: both export
-   modes silently drop alignment (toolbar feature!), links and strikethrough that the
-   code view now round-trips faithfully. Fixing means changing protected export output —
-   its own scoped task with baseline re-capture, never a side effect.
+6. ~~**Export align/link/strike gap**~~ — **RESOLVED 2026-07-03.** Both export modes
+   now emit alignment (`style="text-align:…"` on p/h1-h3/li), links (`<a href>`, scheme-
+   vetted via a `safeLinkHref` allowlist matching delta-html.js's, unsafe schemes degrade
+   to plain text — never dropped, never live), and strikethrough (`<s>`). New base CSS
+   rules for `s`/`a` (the latter reads `--color-primary`, stacks correctly under F4's
+   `--opt-link-color` override). Human-authorized, explicitly scoped, independently
+   reviewed. **New protected-contract baseline: v3.1** (`docs/baselines/README.md` —
+   old Stage 8 baseline archived in `docs/baselines/archive-stage8/`). New regression
+   suite `_export_format_tests.html` (21/21). All other suites re-verified green with
+   updated hash constants where they asserted the old baseline
+   (`_widgets2_tests.html`, `_styling_tests.html`).
 7. **Toast + esc() consolidation**: showToast has 3 drifted copies (export.js,
    save-load.js, code-view.js), the 4-replace HTML escaper has ~12 copies across
    src/. Consolidating touches §3-adjacent files → own re-verified commits.
