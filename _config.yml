@@ -1,0 +1,36 @@
+# GitHub Pages (default Jekyll) config.
+#
+# The published site is ONLY the editor app: index.html + src/ + vendor/.
+# Everything else in the repo is development/test material and must be kept
+# OUT of the deployed artifact — in particular the fixtures/ folder, whose
+# filenames contain spaces and parentheses and whose largest file is ~5.4 MB.
+# Those special-character paths in the Pages artifact are what caused the
+# "Deployment failed, try again later." error at the CDN publish step, even
+# though the Jekyll build itself succeeded.
+#
+# NOTE: setting `exclude` REPLACES Jekyll's defaults rather than extending
+# them — that's fine here because the repo tracks no Gemfile/node_modules.
+# Files and folders beginning with `_` (all the _*_tests.html harnesses,
+# _test_harness.js, _nojs_*.html) are already ignored by Jekyll convention.
+
+title: HTML Content Editor
+
+exclude:
+  # Test fixtures — big, special-character filenames, the deploy blocker.
+  - fixtures/
+  # Protected-contract baselines + screenshots + docs — not part of the app.
+  - docs/
+  # Planning / stage documents.
+  - staging/
+  # Repo docs, prompts, and licence — not served pages.
+  - README.md
+  - CLAUDE.md
+  - CONTRIBUTING.md
+  - First_planning_prompt.md
+  - handoff.md
+  - help.md
+  - new_session_prompt.md
+  - v3_kickoff_prompt.md
+  - LICENSE
+  - .gitattributes
+  - .gitignore
