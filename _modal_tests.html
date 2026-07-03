@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Widget Edit Modals — Geometry Verification Suite</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 0; padding: 20px 28px; background: #f1f5f9; color: #0f172a; }
+    h1 { margin: 0 0 4px; }
+    p.note { margin: 0 0 12px; color: #475569; font-size: 13px; }
+    #summary { font-size: 18px; font-weight: 700; margin: 10px 0 18px; padding: 8px 14px; border-radius: 8px; display: inline-block; background: #e2e8f0; }
+    .ok { background: #dcfce7; color: #166534; } .bad { background: #fee2e2; color: #991b1b; }
+    table { border-collapse: collapse; width: 100%; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+    th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid #e2e8f0; font-size: 13px; vertical-align: top; }
+    th { background: #f8fafc; }
+    .p { color: #166534; font-weight: 700; } .f { color: #991b1b; font-weight: 700; }
+    #stage { margin-top: 20px; border: 2px dashed #cbd5e1; display: inline-block; }
+    iframe { display: block; border: 0; background: #fff; }
+  </style>
+</head>
+<body>
+  <h1>Widget Edit Modals — Geometry Verification Suite</h1>
+  <p class="note">
+    Mounts the real editor in an iframe, opens every widget's edit modal with every field
+    stuffed to maximum content, and asserts the Save button is fully inside the viewport
+    and hit-testable (<code>elementFromPoint</code>) at viewport heights 600px and 400px.
+  </p>
+  <div id="summary">running…</div>
+  <table><thead><tr><th>#</th><th>Widget @ viewport</th><th>Result</th><th>Evidence</th></tr></thead><tbody id="rows"></tbody></table>
+  <div id="stage"><iframe id="app" src="about:blank" width="1000" height="600" title="Editor under test"></iframe></div>
+
+  <script>
+  (function () {
+    'use strict';
+
+    var HEIGHTS = [600, 400];
+    var rows = document.getElementById('rows');
+    var results = [];
+    var caseNo = 0;
+
+    // ── Stuffed data builders — every text field maximal, list items multiplied ──
+
+    var LONG_TEXT = 'An intentionally very long plain-text value used to stress the layout of this field. '.repeat(4).trim();
+    function longRich(n) {
+      var para = '<p>Stress-test paragraph with a considerable amount of rich text content so the mini editor grows tall. '.concat(
+        'It keeps going and going to force wrapping and height. </p>');
+      return new Array(n || 8).fill(para).join('');
+    }
+    var SVG_IMG = 'data:image/svg+xml;base64,' + btoa('<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450"><rect width="800" height="450" fill="#cbd5e1"/></svg>');
+
+    function many(n, make) {
+      var out = [];
+      for (var i = 0; i < n; i++) out.push(make(i));
+      return out;
+    }
+
+    var STUFFERS = {
+      'callout': function () {
+        return { _v: 1, type: 'warning', title: LONG_TEXT, body: longRich(10) };
+      },
+      'quote': function () {
+        return { _v: 1, style: 'pull', quote: longRich(10), attribution: LONG_TEXT, role: LONG_TEXT };
+      },
+      'tabs': function () {
+        return { _v: 1, activeTab: 'tab-1', tabs: many(6, function (i) {
+          return { id: 'tab-' + (i + 1), label: 'Tab ' + (i + 1) + ' ' + LONG_TEXT, content: longRich(8) };
+        }) };
+      },
+      'accordion': function () {
+        return { _v: 1, allowMultiple: false, items: many(6, function (i) {
+          return { id: 'item-' + (i + 1), header: 'Panel ' + (i + 1) + ' ' + LONG_TEXT, content: longRich(8), open: false };
+        }) };
+      },
+      'timeline': function () {
+        return { _v: 1, items: many(6, function (i) {
+          return { id: 'step-' + (i + 1), date: 'Step ' + (i + 1), title: LONG_TEXT, content: longRich(6), icon: String(i + 1) };
+        }) };
+      },
+      'flip-cards': function () {
+        return { _v: 1, columns: 3, cards: many(6, function (i) {
+          return { id: 'card-' + (i + 1), front: LONG_TEXT, frontBody: longRich(6),
+                   back: LONG_TEXT, backBody: longRich(6), frontImage: SVG_IMG, frontImageWidth: '100%' };
+        }) };
+      },
+      'click-reveal': function () {
+        return { _v: 1, items: many(6, function (i) {
+          return { id: 'reveal-' + (i + 1), triggerLabel: LONG_TEXT, triggerStyle: 'button', content: longRich(8) };
+        }) };
+      },
+      'carousel': function () {
+        return { _v: 1, autoplay: false, showDots: true, showArrows: true, slides: many(5, function (i) {
+          return { id: 'slide-' + (i + 1), imageData: SVG_IMG, imageWidth: '100%',
+                   altText: LONG_TEXT, caption: LONG_TEXT, textContent: longRich(8) };
+        }) };
+      },
+      'hotspot': function () {
+        return { _v: 1, imageData: SVG_IMG, altText: LONG_TEXT, pins: many(6, function (i) {
+          return { id: 'pin-' + (i + 1), x: 10 + i * 12, y: 10 + i * 12, label: LONG_TEXT, content: longRich(6) };
+        }) };
+      },
+      'knowledge-check': function () {
+        return { _v: 1, questionType: 'multiple-choice', question: longRich(6), hint: longRich(6), allowRetry: true,
+          options: many(6, function (i) {
+            return { id: 'opt-' + (i + 1), text: LONG_TEXT, correct: i === 0, feedback: longRich(4) };
+          }) };
+      },
+    };
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
+    function escapeHtml(s) {
+      return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function addRow(name, pass, evidence) {
+      caseNo++;
+      var tr = document.createElement('tr');
+      tr.innerHTML = '<td>' + caseNo + '</td><td>' + escapeHtml(name) + '</td>' +
+        '<td class="' + (pass ? 'p">PASS' : 'f">FAIL') + '</td><td>' + escapeHtml(evidence) + '</td>';
+      rows.appendChild(tr);
+      results.push({ name: name, pass: pass, evidence: evidence });
+    }
+
+    function wait(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+
+    function poll(fn, timeoutMs, everyMs) {
+      var deadline = Date.now() + (timeoutMs || 3000);
+      return new Promise(function (resolve) {
+        (function tick() {
+          var v = null;
+          try { v = fn(); } catch (e) { v = null; }
+          if (v) return resolve(v);
+          if (Date.now() > deadline) return resolve(null);
+          setTimeout(tick, everyMs || 50);
+        })();
+      });
+    }
+
+    // Settle layout: prefer rAF, but never block on it — rAF does not fire in
+    // hidden/background tabs (e.g. automated runs), so race it with a timeout.
+    // Layout reads (getBoundingClientRect / elementFromPoint) force sync layout
+    // anyway; this is only to let mini-Quill mounts finish their DOM writes.
+    function frames(win, n) {
+      var raf = new Promise(function (resolve) {
+        (function step(left) {
+          if (left <= 0) return resolve();
+          win.requestAnimationFrame(function () { step(left - 1); });
+        })(n);
+      });
+      return Promise.race([raf, wait(120 * n)]);
+    }
+
+    function fmtRect(r) {
+      return 't' + Math.round(r.top) + ' b' + Math.round(r.bottom) +
+             ' l' + Math.round(r.left) + ' r' + Math.round(r.right);
+    }
+
+    function describe(el) {
+      if (!el) return 'null';
+      var cls = (typeof el.className === 'string' && el.className) ? '.' + el.className.split(/\s+/).join('.') : '';
+      return el.tagName.toLowerCase() + cls;
+    }
+
+    // ── One widget test at the current iframe height ─────────────────────────
+
+    // Wait for every image inside the modal to decode (bounded) — the dialog is
+    // content-sized, so measuring before images size themselves can false-PASS.
+    function waitForImages(overlay) {
+      var imgs = Array.from(overlay.querySelectorAll('img')).filter(function (i) { return i.src; });
+      var decodes = imgs.map(function (i) {
+        return (i.decode ? i.decode() : Promise.resolve()).catch(function () {});
+      });
+      return Promise.race([Promise.all(decodes), wait(1500)]);
+    }
+
+    function measureSave(w, doc, overlay) {
+      var save = overlay.querySelector('.widget-modal-btn--save');
+      if (!save) return { pass: false, evidence: 'no .widget-modal-btn--save in modal' };
+      var r = save.getBoundingClientRect();
+      var vh = w.innerHeight, vw = w.innerWidth;
+      var inViewport = r.top >= 0 && r.left >= 0 && r.bottom <= vh && r.right <= vw && r.width > 0 && r.height > 0;
+      var cx = Math.round(r.left + r.width / 2), cy = Math.round(r.top + r.height / 2);
+      var hitEl = doc.elementFromPoint(cx, cy);
+      var hitOk = !!hitEl && (hitEl === save || save.contains(hitEl));
+      return {
+        pass: inViewport && hitOk,
+        evidence: 'save[' + fmtRect(r) + '] viewport=' + vw + 'x' + vh +
+          ' inViewport=' + inViewport + ' hit(' + cx + ',' + cy + ')=' + describe(hitEl),
+      };
+    }
+
+    // Drive the modal's own close path (Cancel → × → Escape) so its teardown
+    // (rich-field destroy, document keydown removal) runs; force-remove only as
+    // a last resort so one stuck modal can't corrupt the remaining cases.
+    async function closeModal(doc, overlay) {
+      var cancel = overlay.querySelector('.widget-modal-btn--cancel') || overlay.querySelector('.widget-modal-close');
+      if (cancel) cancel.click();
+      var gone = function () { return doc.querySelector('.widget-modal-overlay') ? null : true; };
+      if (await poll(gone, 1500)) return true;
+      doc.dispatchEvent(new doc.defaultView.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      if (await poll(gone, 1500)) return true;
+      var stuck = doc.querySelector('.widget-modal-overlay');
+      if (stuck) stuck.parentNode.removeChild(stuck);
+      return false;
+    }
+
+    async function testWidget(iframe, name) {
+      var w = iframe.contentWindow;
+      var doc = iframe.contentDocument;
+      var quill = w.contentEditor.quill;
+      var label = name + ' @ ' + iframe.height + 'px';
+
+      quill.setText('', 'silent');
+      quill.insertEmbed(0, name, STUFFERS[name](), 'silent');
+
+      var node = await poll(function () { return doc.querySelector('[data-widget-type="' + name + '"]'); });
+      if (!node) { addRow(label, false, 'widget node never appeared in editor'); return; }
+
+      var blot = w.Quill.find(node);
+      if (!blot || typeof blot.edit !== 'function') { addRow(label, false, 'no blot / edit() on node'); return; }
+
+      blot.edit(blot.constructor.value(node));
+
+      var overlay = await poll(function () { return doc.querySelector('.widget-modal-overlay'); });
+      if (!overlay) { addRow(label, false, 'edit modal never opened'); return; }
+
+      await poll(function () { return overlay.querySelector('.widget-modal-btn--save'); });
+      await waitForImages(overlay);
+
+      var result = measureSave(w, doc, overlay);
+      addRow(label, result.pass, result.evidence);
+
+      var closedCleanly = await closeModal(doc, overlay);
+      if (!closedCleanly) {
+        addRow(label + ' [cleanup]', false, 'modal did not close via Cancel/×/Escape — force-removed');
+      }
+    }
+
+    // ── Suite ─────────────────────────────────────────────────────────────────
+
+    // Refresh the HTTP cache for index.html and every local resource it
+    // references, so the iframe never boots against stale scripts — a stale
+    // memory-cache run once reported pre-fix geometry as a false failure.
+    async function bustCaches() {
+      // 'no-cache' revalidates (304 when unchanged) — same freshness guarantee
+      // as 'reload' without re-downloading every byte of unchanged files.
+      var idxText = await (await fetch('index.html', { cache: 'no-cache' })).text();
+      var urls = [];
+      for (var m of idxText.matchAll(/(?:src|href)="([^"]+)"/g)) {
+        if (!/^(?:https?:)?\/\//.test(m[1])) urls.push(m[1]);
+      }
+      await Promise.all(urls.map(function (u) {
+        return fetch(u, { cache: 'no-cache' }).catch(function () {});
+      }));
+    }
+
+    async function run() {
+      var iframe = document.getElementById('app');
+
+      await bustCaches();
+      iframe.src = 'index.html';
+
+      await poll(function () {
+        var w = iframe.contentWindow;
+        return w && w.contentEditor && w.contentEditor.quill && w.WidgetRegistry && w.Quill ? true : null;
+      }, 10000, 100);
+
+      var w = iframe.contentWindow;
+      if (!(w && w.contentEditor && w.contentEditor.quill)) {
+        document.getElementById('summary').textContent = 'FATAL: editor did not boot inside iframe';
+        document.getElementById('summary').className = 'bad';
+        return;
+      }
+
+      // Kill transitions/animations so geometry is measured at rest.
+      var kill = iframe.contentDocument.createElement('style');
+      kill.textContent = '* { transition: none !important; animation: none !important; scroll-behavior: auto !important; }';
+      iframe.contentDocument.head.appendChild(kill);
+
+      var names = w.WidgetRegistry.getAll().map(function (W) { return W.blotName; });
+      var missing = names.filter(function (n) { return !STUFFERS[n]; });
+      var tested = names.filter(function (n) { return STUFFERS[n]; });
+
+      for (var h = 0; h < HEIGHTS.length; h++) {
+        iframe.height = HEIGHTS[h];
+        await frames(w, 2);
+        for (var i = 0; i < tested.length; i++) {
+          await testWidget(iframe, tested[i]);
+        }
+      }
+
+      missing.forEach(function (n) {
+        addRow(n + ' [no stuffer]', false, 'registered widget has no stuffed-data builder — extend STUFFERS');
+      });
+
+      var passed = results.filter(function (r) { return r.pass; }).length;
+      var summary = document.getElementById('summary');
+      summary.textContent = passed + ' / ' + results.length + ' passed';
+      summary.className = passed === results.length ? 'ok' : 'bad';
+      window.__modalResults = results;
+      window.__modalDone = true;
+    }
+
+    // Any uncaught error must surface in the summary + results — a silently
+    // dead suite that still says "running…" is indistinguishable from a hang.
+    window.addEventListener('load', function () {
+      run().catch(function (err) {
+        addRow('suite [fatal]', false, (err && err.message) || String(err));
+        var summary = document.getElementById('summary');
+        summary.textContent = 'FATAL: ' + ((err && err.message) || err);
+        summary.className = 'bad';
+        window.__modalResults = results;
+        window.__modalDone = true;
+      });
+    });
+  })();
+  </script>
+</body>
+</html>

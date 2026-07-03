@@ -470,6 +470,13 @@ body {
   border-top: 1px solid var(--color-border);
 }
 
+/* Header and footer must keep their intrinsic height no matter how tall the
+   body content gets — the body is the only region allowed to shrink/scroll. */
+.widget-modal-header,
+.widget-modal-footer {
+  flex-shrink: 0;
+}
+
 .widget-modal-btn {
   padding: 6px 14px;
   font-size: 13px;

@@ -248,9 +248,11 @@
       header.appendChild(titleEl);
       header.appendChild(closeX);
 
-      // Two-column body
+      // Two-column body — the single flexible region between header and footer.
+      // flex:1 + min-height:0 lets it shrink inside the dialog's max-height so
+      // the footer is never pushed out; columns scroll their own overflow.
       const body = document.createElement('div');
-      body.style.cssText = 'display:flex;min-height:280px;';
+      body.style.cssText = 'display:flex;flex:1;min-height:0;overflow:hidden;';
 
       // Left: tab list
       const leftCol = document.createElement('div');
@@ -274,7 +276,7 @@
 
       // Right: edit fields for selected tab
       const rightCol = document.createElement('div');
-      rightCol.style.cssText = 'flex:1;padding:16px;display:flex;flex-direction:column;gap:12px;';
+      rightCol.style.cssText = 'flex:1;padding:16px;display:flex;flex-direction:column;gap:12px;overflow-y:auto;';
 
       body.appendChild(leftCol);
       body.appendChild(rightCol);

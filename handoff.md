@@ -1,5 +1,5 @@
 # Handoff — HTML Content Editor
-_Last updated: 2026-06-23 · Current stage: **Stage 8 — No-JavaScript / SharePoint-safe export (code complete + self-test verified; pending human verification in the live editor)**_
+_Last updated: 2026-07-02 · Current stage: **Stage 9 — v3 rebuild, F1 modal fix (code complete + 20/20 self-test + independent review; AWAITING HUMAN VERIFICATION before F2 starts)**_
 
 ## Goals
 ~~Get the project to a public v1 release on GitHub.~~ **Done.** v1.0.0 is live.
@@ -11,9 +11,29 @@ Live URLs:
 - v2.0.0 release: https://github.com/Frankyface/HTML-Content-Editor/releases/tag/v2.0.0
 
 ## Current State
-All stages (1–7) complete. v2.0.0 shipped on `main`.
+All stages (1–8) complete. v2.0.0 + Stage 8 shipped; `main` = `origin/main` = `d9e0b96`.
 
-**Stage 8 — No-JS / SharePoint export — code complete, self-test verified, not yet committed.**
+**Stage 9 — v3 rebuild — IN PROGRESS on branch `stage-9-v3-rebuild`.**
+Governing brief: `v3_kickoff_prompt.md` (§0 checkpoint discipline, §3 protected export
+contract). Build order confirmed with the human and recorded in
+`staging/stage-9-v3-rebuild/overview.md`: F1 modal fix → F2 code view → F3 HTML import →
+F5 naming+clear → F6 five new widgets (scroll-snap = carousel option) → F4 styling
+(chrome + opt-in presets) → F7 course-mode plan doc. Strict per-feature checkpoints.
+
+- **Baselines captured** (`docs/baselines/`): byte-exact Stage 8 no-JS + JS export
+  references with SHA-256 hashes and the JS-mode non-determinism caveat (random
+  tabs/accordion ids + session-scoped car/kc counters — normalize before diffing).
+- **F1 (modal Save-button fix): code complete.** New `_modal_tests.html` harness
+  (10 widgets × 2 viewport heights, stuffed data, Save visibility + hit-testability).
+  Initial run 15/20 — tabs/click-reveal/carousel/hotspot were the four modals Stage 7
+  never fixed. Fixed with the accordion body pattern + header/footer flex-shrink:0 in
+  main.css. Independent 8-angle review then caught hotspot's columns not scrolling
+  (tall image unreachable, pin-marker coordinate mismatch under height-clamp) — fixed
+  via scrollable imgArea + imgWrap marker frame (empirically verified exact alignment).
+  Final: 20/20 modal suite, 27/27 no-JS suite, no-JS export SHA byte-identical to
+  baseline, JS export normalized-identical. **Next: human verifies, then F2.**
+
+**Stage 8 — No-JS / SharePoint export — ✅ complete, committed as `d9e0b96`.**
 The user deploys exports into SharePoint via the **Embed web part**, which strips `<script>`, `on*` handlers, and `javascript:` URLs — so the standard `Export HTML` widgets break there. Stage 8 adds a second **"Export for SharePoint"** button (`#export-sharepoint-btn`) that renders every widget JavaScript-free.
 - Engine: `src/export.js` `deltaToHtml(delta, opts)` / `buildExportHtml(delta, title, opts)` take `{ noJs }`; in no-JS mode each widget embed is rendered via `renderExportNoJS(container, data, ctx)` (fallback to `renderExport`). `ctx.uid` (`wx<n>`, per-export counter) is the only unique-id source — export instances are bare `Object.create(prototype)`, so `this._uid` is undefined.
 - 7 interactive blots got `renderExportNoJS`: tabs (radio+`:checked`), accordion (native `<details>`, single-open via `<details name>`), flip-cards (checkbox+`:checked`+`:has()`), click-reveal (`<details>`), carousel (scroll-snap + anchor nav), hotspot (radio+`:checked`+`:has()` + close-label), knowledge-check (radio+`:checked`+`:has()` submit-gate). The 4 static widgets (callout, quote, timeline, resizable-image) fall back to `renderExport` (already JS-free).
@@ -51,6 +71,15 @@ What's built (all stages):
 - `src/styles/main.css` — app shell + all widget CSS + dropdown styles + modal max-height constraint
 
 ## Things I've Changed
+- 2026-07-02: Stage 9 kickoff + F1. New: `docs/baselines/` (protected-contract export
+  references + README), `_modal_tests.html` (modal geometry suite),
+  `staging/stage-9-v3-rebuild/overview.md` (confirmed roadmap + F1 record + named
+  follow-ups). Edited: modal body pattern in tabs/click-reveal/carousel/hotspot,
+  hotspot modal scroll + pin coordinate frame (imgWrap), guard comments at all 8 modal
+  body sites, `.widget-modal-header/-footer { flex-shrink:0 }` in main.css. Gotchas
+  learned: browser memory-cache served stale blot JS to the test iframe (harness now
+  cache-busts itself); rAF never fires in hidden tabs (never await it bare); the JS-mode
+  export was never byte-stable (see baselines README).
 - 2026-06-23: Stage 8 — No-JS / SharePoint export. New files: `staging/stage-8-nojs-export/overview.md`, `_nojs_selftest.html` (root-level browser QA harness — open over localhost, exports one of every widget no-JS into an iframe with PASS/FAIL banner). Edited `src/export.js` (no-JS mode + ctx + `#export-sharepoint-btn` wiring + `exportHtmlNoJs`), `index.html` (new button), and added `renderExportNoJS` to tabs/accordion/flip-cards/click-reveal/carousel/hotspot/knowledge-check. Per-widget conversions were drafted by a parallel agent workflow against the Tabs reference, then fixed (the `!important` inline-override bug) and browser-verified.
 - 2026-06-09: Stage 7 Features 2 & 3 complete + bug fixes. Shipped as v2.0.0.
   - Feature 2: `src/ui/rich-text-field.js` (new), rich text in all 11 widgets, v1→v2 migration in save-load.js.
@@ -78,5 +107,9 @@ What's built (all stages):
 - `window.contentEditor.getDocumentTitle()` shared by tab title (editor.js), save filename (save-load.js), and export title (export.js).
 
 ## Pointer
-→ Stage 8 (No-JS / SharePoint export) is code-complete and self-test-verified. Active feature file: `staging/stage-8-nojs-export/overview.md`.
-→ Next: human-verify the "Export for SharePoint" button in the live editor + a real SharePoint Embed web part, then commit. The `Things I've Changed` Tried/Failed insight: scoped-`<style>` state rules must use `!important` to beat widgets' inline base styles.
+→ Stage 9 (v3 rebuild) F1 is code-complete, self-tested and independently reviewed on
+branch `stage-9-v3-rebuild`. Active feature file: `staging/stage-9-v3-rebuild/overview.md`.
+→ Next: **human verifies F1** — open `_modal_tests.html` over localhost (expect 20/20),
+click through tabs/carousel/hotspot edit modals in a short window, try a tall portrait
+image in hotspot. Only after that checkpoint does F2 (code view) begin. Do not start F2
+without it (kickoff §0).
