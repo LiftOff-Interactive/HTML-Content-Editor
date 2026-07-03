@@ -111,8 +111,8 @@
   }
 
   function updateTabTitle() {
-    const h1 = getDocumentTitle(quill.getContents());
-    document.title = h1 ? h1 + ' — Content Editor' : 'Content Editor';
+    const t = window.contentEditor.getDocumentTitle();
+    document.title = t ? t + ' — Content Editor' : 'Content Editor';
   }
 
   quill.on('text-change', function (delta, oldDelta, source) {
@@ -121,8 +121,10 @@
 
   window.contentEditor = {
     quill,
+    // Explicit document name (F5) wins; empty falls back to the first H1.
     getDocumentTitle: function () {
-      return getDocumentTitle(quill.getContents());
+      var explicit = window.HCEDocState && window.HCEDocState.getTitle();
+      return explicit || getDocumentTitle(quill.getContents());
     },
   };
 

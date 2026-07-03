@@ -98,6 +98,21 @@
           return { id: 'pin-' + (i + 1), x: 10 + i * 12, y: 10 + i * 12, label: LONG_TEXT, content: longRich(6) };
         }) };
       },
+      'raw-html': function () {
+        return { _v: 1, html: new Array(24).join('<p>Raw HTML block stress paragraph with plenty of content so the preview grows tall enough to matter.</p>') };
+      },
+      'toggle-reveal': function () {
+        return { _v: 1, label: LONG_TEXT, style: 'switch', startOn: false, content: longRich(10) };
+      },
+      'popover': function () {
+        return { _v: 1, buttonLabel: LONG_TEXT, buttonStyle: 'primary', title: LONG_TEXT, content: longRich(10) };
+      },
+      'editable-box': function () {
+        return { _v: 1, prompt: LONG_TEXT, placeholder: LONG_TEXT, size: 'large' };
+      },
+      'progress-meter': function () {
+        return { _v: 1, kind: 'meter', label: LONG_TEXT, value: 72, max: 100, low: 30, high: 80, optimum: 90, showValue: true };
+      },
       'knowledge-check': function () {
         return { _v: 1, questionType: 'multiple-choice', question: longRich(6), hint: longRich(6), allowRetry: true,
           options: many(6, function (i) {

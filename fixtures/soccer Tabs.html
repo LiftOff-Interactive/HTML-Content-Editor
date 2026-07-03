@@ -1,0 +1,573 @@
+<!doctype html>
+<html lang="en-CA">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Football history of the 2026 World Cup host nations</title>
+<style>
+    :root {
+      --bg: #f7fbff;
+      --surface: #ffffff;
+      --ink: #102033;
+      --muted: #334155;
+      --border: #c8d6e5;
+      --accent: #0057b8;
+      --accent-dark: #003b7a;
+      --accent-soft: #e8f2ff;
+      --focus: #ffbf47;
+      --success-bg: #eef8f1;
+      --success-border: #2e7d32;
+      --shadow: 0 18px 45px rgba(16, 32, 51, 0.12);
+      --radius-lg: 1.25rem;
+      --radius-md: 0.85rem;
+      --max-width: 980px;
+    }
+
+ 
+
+    * {
+      box-sizing: border-box;
+    }
+
+ 
+
+    html {
+      font-size: 100%;
+    }
+
+ 
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Aptos, Calibri, Arial, Helvetica, sans-serif;
+      line-height: 1.55;
+    }
+
+ 
+
+    .host-history {
+      padding: clamp(1rem, 3vw, 2rem);
+    }
+
+ 
+
+    .shell {
+      width: min(100%, var(--max-width));
+      margin: 0 auto;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+ 
+
+    .intro {
+      padding: clamp(1.25rem, 3vw, 2rem);
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(135deg, #ffffff 0%, #eef6ff 100%);
+    }
+
+ 
+
+    .eyebrow {
+      margin: 0 0 0.4rem;
+      color: var(--accent-dark);
+      font-size: 0.9rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+ 
+
+    h1, h2, h3, p {
+      margin-top: 0;
+    }
+
+ 
+
+    h1 {
+      max-width: 18ch;
+      margin-bottom: 0.8rem;
+      font-size: clamp(1.8rem, 5vw, 3rem);
+      line-height: 1.05;
+    }
+
+ 
+
+    .lede {
+      max-width: 68ch;
+      margin-bottom: 0;
+      color: var(--muted);
+      font-size: clamp(1rem, 2vw, 1.15rem);
+    }
+
+ 
+
+    .tabs {
+      padding: clamp(1rem, 3vw, 1.5rem);
+    }
+
+ 
+
+    .tab-list-wrap {
+      margin-bottom: 1rem;
+      overflow-x: auto;
+      padding-bottom: 0.25rem;
+    }
+
+ 
+
+    .tab-list {
+      display: flex;
+      gap: 0.5rem;
+      min-width: max-content;
+    }
+
+ 
+
+    [role="tab"] {
+      min-width: 44px;
+      min-height: 44px;
+      padding: 0.75rem 1rem;
+      border: 2px solid var(--border);
+      border-radius: 999px;
+      background: #ffffff;
+      color: var(--accent-dark);
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+ 
+
+    [role="tab"]:hover {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+ 
+
+    [role="tab"][aria-selected="true"] {
+      border-color: var(--accent-dark);
+      background: var(--accent-dark);
+      color: #ffffff;
+    }
+
+ 
+
+    [role="tab"]:focus-visible,
+    [role="tabpanel"]:focus-visible,
+    summary:focus-visible {
+      outline: 4px solid var(--focus);
+      outline-offset: 3px;
+    }
+
+ 
+
+    [role="tabpanel"] {
+      scroll-margin-top: 1rem;
+    }
+
+ 
+
+    .tab-panel {
+      padding: clamp(1rem, 3vw, 1.5rem);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      background: #ffffff;
+    }
+
+ 
+
+    .panel-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(220px, 0.8fr);
+      gap: clamp(1rem, 3vw, 1.5rem);
+      align-items: start;
+    }
+
+ 
+
+    .country-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      margin-bottom: 0.5rem;
+      padding: 0.25rem 0.65rem;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--accent-dark);
+      font-weight: 700;
+    }
+
+ 
+
+    .flag-dot {
+      width: 0.7rem;
+      height: 0.7rem;
+      border-radius: 50%;
+      background: currentColor;
+      forced-color-adjust: auto;
+    }
+
+ 
+
+    h2 {
+      margin-bottom: 0.6rem;
+      font-size: clamp(1.4rem, 3vw, 2rem);
+      line-height: 1.15;
+    }
+
+ 
+
+    .summary {
+      color: var(--muted);
+      font-size: 1.05rem;
+    }
+
+ 
+
+    .facts {
+      display: grid;
+      gap: 0.75rem;
+      margin: 1rem 0 0;
+      padding: 0;
+      list-style: none;
+    }
+
+ 
+
+    .facts li {
+      padding: 0.9rem;
+      border-left: 5px solid var(--accent);
+      border-radius: 0.65rem;
+      background: #f8fbff;
+    }
+
+ 
+
+    .facts strong {
+      display: block;
+      margin-bottom: 0.15rem;
+      color: var(--ink);
+    }
+
+ 
+
+    .takeaway {
+      padding: 1rem;
+      border: 1px solid var(--success-border);
+      border-radius: var(--radius-md);
+      background: var(--success-bg);
+    }
+
+ 
+
+    .takeaway h3 {
+      margin-bottom: 0.45rem;
+      font-size: 1.05rem;
+    }
+
+ 
+
+    .takeaway p:last-child,
+    .source-note p:last-child {
+      margin-bottom: 0;
+    }
+
+ 
+
+    .prompt {
+      margin-top: 1rem;
+      padding: 0.9rem;
+      border-radius: var(--radius-md);
+      background: #fff8e8;
+      border: 1px solid #dfb757;
+    }
+
+ 
+
+    .prompt strong {
+      color: #4b3410;
+    }
+
+ 
+
+    .source-note {
+      margin: 1rem clamp(1rem, 3vw, 1.5rem) clamp(1rem, 3vw, 1.5rem);
+      padding: 0.85rem 1rem;
+      border-radius: var(--radius-md);
+      background: #f6f7f9;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+ 
+
+    .source-note summary {
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+      font-weight: 700;
+      color: var(--ink);
+      cursor: pointer;
+    }
+
+ 
+
+    .source-note ul {
+      margin: 0.5rem 0 0;
+      padding-left: 1.25rem;
+    }
+
+ 
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+ 
+
+    @media (max-width: 720px) {
+      .panel-grid {
+        grid-template-columns: 1fr;
+      }
+
+ 
+
+      .tab-list {
+        min-width: 100%;
+      }
+
+ 
+
+      [role="tab"] {
+        flex: 1 0 auto;
+      }
+    }
+
+ 
+
+    @media (forced-colors: active) {
+      .shell,
+      .tab-panel,
+      [role="tab"],
+      .facts li,
+      .takeaway,
+      .prompt,
+      .source-note {
+        border: 1px solid ButtonText;
+      }
+
+ 
+
+      [role="tab"][aria-selected="true"] {
+        forced-color-adjust: none;
+        background: Highlight;
+        color: HighlightText;
+      }
+    }
+</style>
+</head>
+<body>
+<main class="host-history" aria-labelledby="interaction-title">
+<div class="shell">
+<div class="intro">
+<p class="eyebrow">2026 FIFA World Cup</p>
+<h1 id="interaction-title">Three host nations. Three football stories.</h1>
+<p class="lede">Canada, Mexico and the United States share the 2026 World Cup. Each country brings a different football history to the tournament.</p>
+</div>
+
+ 
+
+      <div class="tabs" data-tabs>
+<p class="sr-only" id="tab-instructions">Use the left and right arrow keys to move between tabs. Use Home to go to the first tab and End to go to the last tab.</p>
+
+ 
+
+        <div class="tab-list-wrap">
+<div class="tab-list" role="tablist" aria-labelledby="interaction-title" aria-describedby="tab-instructions">
+<button type="button" role="tab" id="tab-canada" aria-controls="panel-canada" aria-selected="true" tabindex="0">Canada</button>
+<button type="button" role="tab" id="tab-mexico" aria-controls="panel-mexico" aria-selected="false" tabindex="-1">Mexico</button>
+<button type="button" role="tab" id="tab-usa" aria-controls="panel-usa" aria-selected="false" tabindex="-1">United States</button>
+</div>
+</div>
+
+ 
+
+        <section class="tab-panel" id="panel-canada" role="tabpanel" aria-labelledby="tab-canada" tabindex="0">
+<div class="panel-grid">
+<div>
+<span class="country-label"><span class="flag-dot" aria-hidden="true"></span> Canada</span>
+<h2>A fast-growing football nation</h2>
+<p class="summary">Canada’s men’s team reached the World Cup in 1986, returned in 2022, and now enters 2026 as a host nation.</p>
+<ul class="facts">
+<li><strong>World Cup marker</strong> Canada’s first men’s World Cup appearance was in Mexico in 1986.</li>
+<li><strong>Recent shift</strong> Canada returned to the men’s World Cup in 2022 after a 36-year wait.</li>
+<li><strong>2026 meaning</strong> Canada is hosting men’s World Cup matches for the first time.</li>
+</ul>
+</div>
+<aside class="takeaway" role="note" aria-label="Canada key takeaway">
+<h3>Key takeaway</h3>
+<p>Canada’s story is about momentum. The 2026 tournament is a chance to turn recent progress into a bigger football culture.</p>
+</aside>
+</div>
+<p class="prompt"><strong>Pause and think:</strong> What changes when a country moves from qualifying for a World Cup to hosting one?</p>
+</section>
+
+ 
+
+        <section class="tab-panel" id="panel-mexico" role="tabpanel" aria-labelledby="tab-mexico" tabindex="0">
+<div class="panel-grid">
+<div>
+<span class="country-label"><span class="flag-dot" aria-hidden="true"></span> Mexico</span>
+<h2>A World Cup regular with deep roots</h2>
+<p class="summary">Mexico has one of the richest World Cup histories in North America. It played in the first tournament in 1930 and hosted the event in 1970 and 1986.</p>
+<ul class="facts">
+<li><strong>World Cup marker</strong> Mexico becomes the first country to host or co-host the men’s World Cup three times.</li>
+<li><strong>Best finish</strong> Mexico reached the quarter-finals in 1970 and 1986. Both runs came on home soil.</li>
+<li><strong>2026 meaning</strong> Mexico brings memory, pressure and tradition. Tiny assignment. No big deal.</li>
+</ul>
+</div>
+<aside class="takeaway" role="note" aria-label="Mexico key takeaway">
+<h3>Key takeaway</h3>
+<p>Mexico’s story is about legacy. Its supporters expect the national team to match the weight of its football history.</p>
+</aside>
+</div>
+<p class="prompt"><strong>Pause and think:</strong> Does hosting history help a team, or does it add pressure?</p>
+</section>
+
+ 
+
+        <section class="tab-panel" id="panel-usa" role="tabpanel" aria-labelledby="tab-usa" tabindex="0">
+<div class="panel-grid">
+<div>
+<span class="country-label"><span class="flag-dot" aria-hidden="true"></span> United States</span>
+<h2>A football market still writing its story</h2>
+<p class="summary">The United States played in the first World Cup in 1930. Its best finish came that year, when it reached the semi-finals.</p>
+<ul class="facts">
+<li><strong>World Cup marker</strong> The United States hosted the men’s World Cup in 1994, a major moment for the sport’s growth there.</li>
+<li><strong>Long-term impact</strong> The 1994 tournament helped build momentum for professional soccer in the United States.</li>
+<li><strong>2026 meaning</strong> The United States hosts again with a much larger soccer audience than it had in 1994.</li>
+</ul>
+</div>
+<aside class="takeaway" role="note" aria-label="United States key takeaway">
+<h3>Key takeaway</h3>
+<p>The United States story is about scale. The question is no longer whether soccer can grow. It is how far it can go.</p>
+</aside>
+</div>
+<p class="prompt"><strong>Pause and think:</strong> What does a home World Cup need to leave behind after the final whistle?</p>
+</section>
+</div>
+
+ 
+
+      <details class="source-note">
+<summary>Sources and design notes</summary>
+<p>Content is based on FIFA World Cup host information, FIFA team history profiles, and WAI-ARIA tab guidance. The writing uses short sentences, familiar words, clear headings and learner prompts to support plain-language use.</p>
+<ul>
+<li>Tab design uses role="tablist", role="tab" and role="tabpanel".</li>
+<li>Keyboard support includes Tab, Left Arrow, Right Arrow, Home, End, Enter and Space.</li>
+<li>Colours, focus styles and button sizes were selected to support WCAG 2.2 AA checks.</li>
+</ul>
+</details>
+</div>
+</main>
+
+ 
+
+  <script>
+    (() => {
+      const tabContainers = document.querySelectorAll('[data-tabs]');
+
+ 
+
+      tabContainers.forEach(container => {
+        const tabs = Array.from(container.querySelectorAll('[role="tab"]'));
+        const panels = Array.from(container.querySelectorAll('[role="tabpanel"]'));
+
+ 
+
+        const activateTab = (selectedTab, setFocus = true) => {
+          tabs.forEach(tab => {
+            const isSelected = tab === selectedTab;
+            tab.setAttribute('aria-selected', String(isSelected));
+            tab.setAttribute('tabindex', isSelected ? '0' : '-1');
+          });
+
+ 
+
+          panels.forEach(panel => {
+            const isActive = panel.id === selectedTab.getAttribute('aria-controls');
+            panel.hidden = !isActive;
+          });
+
+ 
+
+          if (setFocus) {
+            selectedTab.focus();
+          }
+        };
+
+ 
+
+        tabs.forEach((tab, index) => {
+          tab.addEventListener('click', () => activateTab(tab, false));
+
+ 
+
+          tab.addEventListener('keydown', event => {
+            let nextIndex = null;
+
+ 
+
+            switch (event.key) {
+              case 'ArrowRight':
+                nextIndex = (index + 1) % tabs.length;
+                break;
+              case 'ArrowLeft':
+                nextIndex = (index - 1 + tabs.length) % tabs.length;
+                break;
+              case 'Home':
+                nextIndex = 0;
+                break;
+              case 'End':
+                nextIndex = tabs.length - 1;
+                break;
+              case 'Enter':
+              case ' ':
+                activateTab(tab);
+                event.preventDefault();
+                return;
+              default:
+                return;
+            }
+
+ 
+
+            event.preventDefault();
+            activateTab(tabs[nextIndex]);
+          });
+        });
+
+ 
+
+        activateTab(tabs[0], false);
+      });
+    })();
+</script>
+</body>
+</html>

@@ -256,7 +256,7 @@
     const bodyHtml = deltaToHtml(delta, opts);
     const css      = buildExportCSS();
 
-    return [
+    const lines = [
       '<!DOCTYPE html>',
       '<html lang="en">',
       '<head>',
@@ -266,14 +266,34 @@
       '  <style>',
       css,
       '  </style>',
+    ];
+
+    // Styles captured from an imported HTML document (F3). Emitted ONLY when
+    // present so non-imported documents' export output stays byte-identical
+    // to the Stage 8 baseline (docs/baselines/ — protected contract).
+    // Escape EVERY '</' at the emission point ('<\/' is an escaped '/' in
+    // CSS, visually identical): documentStyles can arrive from a loaded JSON
+    // payload, not just our own import capture, and an unescaped '</style>'
+    // would end the style element early and let a '<script>' go LIVE — while
+    // a '</head>' would hijack html-roundtrip's replace('</head>') injection.
+    const docStyles = ((window.HCEDocState && window.HCEDocState.getDocumentStyles()) || '')
+      .replace(/<\//g, '<\\/');
+    if (docStyles) {
+      lines.push('  <style data-hce-imported-styles>');
+      lines.push(docStyles);
+      lines.push('  </style>');
+    }
+
+    lines.push(
       '</head>',
       '<body>',
       '  <main class="hce-content">',
       bodyHtml,
       '  </main>',
       '</body>',
-      '</html>',
-    ].join('\n');
+      '</html>'
+    );
+    return lines.join('\n');
   }
 
   function _runExport(opts) {

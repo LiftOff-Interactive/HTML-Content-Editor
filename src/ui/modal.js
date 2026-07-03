@@ -17,7 +17,7 @@
    * Resolves with a shallow copy of the updated data object on Save,
    * or null if the user cancels (Escape, backdrop click, Cancel button).
    */
-  function open({ title, fields, data }) {
+  function open({ title, fields, data, width }) {
     return new Promise(function (resolve) {
       const formData = Object.assign({}, data);
       const richInstances = {};
@@ -32,6 +32,7 @@
       dialog.setAttribute('role', 'dialog');
       dialog.setAttribute('aria-modal', 'true');
       dialog.setAttribute('aria-labelledby', 'wm-title');
+      if (width) dialog.style.width = width;
 
       // Header
       const header = document.createElement('div');
@@ -72,8 +73,8 @@
           let input;
           if (field.type === 'textarea') {
             input = document.createElement('textarea');
-            input.className = 'widget-modal-textarea';
-            input.rows = 3;
+            input.className = 'widget-modal-textarea' + (field.mono ? ' widget-modal-textarea--mono' : '');
+            input.rows = field.rows || 3;
             input.value = data[field.key] || '';
           } else if (field.type === 'select') {
             input = document.createElement('select');

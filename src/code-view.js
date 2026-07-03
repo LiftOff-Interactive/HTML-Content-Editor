@@ -23,7 +23,7 @@
   var openedWithCode = null; // serialization shown when the view opened — the "clean" state
 
   // Header controls that act on the (stale) delta while code view is open.
-  var DISABLE_SELECTORS = ['#save-btn', '#load-btn', '#export-btn', '#export-sharepoint-btn', '.toolbar-widget-btn'];
+  var DISABLE_SELECTORS = ['#save-btn', '#load-btn', '#export-btn', '#export-sharepoint-btn', '.toolbar-widget-btn', '#new-project-btn'];
 
   function showToast(msg) {
     var toast = document.createElement('div');

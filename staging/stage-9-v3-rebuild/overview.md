@@ -20,8 +20,14 @@ review + human verification before the next starts.**
 | F7 | Course mode — **plan document only** for now | item 5 | not started |
 
 Decisions locked by the human: scroll-snap = option on existing carousel (not a new
-widget); Clear button wipes everything (content + name + theme) behind a confirm;
-checkpoint cadence = strict, every feature.
+widget); Clear button wipes everything (content + name + theme) behind a confirm.
+
+**Process change (human, 2026-07-03): per-feature human checkpoints REMOVED** — the
+human approved F2 and directed "implement all of these features without stopping."
+Self-tests, independent agent review, §3 baseline checks and per-feature commits stay;
+only the human-verify stops are gone. The §3 protected contract itself still requires
+an explicit human decision to change (the export align/link/strike follow-up stays
+parked).
 
 ## Protected-contract baselines
 
