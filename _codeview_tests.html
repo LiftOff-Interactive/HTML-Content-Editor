@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Code View — Round-Trip Verification Suite</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 0; padding: 20px 28px; background: #f1f5f9; color: #0f172a; }
+    h1 { margin: 0 0 4px; }
+    p.note { margin: 0 0 12px; color: #475569; font-size: 13px; }
+    #summary { font-size: 18px; font-weight: 700; margin: 10px 0 18px; padding: 8px 14px; border-radius: 8px; display: inline-block; background: #e2e8f0; }
+    .ok { background: #dcfce7; color: #166534; } .bad { background: #fee2e2; color: #991b1b; }
+    table { border-collapse: collapse; width: 100%; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+    th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid #e2e8f0; font-size: 13px; vertical-align: top; }
+    th { background: #f8fafc; }
+    .p { color: #166534; font-weight: 700; } .f { color: #991b1b; font-weight: 700; }
+    #stage { margin-top: 20px; border: 2px dashed #cbd5e1; display: inline-block; }
+    iframe { display: block; border: 0; background: #fff; }
+  </style>
+</head>
+<body>
+  <h1>Code View — Round-Trip Verification Suite (F2)</h1>
+  <p class="note">
+    Mounts the real editor in an iframe and verifies: lossless delta ⇄ HTML round-trips
+    (all widgets + all supported text formatting), code edits reflecting back, strict
+    refusal of malformed/unsupported/unsafe input with no data loss, the toggle UI, and
+    the §3 protected-contract hash after a full round-trip.
+  </p>
+  <div id="summary">running…</div>
+  <table><thead><tr><th>#</th><th>Case</th><th>Result</th><th>Evidence</th></tr></thead><tbody id="rows"></tbody></table>
+  <div id="stage"><iframe id="app" src="about:blank" width="1100" height="700" title="Editor under test"></iframe></div>
+
+  <script>
+  (function () {
+    'use strict';
+
+    var rows = document.getElementById('rows');
+    var results = [];
+    var caseNo = 0;
+
+    function escapeHtml(s) {
+      return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function addRow(name, pass, evidence) {
+      caseNo++;
+      var tr = document.createElement('tr');
+      tr.innerHTML = '<td>' + caseNo + '</td><td>' + escapeHtml(name) + '</td>' +
+        '<td class="' + (pass ? 'p">PASS' : 'f">FAIL') + '</td><td>' + escapeHtml(evidence) + '</td>';
+      rows.appendChild(tr);
+      results.push({ name: name, pass: pass, evidence: evidence });
+    }
+
+    function poll(fn, timeoutMs, everyMs) {
+      var deadline = Date.now() + (timeoutMs || 4000);
+      return new Promise(function (resolve) {
+        (function tick() {
+          var v = null;
+          try { v = fn(); } catch (e) { v = null; }
+          if (v) return resolve(v);
+          if (Date.now() > deadline) return resolve(null);
+          setTimeout(tick, everyMs || 50);
+        })();
+      });
+    }
+
+    // Key-order-independent deep stringify, so attribute/object key ordering
+    // differences between Quill internals and the parser can't false-fail.
+    function stableStringify(value) {
+      if (Array.isArray(value)) {
+        return '[' + value.map(stableStringify).join(',') + ']';
+      }
+      if (value && typeof value === 'object') {
+        return '{' + Object.keys(value).sort().map(function (k) {
+          return JSON.stringify(k) + ':' + stableStringify(value[k]);
+        }).join(',') + '}';
+      }
+      return JSON.stringify(value);
+    }
+
+    async function sha256(text) {
+      var buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+      return Array.from(new Uint8Array(buf)).map(function (b) { return b.toString(16).padStart(2, '0'); }).join('');
+    }
+
+    async function bustCaches() {
+      var idxText = await (await fetch('index.html', { cache: 'no-cache' })).text();
+      var urls = [];
+      for (var m of idxText.matchAll(/(?:src|href)="([^"]+)"/g)) {
+        if (!/^(?:https?:)?\/\//.test(m[1])) urls.push(m[1]);
+      }
+      await Promise.all(urls.map(function (u) {
+        return fetch(u, { cache: 'no-cache' }).catch(function () {});
+      }));
+    }
+
+    // ── Fixture delta: every widget + every supported text format ────────────
+
+    var SVG_IMG = 'data:image/svg+xml;base64,' + btoa('<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect width="320" height="180" fill="#cbd5e1"/></svg>');
+
+    function buildFixtureOps(w) {
+      var ops = [
+        { insert: 'Main Title' }, { insert: '\n', attributes: { header: 1 } },
+        { insert: 'Second level' }, { insert: '\n', attributes: { header: 2 } },
+        { insert: 'Third level' }, { insert: '\n', attributes: { header: 3 } },
+        { insert: 'plain ' },
+        { insert: 'bold', attributes: { bold: true } }, { insert: ' ' },
+        { insert: 'italic', attributes: { italic: true } }, { insert: ' ' },
+        { insert: 'underlined', attributes: { underline: true } }, { insert: ' ' },
+        { insert: 'struck', attributes: { strike: true } }, { insert: ' and ' },
+        { insert: 'bold-italic', attributes: { bold: true, italic: true } },
+        { insert: '\n' },
+        { insert: 'centered heading' }, { insert: '\n', attributes: { header: 2, align: 'center' } },
+        { insert: 'right-aligned text EDITME' }, { insert: '\n', attributes: { align: 'right' } },
+        { insert: 'a link', attributes: { link: 'https://example.com/x?a=1&b=2' } }, { insert: ' after' },
+        { insert: '\n' },
+        { insert: 'first ordered' }, { insert: '\n', attributes: { list: 'ordered' } },
+        { insert: 'second ordered' }, { insert: '\n', attributes: { list: 'ordered' } },
+        { insert: 'a bullet' }, { insert: '\n', attributes: { list: 'bullet' } },
+        { insert: { 'resizable-image': { src: SVG_IMG, width: 320, alt: 'pic "quoted" <alt>' } } },
+      ];
+      w.WidgetRegistry.getAll().forEach(function (W) {
+        var embed = {};
+        embed[W.blotName] = JSON.parse(JSON.stringify(W.defaultData || {}));
+        ops.push({ insert: embed });
+        ops.push({ insert: 'after ' + W.blotName + '\n' });
+      });
+      ops.push({ insert: 'the end\n' });
+      return ops;
+    }
+
+    function buildSelftestOps(w) {
+      // Exact builder from _nojs_selftest.html — feeds the §3 hash check.
+      var NAMES = ['callout','tabs','accordion','quote','timeline','flip-cards','click-reveal','carousel','hotspot','knowledge-check'];
+      var ops = [{ insert: 'No-JS Export Self-Test\n', attributes: { header: 1 } }];
+      function pushWidget(name) {
+        var Blot = w.WidgetRegistry.get(name);
+        if (!Blot) { ops.push({ insert: '[missing: ' + name + ']\n' }); return; }
+        var data = JSON.parse(JSON.stringify(Blot.defaultData || {}));
+        var embed = {}; embed[name] = data;
+        ops.push({ insert: '\n' });
+        ops.push({ insert: '\n', attributes: { header: 2 } });
+        ops.push({ insert: name + '\n', attributes: { header: 3 } });
+        ops.push({ insert: embed });
+        ops.push({ insert: '\n' });
+      }
+      NAMES.forEach(pushWidget);
+      pushWidget('tabs');
+      pushWidget('accordion');
+      return ops;
+    }
+
+    // ── Suite ─────────────────────────────────────────────────────────────────
+
+    async function run() {
+      var iframe = document.getElementById('app');
+      await bustCaches();
+      iframe.src = 'index.html';
+
+      await poll(function () {
+        var w = iframe.contentWindow;
+        return w && w.contentEditor && w.contentEditor.quill && w.WidgetRegistry &&
+               w.HCEDeltaHtml && w.HCECodeView && w.document.getElementById('code-view-btn') ? true : null;
+      }, 10000, 100);
+
+      var w = iframe.contentWindow;
+      var doc = iframe.contentDocument;
+      if (!(w && w.HCEDeltaHtml && doc.getElementById('code-view-btn'))) {
+        throw new Error('editor + code view did not boot inside iframe');
+      }
+      var quill = w.contentEditor.quill;
+      var DH = w.HCEDeltaHtml;
+
+      function setDelta(ops) {
+        quill.setContents({ ops: ops }, 'silent');
+        return quill.getContents(); // normalized form
+      }
+      function deltaEq(a, b) { return stableStringify(a.ops || a) === stableStringify(b.ops || b); }
+
+      // 1. Empty document round-trips.
+      (function () {
+        var d0 = setDelta([{ insert: '\n' }]);
+        var code = DH.deltaToCode(d0);
+        var d1 = setDelta(DH.codeToDelta(code).ops);
+        addRow('empty doc round-trip', deltaEq(d0, d1), 'code=' + JSON.stringify(code));
+      })();
+
+      // 2. Fixture guard: every format actually landed in the normalized delta.
+      var d0 = setDelta(buildFixtureOps(w));
+      (function () {
+        var s = JSON.stringify(d0);
+        var needed = ['"bold":true', '"italic":true', '"underline":true', '"strike":true',
+                      '"link"', '"align":"center"', '"align":"right"', '"list":"ordered"',
+                      '"list":"bullet"', '"header":1', '"header":2', '"header":3', 'resizable-image'];
+        w.WidgetRegistry.getAll().forEach(function (W) { needed.push('"' + W.blotName + '"'); });
+        var missing = needed.filter(function (n) { return s.indexOf(n) === -1; });
+        addRow('fixture guard: all formats present pre-round-trip', missing.length === 0,
+          missing.length ? 'MISSING: ' + missing.join(', ') : needed.length + ' markers present');
+      })();
+
+      // 3. Full-fidelity round-trip: delta → code → delta is identity.
+      var fixtureCode;
+      (function () {
+        try {
+          fixtureCode = DH.deltaToCode(d0);
+          var d1 = setDelta(DH.codeToDelta(fixtureCode).ops);
+          var eq = deltaEq(d0, d1);
+          addRow('full round-trip identity (all widgets + all formats)', eq,
+            eq ? 'ops=' + d0.ops.length + ' code=' + fixtureCode.length + ' chars'
+               : 'DIFF — d0=' + stableStringify(d0.ops).slice(0, 400) + ' … d1=' + stableStringify(quill.getContents().ops).slice(0, 400));
+        } catch (err) {
+          addRow('full round-trip identity (all widgets + all formats)', false,
+            'threw: ' + (err.reasons ? err.reasons.join('; ') : err.message));
+        }
+      })();
+
+      // 4. Editing text in code reflects back in the document.
+      (function () {
+        if (!fixtureCode) { addRow('code edit reflects back', false, 'no fixture code'); return; }
+        var edited = fixtureCode.replace('EDITME', 'EDITME-CHANGED');
+        var d1 = setDelta(DH.codeToDelta(edited).ops);
+        var ok = JSON.stringify(d1).indexOf('EDITME-CHANGED') !== -1;
+        addRow('code edit reflects back', ok, ok ? 'token found after apply' : 'token missing');
+      })();
+
+      // 5. Editing a widget's JSON reflects back into the embed data.
+      (function () {
+        var d = setDelta([{ insert: { callout: { _v: 1, type: 'info', title: 'Note', body: '<p>hello</p>' } } }, { insert: '\n' }]);
+        var code = DH.deltaToCode(d);
+        var edited = code.replace('"title": "Note"', '"title": "Edited Title"');
+        var d1 = setDelta(DH.codeToDelta(edited).ops);
+        var ok = JSON.stringify(d1).indexOf('Edited Title') !== -1;
+        addRow('widget JSON edit reflects back', ok, ok ? 'title updated in embed data' : 'edit lost');
+      })();
+
+      // 6-11. Refusals — each must throw HCECodeError with a reason, no state change.
+      var refusals = [
+        { name: 'malformed widget JSON refused',
+          code: '<script type="application/hce-widget" data-widget="callout">{ bad json,, }</' + 'script>',
+          expect: /invalid JSON/i },
+        { name: 'unknown widget type refused',
+          code: '<script type="application/hce-widget" data-widget="not-a-widget">{}</' + 'script>',
+          expect: /unknown widget type/i },
+        { name: 'unknown element <table> refused',
+          code: '<p>ok</p><table><tr><td>x</td></tr></table>',
+          expect: /unsupported element <table>/i },
+        { name: 'on* handler attribute refused',
+          code: '<p onclick="alert(1)">x</p>',
+          expect: /unsupported attribute "onclick"/i },
+        { name: 'javascript: link refused',
+          code: '<p><a href="javascript:alert(1)">x</a></p>',
+          expect: /disallowed scheme/i },
+        { name: 'plain <script> refused',
+          code: '<script>alert(1)</' + 'script>',
+          expect: /script elements are not allowed/i },
+        { name: 'HTML comment refused (not silently dropped)',
+          code: '<p>ok</p><' + '!-- todo: rework -->',
+          expect: /comments are not supported/i },
+        { name: 'protocol-relative link refused',
+          code: '<p><a href="//evil.example/x">x</a></p>',
+          expect: /disallowed scheme/i },
+        { name: 'inline-wrapped image refused (not silently dropped)',
+          code: '<a href="https://x.example"><img src="https://x.example/p.png"></a>',
+          expect: /unsupported element <img>/i },
+      ];
+      refusals.forEach(function (rc) {
+        var before = JSON.stringify(quill.getContents());
+        try {
+          DH.codeToDelta(rc.code);
+          addRow(rc.name, false, 'did NOT throw');
+        } catch (err) {
+          var msg = (err.reasons || [err.message]).join('; ');
+          addRow(rc.name, rc.expect.test(msg), 'reasons: ' + msg);
+        }
+        var after = JSON.stringify(quill.getContents());
+        if (before !== after) addRow(rc.name + ' [no-mutation]', false, 'document changed during refusal');
+      });
+
+      // 12. Unsupported delta formatting refuses serialization (blockquote).
+      (function () {
+        var d = setDelta([{ insert: 'quoted' }, { insert: '\n', attributes: { blockquote: true } }]);
+        if (JSON.stringify(d).indexOf('blockquote') === -1) {
+          addRow('unsupported block format refused on serialize', false, 'guard: blockquote format did not register');
+          return;
+        }
+        try {
+          DH.deltaToCode(d);
+          addRow('unsupported block format refused on serialize', false, 'did NOT throw');
+        } catch (err) {
+          var msg = (err.reasons || [err.message]).join('; ');
+          addRow('unsupported block format refused on serialize', /unsupported block formatting "blockquote"/.test(msg), msg);
+        }
+      })();
+
+      // 12b. Unknown list values (Quill 'checked' checklists) refuse on serialize.
+      (function () {
+        var d = setDelta([{ insert: 'todo item' }, { insert: '\n', attributes: { list: 'checked' } }]);
+        if (JSON.stringify(d).indexOf('"list":"checked"') === -1) {
+          addRow('checked-list delta refused on serialize', false, 'guard: checked list did not register');
+          return;
+        }
+        try {
+          DH.deltaToCode(d);
+          addRow('checked-list delta refused on serialize', false, 'did NOT throw');
+        } catch (err) {
+          var msg = (err.reasons || [err.message]).join('; ');
+          addRow('checked-list delta refused on serialize', /unsupported list type "checked"/.test(msg), msg);
+        }
+      })();
+
+      // 12c. Whitespace fidelity: NBSP, double spaces, edge spaces, tabs round-trip verbatim.
+      (function () {
+        var NBSP = String.fromCharCode(160);
+        var TAB = String.fromCharCode(9);
+        var d0 = setDelta([
+          { insert: ('a ' + NBSP + 'b') }, { insert: '\n' },
+          { insert: 'double  space' }, { insert: '\n' },
+          { insert: '  leading' }, { insert: '\n' },
+          { insert: 'trailing  ' }, { insert: '\n' },
+          { insert: (TAB + 'tabbed') }, { insert: '\n' },
+        ]);
+        var d1 = setDelta(DH.codeToDelta(DH.deltaToCode(d0)).ops);
+        addRow('whitespace fidelity: NBSP/multi-space/edges/tabs round-trip verbatim', deltaEq(d0, d1),
+          deltaEq(d0, d1) ? 'verbatim' : 'd0=' + JSON.stringify(d0.ops).slice(0, 180) + ' d1=' + JSON.stringify(quill.getContents().ops).slice(0, 180));
+      })();
+
+      // 12d. Loose top-level inline elements keep their separating space.
+      (function () {
+        var d1 = setDelta(DH.codeToDelta('<strong>Hello</strong> <em>world</em>').ops);
+        var txt = d1.ops.map(function (o) { return typeof o.insert === 'string' ? o.insert : ''; }).join('');
+        addRow('loose inline elements keep separating space', txt.indexOf('Hello world') === 0,
+          'text=' + JSON.stringify(txt.slice(0, 40)));
+      })();
+
+      // 12e. Widget JSON containing '<!--' + '<script' sequences round-trips
+      // (script-data double-escaped state). Built by concatenation so this
+      // harness's own <script> block can't be terminated/poisoned by it.
+      (function () {
+        var tricky = 'Example: <' + '!--' + '<' + 'script>x<' + '/script>--> done';
+        var d0 = setDelta([{ insert: { callout: { _v: 1, type: 'info', title: tricky, body: '' } } }]);
+        try {
+          var d1 = setDelta(DH.codeToDelta(DH.deltaToCode(d0)).ops);
+          addRow('widget JSON with script-open/comment sequences round-trips', deltaEq(d0, d1),
+            deltaEq(d0, d1) ? 'island escaping held' : 'DIFF after round-trip');
+        } catch (err) {
+          addRow('widget JSON with script-open/comment sequences round-trips', false,
+            'threw: ' + (err.reasons || [err.message]).join('; '));
+        }
+      })();
+
+      // 12f. about:blank links (Quill Link.sanitize output for pasted junk) round-trip.
+      (function () {
+        var d0 = setDelta([{ insert: 'x', attributes: { link: 'about:blank' } }, { insert: '\n' }]);
+        if (JSON.stringify(d0).indexOf('about:blank') === -1) {
+          addRow('about:blank link round-trips', false, 'guard: link did not register');
+          return;
+        }
+        try {
+          var d1 = setDelta(DH.codeToDelta(DH.deltaToCode(d0)).ops);
+          addRow('about:blank link round-trips', deltaEq(d0, d1), 'reversible');
+        } catch (err) {
+          addRow('about:blank link round-trips', false, 'threw: ' + (err.reasons || [err.message]).join('; '));
+        }
+      })();
+
+      // 13. Toggle UI flow: open → textarea filled + actions disabled → apply → identical delta + actions re-enabled.
+      (function () {
+        var dBefore = setDelta(buildFixtureOps(w));
+        var btn = doc.getElementById('code-view-btn');
+        btn.click(); // open
+        var panel = doc.getElementById('code-view');
+        var ta = doc.getElementById('code-editor');
+        var exportBtn = doc.getElementById('export-btn');
+        var openOk = panel && panel.style.display === 'flex' && ta && ta.value.length > 100 &&
+                     exportBtn.disabled === true &&
+                     doc.getElementById('editor-wrap').style.display === 'none';
+        addRow('UI: open code view (textarea filled, actions disabled)', !!openOk,
+          'panelShown=' + (panel && panel.style.display) + ' taLen=' + (ta && ta.value.length) + ' exportDisabled=' + exportBtn.disabled);
+        btn.click(); // apply unchanged
+        var dAfter = quill.getContents();
+        var applyOk = !w.HCECodeView.isOpen() && deltaEq(dBefore, dAfter) && exportBtn.disabled === false;
+        addRow('UI: apply unchanged code returns identical document', !!applyOk,
+          'isOpen=' + w.HCECodeView.isOpen() + ' deltaEqual=' + deltaEq(dBefore, dAfter) + ' exportDisabled=' + exportBtn.disabled);
+      })();
+
+      // 14. Toggle UI error flow: invalid edit → error shown, stays open;
+      // cancelled discard stays open; confirmed discard restores unchanged.
+      (function () {
+        var realConfirm = w.confirm;
+        var dBefore = setDelta(buildFixtureOps(w));
+        var btn = doc.getElementById('code-view-btn');
+        btn.click(); // open
+        var ta = doc.getElementById('code-editor');
+        ta.value += '\n<table><tr><td>bad</td></tr></table>';
+        btn.click(); // apply → must fail
+        var errEl = doc.querySelector('.code-view-error');
+        var stayed = w.HCECodeView.isOpen() && errEl && errEl.style.display !== 'none' &&
+                     /table/.test(errEl.textContent);
+        addRow('UI: invalid apply shows reasons and stays open', !!stayed,
+          'isOpen=' + w.HCECodeView.isOpen() + ' error="' + (errEl ? errEl.textContent.slice(0, 90) : 'none') + '"');
+
+        // Re-entrant open() while edits are pending must be a no-op.
+        w.HCECodeView.open();
+        var editsPreserved = w.HCECodeView.isOpen() && /table/.test(ta.value);
+        addRow('UI: re-entrant open() preserves in-progress edits', !!editsPreserved,
+          'isOpen=' + w.HCECodeView.isOpen() + ' editStillInTextarea=' + /table/.test(ta.value));
+
+        w.confirm = function () { return false; };
+        doc.getElementById('code-view-discard').click();
+        addRow('UI: cancelled discard confirm stays open', w.HCECodeView.isOpen(),
+          'isOpen=' + w.HCECodeView.isOpen());
+
+        w.confirm = function () { return true; };
+        doc.getElementById('code-view-discard').click();
+        var restored = !w.HCECodeView.isOpen() && deltaEq(dBefore, quill.getContents());
+        addRow('UI: discard restores the visual view unchanged', !!restored,
+          'isOpen=' + w.HCECodeView.isOpen() + ' deltaEqual=' + deltaEq(dBefore, quill.getContents()));
+        w.confirm = realConfirm; // never leak the stub into later cases
+      })();
+
+      // 15. §3 protected contract: the no-JS export is BYTE-IDENTICAL before vs
+      // after a full code round-trip of the selftest document. (The absolute
+      // baseline hash is only reproducible from _nojs_selftest.html's page
+      // environment — exports read theme vars from the hosting page, and the
+      // editor page resolves e.g. --font-family-ui differently. That absolute
+      // check runs on the selftest page as its own step; this case proves F2
+      // introduces zero export drift.)
+      await (async function () {
+        var ops = buildSelftestOps(w);
+        var d0 = setDelta(ops);
+        var exportBefore = w.HCEExport.buildExportHtml(d0, 'No-JS Self Test', { noJs: true });
+        var d1 = setDelta(DH.codeToDelta(DH.deltaToCode(d0)).ops);
+        var exportAfter = w.HCEExport.buildExportHtml(d1, 'No-JS Self Test', { noJs: true });
+        var shaBefore = await sha256(exportBefore);
+        var shaAfter = await sha256(exportAfter);
+        var ok = exportBefore === exportAfter && deltaEq(d0, d1);
+        addRow('§3: no-JS export byte-identical across a code round-trip', ok,
+          'deltaEqual=' + deltaEq(d0, d1) + ' beforeSha=' + shaBefore.slice(0, 12) + ' afterSha=' + shaAfter.slice(0, 12) +
+          ' identical=' + (exportBefore === exportAfter));
+      })();
+
+      var passed = results.filter(function (r) { return r.pass; }).length;
+      var summary = document.getElementById('summary');
+      summary.textContent = passed + ' / ' + results.length + ' passed';
+      summary.className = passed === results.length ? 'ok' : 'bad';
+      window.__codeviewResults = results;
+      window.__codeviewDone = true;
+    }
+
+    window.addEventListener('load', function () {
+      run().catch(function (err) {
+        addRow('suite [fatal]', false, (err && err.message) || String(err));
+        var summary = document.getElementById('summary');
+        summary.textContent = 'FATAL: ' + ((err && err.message) || err);
+        summary.className = 'bad';
+        window.__codeviewResults = results;
+        window.__codeviewDone = true;
+      });
+    });
+  })();
+  </script>
+</body>
+</html>

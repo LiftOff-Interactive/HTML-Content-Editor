@@ -1,5 +1,5 @@
 # Handoff — HTML Content Editor
-_Last updated: 2026-07-02 · Current stage: **Stage 9 — v3 rebuild, F1 modal fix (code complete + 20/20 self-test + independent review; AWAITING HUMAN VERIFICATION before F2 starts)**_
+_Last updated: 2026-07-02 · Current stage: **Stage 9 — v3 rebuild, F2 code view (code complete + 27/27 self-test + independent review; AWAITING HUMAN VERIFICATION before F3 starts). F1 human-approved.**_
 
 ## Goals
 ~~Get the project to a public v1 release on GitHub.~~ **Done.** v1.0.0 is live.
@@ -23,7 +23,16 @@ F5 naming+clear → F6 five new widgets (scroll-snap = carousel option) → F4 s
 - **Baselines captured** (`docs/baselines/`): byte-exact Stage 8 no-JS + JS export
   references with SHA-256 hashes and the JS-mode non-determinism caveat (random
   tabs/accordion ids + session-scoped car/kc counters — normalize before diffing).
-- **F1 (modal Save-button fix): code complete.** New `_modal_tests.html` harness
+- **F2 (WYSIWYG ⇄ HTML code view): code complete.** New `src/delta-html.js`
+  (reversible delta⇄HTML: widget JSON script-islands, inert-template allowlist parser =
+  sanitizer, verbatim whitespace model, refuse-don't-drop) + `src/code-view.js`
+  (`</> Code` toggle, Apply/Discard, action disabling, beforeunload guard) +
+  `_codeview_tests.html` (27 cases). Six-angle review fixed: whitespace/NBSP mutation,
+  silent inline-run drops, `<!--<script` island escaping, link asymmetry (about:blank),
+  checklist coercion, comment drops, re-entry/restore guards. All suites green; no-JS
+  baseline byte-identical. **Next: human verifies, then F3** (start with the shared
+  test-harness + parser-policy-hook follow-ups in the stage doc).
+- **F1 (modal Save-button fix): ✅ complete, human-approved 2026-07-02.** New `_modal_tests.html` harness
   (10 widgets × 2 viewport heights, stuffed data, Save visibility + hit-testability).
   Initial run 15/20 — tabs/click-reveal/carousel/hotspot were the four modals Stage 7
   never fixed. Fixed with the accordion body pattern + header/footer flex-shrink:0 in
@@ -71,6 +80,14 @@ What's built (all stages):
 - `src/styles/main.css` — app shell + all widget CSS + dropdown styles + modal max-height constraint
 
 ## Things I've Changed
+- 2026-07-02 (later): Stage 9 F2 — code view. New files: `src/delta-html.js`,
+  `src/code-view.js`, `_codeview_tests.html`. Edited: `index.html` (2 script tags),
+  `src/styles/main.css` (#code-view styles + `--font-family-mono` + danger tokens),
+  `docs/baselines/README.md` (page-sensitivity caveat), stage-9 overview (F2 record +
+  follow-ups 6–10). Tried/Failed: never put literal NUL chars in source (git treats the
+  file as binary) — the parser's newline placeholder uses the `\u0000` ESCAPE; a
+  leading `<script>` island gets hoisted to `<head>` by DOMParser — parse with an inert
+  `<template>` instead.
 - 2026-07-02: Stage 9 kickoff + F1. New: `docs/baselines/` (protected-contract export
   references + README), `_modal_tests.html` (modal geometry suite),
   `staging/stage-9-v3-rebuild/overview.md` (confirmed roadmap + F1 record + named
@@ -107,9 +124,8 @@ What's built (all stages):
 - `window.contentEditor.getDocumentTitle()` shared by tab title (editor.js), save filename (save-load.js), and export title (export.js).
 
 ## Pointer
-→ Stage 9 (v3 rebuild) F1 is code-complete, self-tested and independently reviewed on
+→ Stage 9 (v3 rebuild) F2 is code-complete, self-tested and independently reviewed on
 branch `stage-9-v3-rebuild`. Active feature file: `staging/stage-9-v3-rebuild/overview.md`.
-→ Next: **human verifies F1** — open `_modal_tests.html` over localhost (expect 20/20),
-click through tabs/carousel/hotspot edit modals in a short window, try a tall portrait
-image in hotspot. Only after that checkpoint does F2 (code view) begin. Do not start F2
-without it (kickoff §0).
+→ Next: **human verifies F2** — click `</> Code` in the editor, edit text + a widget's
+JSON, Apply; feed it junk HTML and see the refusal list; run `_codeview_tests.html`
+(expect 27/27). Only after that checkpoint does F3 (raw HTML import) begin (kickoff §0).

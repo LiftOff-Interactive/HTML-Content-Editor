@@ -35,6 +35,16 @@ no `javascript:`).
    authorizing it is a regression of the protected contract. Theme defaults, widget
    `renderExport`/`renderExportNoJS`, and `export.js` shared paths all feed these bytes.
 
+### Environment caveat — exports are page-sensitive (found 2026-07-02, F2 check)
+
+`buildExportHtml` reads theme variables from the **hosting page** via
+`getComputedStyle` (e.g. timeline reads `--font-family-ui`). The editor page
+(`index.html`, with `main.css` loaded) resolves some of these differently than the bare
+`_nojs_selftest.html` page (only `theme-defaults.css`), so the same delta exports
+different bytes on the two pages. **The baseline hashes above are only reproducible
+from `_nojs_selftest.html`** — always run the absolute hash check there. In-editor
+checks should assert before/after invariance instead of the absolute hash.
+
 ### JS-mode caveat — pre-existing non-determinism (found 2026-07-02, F1 check)
 
 The JS-mode export was **never byte-stable**, so its hash will not reproduce. Two
