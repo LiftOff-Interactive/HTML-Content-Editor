@@ -152,7 +152,7 @@
     const colorBg     = get('--color-background')    || '#ffffff';
     const colorText   = get('--color-text')          || '#1e293b';
 
-    return [
+    const base = [
       '*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }',
       'html { scroll-behavior: smooth; }',
       'body {',
@@ -184,7 +184,25 @@
       'ul, ol { padding-left: 1.75em; margin: 0.75em 0; }',
       'li { margin: 0.25em 0; }',
       'img { max-width: 100%; height: auto; }',
-    ].join('\n');
+    ];
+
+    appendOptInRules(base, get);
+    return base.join('\n');
+  }
+
+  // F4 opt-in document styling: append override rules ONLY when the control is
+  // set. Every appended rule comes AFTER the base (later wins), and when all opt
+  // vars are empty this adds nothing — so a document that opts into nothing
+  // exports byte-identically to the Stage 8 baseline (§3, docs/baselines/).
+  function appendOptInRules(base, get) {
+    const headingColor  = get('--opt-heading-color');
+    const linkColor     = get('--opt-link-color');
+    const paraMargin    = get('--opt-paragraph-margin');
+    const headingMargin = get('--opt-heading-margin');
+    if (headingColor)  base.push('h1, h2, h3 { color: ' + headingColor + '; }');
+    if (headingMargin) base.push('h1, h2, h3 { margin: ' + headingMargin + '; }');
+    if (paraMargin)    base.push('p { margin: ' + paraMargin + ' 0; }', 'p:first-child { margin-top: 0; }');
+    if (linkColor)     base.push('a { color: ' + linkColor + '; }');
   }
 
   // ── Download helpers ──────────────────────────────────────────────────────

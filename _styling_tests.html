@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>F4 — Document Styling Presets & Controls Suite</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 0; padding: 20px 28px; background: #f1f5f9; color: #0f172a; }
+    h1 { margin: 0 0 4px; }
+    p.note { margin: 0 0 12px; color: #475569; font-size: 13px; }
+    #summary { font-size: 18px; font-weight: 700; margin: 10px 0 18px; padding: 8px 14px; border-radius: 8px; display: inline-block; background: #e2e8f0; }
+    .ok { background: #dcfce7; color: #166534; } .bad { background: #fee2e2; color: #991b1b; }
+    table { border-collapse: collapse; width: 100%; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+    th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid #e2e8f0; font-size: 13px; vertical-align: top; }
+    th { background: #f8fafc; }
+    .p { color: #166534; font-weight: 700; } .f { color: #991b1b; font-weight: 700; }
+    iframe { display: block; border: 0; background: #fff; margin-top: 16px; }
+  </style>
+  <script src="_test_harness.js"></script>
+</head>
+<body>
+  <h1>F4 — Document Styling Presets & Controls Suite</h1>
+  <p class="note">
+    Verifies the §3 protected contract holds (default export byte-identical), new presets
+    change output only when applied, opt-in controls append CSS only when set and revert
+    cleanly, and old v2/v3 project files still load with sane defaults.
+  </p>
+  <div id="summary">running…</div>
+  <table><thead><tr><th>#</th><th>Case</th><th>Result</th><th>Evidence</th></tr></thead><tbody id="rows"></tbody></table>
+  <iframe id="app" src="about:blank" width="1100" height="700" title="Editor under test"></iframe>
+
+  <script>
+  (function () {
+    'use strict';
+    var H = window.HCETestHarness;
+    var EDITOR_PAGE_SHA = '91fc4124af626c7c2a7e9518c50024c93746539258072dbcd3c11e1f1e9645c4';
+
+    function selftestOps(WR) {
+      var NAMES = ['callout','tabs','accordion','quote','timeline','flip-cards','click-reveal','carousel','hotspot','knowledge-check'];
+      var ops = [{ insert: 'No-JS Export Self-Test\n', attributes: { header: 1 } }];
+      function pushWidget(name) {
+        var data = JSON.parse(JSON.stringify(WR.get(name).defaultData || {}));
+        var embed = {}; embed[name] = data;
+        ops.push({ insert: '\n' }); ops.push({ insert: '\n', attributes: { header: 2 } });
+        ops.push({ insert: name + '\n', attributes: { header: 3 } }); ops.push({ insert: embed }); ops.push({ insert: '\n' });
+      }
+      NAMES.forEach(pushWidget); pushWidget('tabs'); pushWidget('accordion');
+      return { ops: ops };
+    }
+
+    async function run() {
+      H.init();
+      var iframe = document.getElementById('app');
+      await H.bustCaches();
+      iframe.src = 'index.html';
+      await H.poll(function () {
+        var w = iframe.contentWindow;
+        return w && w.contentEditor && w.ThemePanel && w.HCEExport && w.WidgetRegistry &&
+               w.document.querySelector('[data-preset="editorial"]') ? true : null;
+      }, 10000, 100);
+      var w = iframe.contentWindow, doc = iframe.contentDocument;
+      var TP = w.ThemePanel, EX = w.HCEExport, WR = w.WidgetRegistry;
+      var delta = selftestOps(WR);
+
+      function exportSha(noJs) {
+        return H.sha256(EX.buildExportHtml(delta, 'No-JS Self Test', noJs ? { noJs: true } : undefined));
+      }
+      function resetDefault() {
+        TP.deserialize(JSON.stringify(TP.DEFAULT_THEME));
+      }
+
+      // 1. Default theme → no-JS export byte-identical to the editor-page baseline.
+      resetDefault();
+      var sha0 = await exportSha(true);
+      H.addRow('§3: default theme no-JS export byte-identical (baseline)', sha0 === EDITOR_PAGE_SHA,
+        'sha=' + sha0.slice(0, 16) + ' match=' + (sha0 === EDITOR_PAGE_SHA));
+
+      // 2. Opt-in controls are all empty by default (so nothing is appended).
+      var t = TP.getCurrentTheme();
+      var allEmpty = !t['--opt-heading-color'] && !t['--opt-link-color'] &&
+                     !t['--opt-paragraph-margin'] && !t['--opt-heading-margin'];
+      H.addRow('opt-in controls default to empty (no appended CSS)', allEmpty,
+        'heading="' + t['--opt-heading-color'] + '" link="' + t['--opt-link-color'] +
+        '" para="' + t['--opt-paragraph-margin'] + '" headMargin="' + t['--opt-heading-margin'] + '"');
+
+      // 3. Applying a preset changes output, and reverting to default restores byte-identical.
+      ['editorial', 'technical', 'academic', 'corporate'].forEach(function () {});
+      TP.applyTheme(TP.DEFAULT_THEME); // ensure clean
+      var beforePreset = await exportSha(true);
+      TP.deserialize(JSON.stringify(TP.getCurrentTheme())); // no-op sanity
+      var css = EX ? null : null;
+      // Apply editorial, expect different export, then reset and expect baseline again.
+      (function () {})();
+      // Use the panel's own preset click path for realism.
+      doc.querySelector('[data-preset="editorial"]').click();
+      var editorialSha = await exportSha(true);
+      H.addRow('preset "Editorial" changes export output (opt-in)', editorialSha !== beforePreset,
+        'changed=' + (editorialSha !== beforePreset));
+
+      resetDefault();
+      var afterReset = await exportSha(true);
+      H.addRow('reverting to default restores byte-identical baseline', afterReset === EDITOR_PAGE_SHA,
+        'sha=' + afterReset.slice(0, 16) + ' match=' + (afterReset === EDITOR_PAGE_SHA));
+
+      // 4. Each opt-in control, when set, appends exactly its rule; unset appends nothing.
+      resetDefault();
+      function exportCssBody(noJs) {
+        var html = EX.buildExportHtml(delta, 't', noJs ? { noJs: true } : undefined);
+        return html.slice(html.indexOf('<style>'), html.indexOf('</style>'));
+      }
+      var baseCss = exportCssBody(false);
+
+      TP.applyTheme({ '--opt-heading-color': '#ff0000' });
+      var headCss = exportCssBody(false);
+      H.addRow('opt heading-color appends "h1, h2, h3 { color: #ff0000; }"',
+        headCss.indexOf('h1, h2, h3 { color: #ff0000; }') !== -1 && baseCss.indexOf('#ff0000') === -1,
+        'appended=' + (headCss.indexOf('#ff0000') !== -1));
+      resetDefault();
+
+      TP.applyTheme({ '--opt-link-color': '#00aa00' });
+      var linkCss = exportCssBody(false);
+      H.addRow('opt link-color appends "a { color: #00aa00; }" (base emits no <a> rule)',
+        linkCss.indexOf('a { color: #00aa00; }') !== -1 && baseCss.indexOf('a {') === -1,
+        'appended=' + (linkCss.indexOf('#00aa00') !== -1) + ' baseHadLinkRule=' + (baseCss.indexOf('a {') !== -1));
+      resetDefault();
+
+      TP.applyTheme({ '--opt-paragraph-margin': '1.4em' });
+      var paraCss = exportCssBody(false);
+      H.addRow('opt paragraph-margin appends "p { margin: 1.4em 0; }"',
+        paraCss.indexOf('p { margin: 1.4em 0; }') !== -1,
+        'appended=' + (paraCss.indexOf('1.4em') !== -1));
+      resetDefault();
+
+      TP.applyTheme({ '--opt-heading-margin': '2.2em 0 0.6em' });
+      var hmCss = exportCssBody(false);
+      H.addRow('opt heading-margin appends "h1, h2, h3 { margin: 2.2em 0 0.6em; }"',
+        hmCss.indexOf('h1, h2, h3 { margin: 2.2em 0 0.6em; }') !== -1,
+        'appended=' + (hmCss.indexOf('2.2em 0 0.6em') !== -1));
+      resetDefault();
+
+      // 5. After setting then clearing an opt-in, export returns to baseline.
+      TP.applyTheme({ '--opt-heading-color': '#ff0000' });
+      TP.applyTheme({ '--opt-heading-color': '' });
+      var clearedSha = await exportSha(true);
+      H.addRow('clearing an opt-in returns export to baseline', clearedSha === EDITOR_PAGE_SHA,
+        'sha=' + clearedSha.slice(0, 16) + ' match=' + (clearedSha === EDITOR_PAGE_SHA));
+
+      // 6. Preset switching resets opt-in keys a prior preset set (no lingering).
+      doc.querySelector('[data-preset="editorial"]').click(); // sets several opt keys
+      doc.querySelector('[data-preset="neutral"]').click();   // sets none → must clear them
+      var t2 = TP.getCurrentTheme();
+      var cleared = !t2['--opt-heading-color'] && !t2['--opt-link-color'] &&
+                    !t2['--opt-paragraph-margin'] && !t2['--opt-heading-margin'];
+      var neutralSha = await exportSha(true);
+      H.addRow('switching Editorial→Neutral clears lingering opt-in keys (byte-identical)',
+        cleared && neutralSha === EDITOR_PAGE_SHA,
+        'optsCleared=' + cleared + ' baselineMatch=' + (neutralSha === EDITOR_PAGE_SHA));
+
+      // 7. Optional-color panel wiring: enable checkbox toggles the var.
+      resetDefault();
+      (function () {
+        var row = doc.querySelector('[data-opt-color="--opt-link-color"]');
+        var enable = row.querySelector('.optcolor-enable');
+        var picker = row.querySelector('.optcolor-value');
+        picker.value = '#123456';
+        enable.checked = true;
+        enable.dispatchEvent(new w.Event('change', { bubbles: true }));
+        var on = w.getComputedStyle(doc.documentElement).getPropertyValue('--opt-link-color').trim();
+        enable.checked = false;
+        enable.dispatchEvent(new w.Event('change', { bubbles: true }));
+        var off = w.getComputedStyle(doc.documentElement).getPropertyValue('--opt-link-color').trim();
+        H.addRow('optional-color checkbox sets var when on, clears when off',
+          on === '#123456' && off === '', 'on="' + on + '" off="' + off + '"');
+      })();
+
+      // 8. Old v2 project file still loads with sane defaults (opt keys absent → empty).
+      resetDefault();
+      (function () {
+        var v2 = { version: 2, content: { ops: [{ insert: 'legacy\n' }] }, theme: {
+          '--color-primary': '#2563eb', '--color-secondary': '#64748b', '--color-accent': '#f59e0b',
+          '--color-background': '#ffffff', '--color-surface': '#f8fafc', '--color-text': '#1e293b',
+          '--color-text-muted': '#64748b', '--color-border': '#e2e8f0',
+          '--font-family-body': "Georgia, 'Times New Roman', serif", '--font-family-heading': 'Inter, system-ui, sans-serif',
+          '--font-size-base': '1rem', '--line-height-base': '1.6', '--content-max-width': '860px',
+          '--section-padding': '2rem', '--widget-border-radius': '0.5rem', '--widget-shadow': '0 1px 3px rgba(0,0,0,0.1)',
+        } };
+        w.HCESaveLoad.applyPayload(JSON.parse(JSON.stringify(v2)));
+        var t3 = TP.getCurrentTheme();
+        var ok = w.contentEditor.quill.getText().indexOf('legacy') === 0 &&
+                 !t3['--opt-heading-color'] && !t3['--opt-link-color'];
+        H.addRow('old v2 project loads; opt-in keys default to empty', ok,
+          'text ok=' + (w.contentEditor.quill.getText().indexOf('legacy') === 0) +
+          ' optHeading="' + t3['--opt-heading-color'] + '"');
+      })();
+
+      // 9. LOAD-PATH byte-safety (the F4-review hole): apply a preset that sets
+      // opt keys, then load a project whose theme lacks opt keys WITHOUT a prior
+      // reset. The load must clear the lingering opt vars → baseline export.
+      (function () {
+        doc.querySelector('[data-preset="editorial"]').click(); // sets opt-heading/link on :root
+        var v3NoOpts = { version: 3, title: '', documentStyles: '',
+          content: { ops: [{ insert: 'plain\n' }] },
+          theme: {
+            '--color-primary': '#2563eb', '--color-secondary': '#64748b', '--color-accent': '#f59e0b',
+            '--color-background': '#ffffff', '--color-surface': '#f8fafc', '--color-text': '#1e293b',
+            '--color-text-muted': '#64748b', '--color-border': '#e2e8f0',
+            '--font-family-body': "Georgia, 'Times New Roman', serif", '--font-family-heading': 'Inter, system-ui, sans-serif',
+            '--font-size-base': '1rem', '--line-height-base': '1.6', '--content-max-width': '860px',
+            '--section-padding': '2rem', '--widget-border-radius': '0.5rem', '--widget-shadow': '0 1px 3px rgba(0,0,0,0.1)',
+          } };
+        w.HCESaveLoad.applyPayload(JSON.parse(JSON.stringify(v3NoOpts)));
+        var leaked = w.getComputedStyle(doc.documentElement).getPropertyValue('--opt-heading-color').trim();
+        return H;
+      })();
+      var loadSha = await exportSha(true);
+      H.addRow('load without reset after a preset clears lingering opt keys (baseline export)',
+        loadSha === EDITOR_PAGE_SHA,
+        'sha=' + loadSha.slice(0, 16) + ' match=' + (loadSha === EDITOR_PAGE_SHA) +
+        ' leakedOptHeading="' + w.getComputedStyle(doc.documentElement).getPropertyValue('--opt-heading-color').trim() + '"');
+
+      window.__stylingResults = H.finish();
+      window.__stylingDone = true;
+    }
+
+    window.addEventListener('load', function () {
+      run().catch(function (err) { window.__stylingResults = H.fatal(err); window.__stylingDone = true; });
+    });
+  })();
+  </script>
+</body>
+</html>

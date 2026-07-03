@@ -44,10 +44,15 @@
         </div>
         <div class="sidebar-content" id="theme-panel">
 
+          <div class="theme-section-title">Document presets</div>
           <div class="theme-presets">
             <button class="preset-btn" data-preset="neutral">Neutral</button>
             <button class="preset-btn" data-preset="bold">Bold</button>
             <button class="preset-btn" data-preset="soft">Soft</button>
+            <button class="preset-btn" data-preset="editorial">Editorial</button>
+            <button class="preset-btn" data-preset="technical">Technical</button>
+            <button class="preset-btn" data-preset="academic">Academic</button>
+            <button class="preset-btn" data-preset="corporate">Corporate</button>
           </div>
 
           <div class="theme-section">
@@ -153,6 +158,46 @@
                 <option value="0.5rem">Medium</option>
                 <option value="0.75rem">Round</option>
                 <option value="1rem">Full</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="theme-section">
+            <div class="theme-section-title">Document polish</div>
+
+            <div class="theme-row theme-optcolor-row" data-opt-color="--opt-heading-color">
+              <label class="theme-label">Heading color</label>
+              <span class="optcolor-controls">
+                <input type="checkbox" class="optcolor-enable" aria-label="Use a custom heading color">
+                <input type="color" class="optcolor-value theme-color" value="#111111" disabled>
+              </span>
+            </div>
+
+            <div class="theme-row theme-optcolor-row" data-opt-color="--opt-link-color">
+              <label class="theme-label">Link color</label>
+              <span class="optcolor-controls">
+                <input type="checkbox" class="optcolor-enable" aria-label="Use a custom link color">
+                <input type="color" class="optcolor-value theme-color" value="#2563eb" disabled>
+              </span>
+            </div>
+
+            <div class="theme-row">
+              <label class="theme-label" for="opt-para">Paragraph spacing</label>
+              <select class="theme-select" id="opt-para" data-var="--opt-paragraph-margin">
+                <option value="">Default</option>
+                <option value="0.4em">Compact</option>
+                <option value="1em">Relaxed</option>
+                <option value="1.4em">Loose</option>
+              </select>
+            </div>
+
+            <div class="theme-row">
+              <label class="theme-label" for="opt-head">Heading spacing</label>
+              <select class="theme-select" id="opt-head" data-var="--opt-heading-margin">
+                <option value="">Default</option>
+                <option value="1.2em 0 0.4em">Compact</option>
+                <option value="2.2em 0 0.6em">Airy</option>
+                <option value="3em 0 0.7em">Generous</option>
               </select>
             </div>
           </div>
