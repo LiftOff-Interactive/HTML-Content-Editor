@@ -11,13 +11,18 @@ review + human verification before the next starts.**
 
 | # | Feature | Source | Status |
 |---|---------|--------|--------|
-| F1 | Modal Save-button fix (all widget edit modals) | kickoff | ✅ human-approved 2026-07-02 |
-| F2 | Whole-document WYSIWYG ⇄ HTML code toggle | kickoff + item 1 | **Code complete + reviewed — AWAITING HUMAN VERIFY** |
-| F3 | Robust raw HTML import (native import of foreign HTML) | kickoff + item 2 | not started |
-| F5 | Document naming (header title field) + full Clear/New button | items 6 + 3 | not started |
-| F6 | New widgets: toggle/conditional content, native popover, editable-content box, progress/meter; scroll-snap as an option on the existing carousel | items 7–11 | not started |
-| F4 | Styling pass: editor chrome + new opt-in document presets (protected contract untouched) | kickoff + item 4 | not started |
-| F7 | Course mode — **plan document only** for now | item 5 | not started |
+| F1 | Modal Save-button fix (all widget edit modals) | kickoff | ✅ done (0ed0ae0), human-approved |
+| F2 | Whole-document WYSIWYG ⇄ HTML code toggle | kickoff + item 1 | ✅ done (a80edbe), human-approved |
+| F3 | Robust raw HTML import (native import of foreign HTML) | kickoff + item 2 | ✅ done (8fc5532) |
+| F5 | Document naming (header title field) + full Clear/New button | items 6 + 3 | ✅ done (8fc5532) |
+| F6 | New widgets: toggle/conditional content, native popover, editable-content box, progress/meter; scroll-snap as an option on the existing carousel | items 7–11 | ✅ done (8fc5532) |
+| F4 | Styling pass: editor chrome + new opt-in document presets (protected contract untouched) | kickoff + item 4 | ✅ done (f3feec4) |
+| F7 | Course mode — **plan document only** for now | item 5 | ✅ done (f3feec4) — `staging/stage-10-course-mode-plan.md` |
+
+**STATUS: Stage 9 v3 rebuild COMPLETE.** All features built, self-tested,
+independently agent-reviewed, committed on `stage-9-v3-rebuild`. Not merged to main or
+pushed. Suites: modal 30/30, codeview 27/27, import 15/15, widgets2 22/22, styling 13/13,
+no-JS 27/27, no-JS selftest baseline byte-identical.
 
 Decisions locked by the human: scroll-snap = option on existing carousel (not a new
 widget); Clear button wipes everything (content + name + theme) behind a confirm.
