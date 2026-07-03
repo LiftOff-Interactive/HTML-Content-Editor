@@ -1,0 +1,3 @@
+# Baseline export references are byte-exact contracts (SHA-256 pinned in
+# docs/baselines/README.md) — never let EOL normalization rewrite them.
+docs/baselines/* -text

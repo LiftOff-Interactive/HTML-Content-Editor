@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>F5 + F6 — New Widgets, Naming & Clear Suite</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 0; padding: 20px 28px; background: #f1f5f9; color: #0f172a; }
+    h1 { margin: 0 0 4px; }
+    p.note { margin: 0 0 12px; color: #475569; font-size: 13px; }
+    #summary { font-size: 18px; font-weight: 700; margin: 10px 0 18px; padding: 8px 14px; border-radius: 8px; display: inline-block; background: #e2e8f0; }
+    .ok { background: #dcfce7; color: #166534; } .bad { background: #fee2e2; color: #991b1b; }
+    table { border-collapse: collapse; width: 100%; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+    th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid #e2e8f0; font-size: 13px; vertical-align: top; }
+    th { background: #f8fafc; }
+    .p { color: #166534; font-weight: 700; } .f { color: #991b1b; font-weight: 700; }
+    iframe { display: block; border: 0; background: #fff; margin-top: 16px; }
+  </style>
+  <script src="_test_harness.js"></script>
+</head>
+<body>
+  <h1>F5 + F6 — New Widgets, Naming & Clear Suite</h1>
+  <p class="note">
+    Mounts the real editor in an iframe. Verifies the four new widgets + carousel
+    scroll-snap option export JS-free (live-DOM check), their CSS-only interactions work
+    in an exported iframe, and F5 document naming/New behaves correctly. Also re-asserts
+    the §3 no-JS baseline is byte-identical (new widgets must not perturb it).
+  </p>
+  <div id="summary">running…</div>
+  <table><thead><tr><th>#</th><th>Case</th><th>Result</th><th>Evidence</th></tr></thead><tbody id="rows"></tbody></table>
+  <iframe id="app" src="about:blank" width="1100" height="700" title="Editor under test"></iframe>
+
+  <script>
+  (function () {
+    'use strict';
+    var H = window.HCETestHarness;
+    // Editor-page-environment no-JS hash for the 10-widget selftest document.
+    // Differs from the bare-page baseline (7c0a8363…) because the export reads
+    // theme vars from the hosting page and index.html+main.css resolve
+    // --font-family-ui to the full system stack (see docs/baselines/README).
+    // Recorded before F6; this guards that the original-10 export is unchanged.
+    var NOJS_EDITOR_PAGE_SHA = '91fc4124af626c7c2a7e9518c50024c93746539258072dbcd3c11e1f1e9645c4';
+
+    function bodyOf(html) { return html.replace(/^[\s\S]*?<body>/i, '').replace(/<\/body>[\s\S]*$/i, ''); }
+
+    function domProblems(doc, exportedHtml) {
+      var tpl = doc.createElement('template');
+      tpl.innerHTML = bodyOf(exportedHtml);
+      var problems = [];
+      if (tpl.content.querySelector('script')) problems.push('live <script>');
+      var all = tpl.content.querySelectorAll('*');
+      for (var i = 0; i < all.length; i++) {
+        for (var j = 0; j < all[i].attributes.length; j++) {
+          var a = all[i].attributes[j];
+          if (/^on/i.test(a.name)) { problems.push('on* attr ' + a.name); break; }
+          if (/^(href|src|action)$/i.test(a.name) && /^\s*javascript:/i.test(a.value)) { problems.push('javascript: url'); break; }
+        }
+      }
+      return problems;
+    }
+
+    // Render exported HTML into a sandbox iframe and return its document.
+    function renderExported(html) {
+      return new Promise(function (resolve) {
+        var f = document.createElement('iframe');
+        f.style.cssText = 'position:absolute;left:-9999px;width:900px;height:700px;';
+        f.onload = function () { setTimeout(function () { resolve({ frame: f, doc: f.contentDocument }); }, 60); };
+        document.body.appendChild(f);
+        f.srcdoc = html;
+      });
+    }
+
+    async function run() {
+      H.init();
+      var iframe = document.getElementById('app');
+      await H.bustCaches();
+      iframe.src = 'index.html';
+      await H.poll(function () {
+        var w = iframe.contentWindow;
+        return w && w.contentEditor && w.contentEditor.quill && w.WidgetRegistry &&
+               w.HCEExport && w.HCEDocState && w.document.getElementById('doc-title-input') ? true : null;
+      }, 10000, 100);
+      var w = iframe.contentWindow, doc = iframe.contentDocument;
+      if (!(w && w.HCEExport)) throw new Error('editor did not boot');
+      var WR = w.WidgetRegistry, EX = w.HCEExport;
+
+      function D(name, over) { return Object.assign({}, JSON.parse(JSON.stringify((WR.get(name) || {}).defaultData || {})), over || {}); }
+      function exportOne(name, data, noJs) {
+        var embed = {}; embed[name] = data;
+        return EX.buildExportHtml({ ops: [{ insert: embed }, { insert: '\n' }] }, 't', noJs ? { noJs: true } : undefined);
+      }
+
+      // ── Registry presence ───────────────────────────────────────────────────
+      ['toggle-reveal', 'popover', 'editable-box', 'progress-meter', 'raw-html'].forEach(function (n) {
+        H.addRow('registered: ' + n, !!WR.get(n), WR.get(n) ? WR.get(n).widgetLabel : 'MISSING');
+      });
+
+      // ── Each new widget: both export modes are JS-free (live DOM) ────────────
+      var NEW = [
+        { name: 'toggle-reveal', data: D('toggle-reveal', { label: 'T', content: '<p>hidden</p>' }) },
+        { name: 'popover', data: D('popover', { buttonLabel: 'B', content: '<p>pop</p>' }) },
+        { name: 'editable-box', data: D('editable-box') },
+        { name: 'progress-meter', data: D('progress-meter', { kind: 'progress', value: 40 }) },
+        { name: 'progress-meter', data: D('progress-meter', { kind: 'meter', value: 0.7, max: 1 }), tag: ' (meter)' },
+        { name: 'raw-html', data: D('raw-html', { html: '<p>plain <b>markup</b></p>' }) },
+      ];
+      NEW.forEach(function (c) {
+        var pj = domProblems(doc, exportOne(c.name, c.data, false));
+        var pn = domProblems(doc, exportOne(c.name, c.data, true));
+        H.addRow(c.name + (c.tag || '') + ': both export modes JS-free', pj.length === 0 && pn.length === 0,
+          'JS[' + (pj.join(';') || 'clean') + '] noJS[' + (pn.join(';') || 'clean') + ']');
+      });
+
+      // ── raw-html sanitizes hostile stored markup in export ──────────────────
+      (function () {
+        var hostile = '<p onclick="x()">t</p><script>x()</' + 'script>' +
+          '<iframe srcdoc="<script>x</scr' + 'ipt>"></iframe><a href="javascript:x()">l</a>';
+        var pn = domProblems(doc, exportOne('raw-html', { _v: 1, html: hostile }, true));
+        H.addRow('raw-html: hostile stored markup sanitized in no-JS export', pn.length === 0,
+          pn.join(';') || 'clean');
+      })();
+
+      // ── toggle-reveal interaction (CSS :checked reveals content) ─────────────
+      await (async function () {
+        var html = exportOne('toggle-reveal', D('toggle-reveal', { label: 'Show', startOn: false, content: '<p id="tr-secret">SECRET</p>' }), true);
+        var r = await renderExported(html);
+        var secret = r.doc.getElementById('tr-secret');
+        var before = r.frame.contentWindow.getComputedStyle(secret.closest('.hce-tr-content')).display;
+        var cb = r.doc.querySelector('.hce-tr-cb');
+        cb.checked = true;
+        var after = r.frame.contentWindow.getComputedStyle(secret.closest('.hce-tr-content')).display;
+        document.body.removeChild(r.frame);
+        H.addRow('toggle-reveal: content hidden until checkbox checked (CSS-only)', before === 'none' && after === 'block',
+          'before=' + before + ' after=' + after);
+      })();
+
+      // ── progress/meter emit native elements with correct values ─────────────
+      (function () {
+        var html = exportOne('progress-meter', D('progress-meter', { kind: 'progress', value: 42, max: 100 }), true);
+        var tpl = doc.createElement('template'); tpl.innerHTML = bodyOf(html);
+        var prog = tpl.content.querySelector('progress');
+        var html2 = exportOne('progress-meter', D('progress-meter', { kind: 'meter', value: 0.7, max: 1, low: 0.3, high: 0.8, optimum: 0.9 }), true);
+        var tpl2 = doc.createElement('template'); tpl2.innerHTML = bodyOf(html2);
+        var meter = tpl2.content.querySelector('meter');
+        H.addRow('progress/meter: native elements with correct attributes', !!prog && prog.getAttribute('value') === '42' && !!meter && meter.getAttribute('optimum') === '0.9',
+          'progress.value=' + (prog && prog.getAttribute('value')) + ' meter.optimum=' + (meter && meter.getAttribute('optimum')));
+      })();
+
+      // ── progress/meter clamps out-of-range values ───────────────────────────
+      (function () {
+        var html = exportOne('progress-meter', { _v: 1, kind: 'progress', value: 999, max: 100 }, true);
+        var tpl = doc.createElement('template'); tpl.innerHTML = bodyOf(html);
+        var prog = tpl.content.querySelector('progress');
+        H.addRow('progress: value clamped to max (no overflow)', prog && prog.getAttribute('value') === '100',
+          'value=' + (prog && prog.getAttribute('value')));
+      })();
+
+      // ── popover uses native popovertarget, no JS ────────────────────────────
+      (function () {
+        var html = exportOne('popover', D('popover'), true);
+        var tpl = doc.createElement('template'); tpl.innerHTML = bodyOf(html);
+        var btn = tpl.content.querySelector('button[popovertarget]');
+        var pop = tpl.content.querySelector('[popover]');
+        H.addRow('popover: native popovertarget wiring present', !!btn && !!pop && btn.getAttribute('popovertarget') === pop.id,
+          'target=' + (btn && btn.getAttribute('popovertarget')) + ' popId=' + (pop && pop.id));
+      })();
+
+      // ── carousel scroll-snap option: JS mode honors navStyle:'snap' ──────────
+      (function () {
+        var slides = [
+          { id: 's1', imageData: null, imageWidth: '100%', altText: '', caption: '', textContent: '<p>S1</p>' },
+          { id: 's2', imageData: null, imageWidth: '100%', altText: '', caption: '', textContent: '<p>S2</p>' },
+        ];
+        var buttonsJs = exportOne('carousel', { _v: 1, slides: slides, navStyle: 'buttons', showArrows: true, showDots: true, autoplay: false }, false);
+        var snapJs = exportOne('carousel', { _v: 1, slides: slides, navStyle: 'snap', showArrows: true, showDots: true, autoplay: false }, false);
+        var buttonsHasScript = /<script/i.test(bodyOf(buttonsJs));
+        var snapProblems = domProblems(doc, snapJs);
+        var snapHasScroll = /scroll-snap-type/i.test(snapJs);
+        H.addRow('carousel: navStyle "buttons" keeps JS (unchanged default), "snap" is JS-free scroll-snap in JS export',
+          buttonsHasScript && snapProblems.length === 0 && snapHasScroll,
+          'buttonsHasScript=' + buttonsHasScript + ' snapProblems=[' + snapProblems.join(';') + '] snapHasScrollSnap=' + snapHasScroll);
+      })();
+
+      // ── §3: baseline no-JS export unchanged by adding the new widgets ────────
+      await (async function () {
+        var NAMES = ['callout','tabs','accordion','quote','timeline','flip-cards','click-reveal','carousel','hotspot','knowledge-check'];
+        var ops = [{ insert: 'No-JS Export Self-Test\n', attributes: { header: 1 } }];
+        function pushWidget(name) {
+          var data = JSON.parse(JSON.stringify(WR.get(name).defaultData || {}));
+          var embed = {}; embed[name] = data;
+          ops.push({ insert: '\n' }); ops.push({ insert: '\n', attributes: { header: 2 } });
+          ops.push({ insert: name + '\n', attributes: { header: 3 } }); ops.push({ insert: embed }); ops.push({ insert: '\n' });
+        }
+        NAMES.forEach(pushWidget); pushWidget('tabs'); pushWidget('accordion');
+        var noJs = EX.buildExportHtml({ ops: ops }, 'No-JS Self Test', { noJs: true });
+        var sha = await H.sha256(noJs);
+        H.addRow('§3: original-10 no-JS export unchanged by new widgets (editor-page baseline)',
+          sha === NOJS_EDITOR_PAGE_SHA, 'sha=' + sha.slice(0, 16) + ' match=' + (sha === NOJS_EDITOR_PAGE_SHA));
+      })();
+
+      // ── F5: document naming + New ───────────────────────────────────────────
+      (function () {
+        var q = w.contentEditor.quill;
+        var ti = doc.getElementById('doc-title-input');
+        q.setContents({ ops: [{ insert: 'H1 Heading' }, { insert: '\n', attributes: { header: 1 } }] }, 'silent');
+        w.HCEDocState.setTitle('');
+        H.addRow('F5: empty title falls back to first H1', w.contentEditor.getDocumentTitle() === 'H1 Heading',
+          'title=' + w.contentEditor.getDocumentTitle());
+
+        ti.focus();
+        ti.value = 'My Course';
+        ti.dispatchEvent(new w.Event('input', { bubbles: true }));
+        H.addRow('F5: explicit title wins and multi-word (space) survives typing',
+          w.HCEDocState.getTitle() === 'My Course' && w.contentEditor.getDocumentTitle() === 'My Course',
+          'stored="' + w.HCEDocState.getTitle() + '"');
+        ti.blur();
+      })();
+
+      (function () {
+        var q = w.contentEditor.quill;
+        q.setContents({ ops: [{ insert: 'stuff\n' }] }, 'silent');
+        w.HCEDocState.setTitle('Named');
+        w.HCEDocState.setDocumentStyles('.x{}');
+        w.ThemePanel.applyTheme({ '--color-primary': '#ff0000' });
+        var realConfirm = w.confirm;
+        w.confirm = function () { return true; };
+        doc.getElementById('new-project-btn').click();
+        w.confirm = realConfirm;
+        var cleared = q.getText().trim() === '' && w.HCEDocState.getTitle() === '' &&
+          w.HCEDocState.getDocumentStyles() === '' &&
+          w.getComputedStyle(doc.documentElement).getPropertyValue('--color-primary').trim() === '#2563eb';
+        H.addRow('F5: New wipes content + title + imported styles + theme', cleared,
+          'text="' + q.getText().trim() + '" title="' + w.HCEDocState.getTitle() + '" styles=' + w.HCEDocState.getDocumentStyles().length +
+          ' primary=' + w.getComputedStyle(doc.documentElement).getPropertyValue('--color-primary').trim());
+      })();
+
+      (function () {
+        var q = w.contentEditor.quill;
+        q.setContents({ ops: [{ insert: 'keep\n' }] }, 'silent');
+        w.HCEDocState.setTitle('KeepName');
+        var realConfirm = w.confirm;
+        w.confirm = function () { return false; };
+        doc.getElementById('new-project-btn').click();
+        w.confirm = realConfirm;
+        H.addRow('F5: cancelled New keeps everything', q.getText().indexOf('keep') === 0 && w.HCEDocState.getTitle() === 'KeepName',
+          'text="' + q.getText().trim() + '" title="' + w.HCEDocState.getTitle() + '"');
+      })();
+
+      window.__w2Results = H.finish();
+      window.__w2Done = true;
+    }
+
+    window.addEventListener('load', function () {
+      run().catch(function (err) { window.__w2Results = H.fatal(err); window.__w2Done = true; });
+    });
+  })();
+  </script>
+</body>
+</html>

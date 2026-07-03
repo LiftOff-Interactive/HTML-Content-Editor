@@ -1,5 +1,5 @@
 # Handoff — HTML Content Editor
-_Last updated: 2026-06-23 · Current stage: **Stage 8 — No-JavaScript / SharePoint-safe export (code complete + self-test verified; pending human verification in the live editor)**_
+_Last updated: 2026-07-03 · Current stage: **Stage 9 — v3 rebuild COMPLETE (F1–F7 all built, self-tested, independently reviewed, committed on `stage-9-v3-rebuild`). Not yet merged to main or pushed.**_
 
 ## Goals
 ~~Get the project to a public v1 release on GitHub.~~ **Done.** v1.0.0 is live.
@@ -11,9 +11,49 @@ Live URLs:
 - v2.0.0 release: https://github.com/Frankyface/HTML-Content-Editor/releases/tag/v2.0.0
 
 ## Current State
-All stages (1–7) complete. v2.0.0 shipped on `main`.
+All stages (1–8) complete. v2.0.0 + Stage 8 shipped; `main` = `origin/main` = `d9e0b96`.
 
-**Stage 8 — No-JS / SharePoint export — code complete, self-test verified, not yet committed.**
+**Stage 9 — v3 rebuild — COMPLETE on branch `stage-9-v3-rebuild` (5 commits, 0ed0ae0→f3feec4).**
+Governing brief: `v3_kickoff_prompt.md` (§3 protected export contract). Full build order
+and per-feature records in `staging/stage-9-v3-rebuild/overview.md`. Per-feature HUMAN
+checkpoints were removed by the human after F2 ("implement all without stopping"); the
+rest of the discipline (self-tests, independent agent review, §3 baseline checks,
+per-feature commits) was kept. The only thing still gated on the human is any change to
+the §3 contract itself (the export align/link/strike gap — parked, see follow-ups).
+
+- **Baselines** (`docs/baselines/`): byte-exact Stage 8 references + hashes, JS-mode
+  non-determinism caveat, and the export page-sensitivity caveat (bare-page hash
+  7c0a8363… only reproducible from `_nojs_selftest.html`; editor-page hash 91fc4124…).
+- **F1 (modal Save fix) ✅** — accordion body pattern in the 4 broken modals + header/
+  footer flex-shrink:0; hotspot rework (scrollable imgArea + imgWrap marker frame).
+  `_modal_tests.html` 30/30 (now incl. raw-html + 4 new widgets).
+- **F2 (code view) ✅** — `src/delta-html.js` (reversible delta⇄HTML, inert-template
+  allowlist parser = sanitizer, verbatim whitespace, refuse-don't-drop) + `code-view.js`.
+  `_codeview_tests.html` 27/27.
+- **F3 (raw HTML import) ✅** — `src/html-import.js` (element-level sanitizer denylist for
+  script/iframe/object/embed/meta/…, control-char-safe scheme vetting, @import strip;
+  lenient walker mapping known nodes + wrapping unknowns) + `raw-html.js` blot. Load HTML
+  auto-imports foreign files with a kept/dropped report. `_import_tests.html` 15/15
+  (incl. the 4 real fixtures 7KB–5.5MB).
+- **F5 (naming + clear) ✅** — `doc-title.js` + `doc-state.js`: header title input
+  (H1 fallback), New button clears content+title+styles+theme behind a confirm.
+- **F6 (5 new widgets) ✅** — toggle-reveal, popover (native), editable-box, progress-
+  meter, + scroll-snap option on carousel. All CSS-only, JS-free both export modes.
+  `_widgets2_tests.html` 22/22.
+- **F4 (document styling) ✅** — 4 pro presets + 4 opt-in controls, conditional export
+  emission so default stays §3 byte-identical. `_styling_tests.html` 13/13.
+- **F7 (course-mode plan) ✅** — `staging/stage-10-course-mode-plan.md`, no code.
+- **Save format v3**: adds `title` + `documentStyles`; v1→v2→v3 migration chain.
+- **Shared `_test_harness.js`** extracted for the new suites.
+- **Every suite green + frozen no-JS baseline byte-identical after all features.**
+
+**REMAINING FOR THE HUMAN (needs an explicit decision — touches §3):**
+Both export modes silently drop alignment/link/strike formatting that the code view now
+round-trips. Fixing changes protected export output, so it needs its own scoped task with
+baseline re-capture. Full follow-up list in the stage overview. Also: not merged to
+`main` or pushed to origin yet — awaiting your go.
+
+**Stage 8 — No-JS / SharePoint export — ✅ complete, committed as `d9e0b96`.**
 The user deploys exports into SharePoint via the **Embed web part**, which strips `<script>`, `on*` handlers, and `javascript:` URLs — so the standard `Export HTML` widgets break there. Stage 8 adds a second **"Export for SharePoint"** button (`#export-sharepoint-btn`) that renders every widget JavaScript-free.
 - Engine: `src/export.js` `deltaToHtml(delta, opts)` / `buildExportHtml(delta, title, opts)` take `{ noJs }`; in no-JS mode each widget embed is rendered via `renderExportNoJS(container, data, ctx)` (fallback to `renderExport`). `ctx.uid` (`wx<n>`, per-export counter) is the only unique-id source — export instances are bare `Object.create(prototype)`, so `this._uid` is undefined.
 - 7 interactive blots got `renderExportNoJS`: tabs (radio+`:checked`), accordion (native `<details>`, single-open via `<details name>`), flip-cards (checkbox+`:checked`+`:has()`), click-reveal (`<details>`), carousel (scroll-snap + anchor nav), hotspot (radio+`:checked`+`:has()` + close-label), knowledge-check (radio+`:checked`+`:has()` submit-gate). The 4 static widgets (callout, quote, timeline, resizable-image) fall back to `renderExport` (already JS-free).
@@ -51,6 +91,38 @@ What's built (all stages):
 - `src/styles/main.css` — app shell + all widget CSS + dropdown styles + modal max-height constraint
 
 ## Things I've Changed
+- 2026-07-03: Stage 9 F3+F5+F6 (commit 8fc5532) then F4+F7 (commit f3feec4).
+  New files: `src/html-import.js`, `src/blots/raw-html.js`, `src/doc-state.js`,
+  `src/doc-title.js`, `src/blots/{toggle-reveal,popover,editable-box,progress-meter}.js`,
+  `_test_harness.js`, `_import_tests.html`, `_widgets2_tests.html`, `_styling_tests.html`,
+  `staging/stage-10-course-mode-plan.md`, `fixtures/*` (4 import fixtures committed).
+  Edited: save-load (v3 payload + import fallback + report), html-roundtrip (v3),
+  export.js (conditional imported-styles block + F4 opt-in append), theme.js (presets +
+  opt controls + deserialize merge), editor.js (title preference), carousel.js (navStyle),
+  modal.js (rows/mono/width), index.html, main.css, editor.css. Gotchas: never emit a
+  literal NUL to source (git binary) — use the ` ` escape; DOMParser hoists a leading
+  `<script>` island to head — parse in an inert `<template>`; export is page-sensitive
+  (baseline hash only reproducible from `_nojs_selftest.html`); escape every `</` when
+  re-emitting captured CSS or a `</style>`/`</head>` breaks the file/roundtrip; import
+  needs ELEMENT-level sanitization (denylist iframe/object/embed/meta), not just
+  attribute stripping.
+- 2026-07-02 (later): Stage 9 F2 — code view. New files: `src/delta-html.js`,
+  `src/code-view.js`, `_codeview_tests.html`. Edited: `index.html` (2 script tags),
+  `src/styles/main.css` (#code-view styles + `--font-family-mono` + danger tokens),
+  `docs/baselines/README.md` (page-sensitivity caveat), stage-9 overview (F2 record +
+  follow-ups 6–10). Tried/Failed: never put literal NUL chars in source (git treats the
+  file as binary) — the parser's newline placeholder uses the `\u0000` ESCAPE; a
+  leading `<script>` island gets hoisted to `<head>` by DOMParser — parse with an inert
+  `<template>` instead.
+- 2026-07-02: Stage 9 kickoff + F1. New: `docs/baselines/` (protected-contract export
+  references + README), `_modal_tests.html` (modal geometry suite),
+  `staging/stage-9-v3-rebuild/overview.md` (confirmed roadmap + F1 record + named
+  follow-ups). Edited: modal body pattern in tabs/click-reveal/carousel/hotspot,
+  hotspot modal scroll + pin coordinate frame (imgWrap), guard comments at all 8 modal
+  body sites, `.widget-modal-header/-footer { flex-shrink:0 }` in main.css. Gotchas
+  learned: browser memory-cache served stale blot JS to the test iframe (harness now
+  cache-busts itself); rAF never fires in hidden tabs (never await it bare); the JS-mode
+  export was never byte-stable (see baselines README).
 - 2026-06-23: Stage 8 — No-JS / SharePoint export. New files: `staging/stage-8-nojs-export/overview.md`, `_nojs_selftest.html` (root-level browser QA harness — open over localhost, exports one of every widget no-JS into an iframe with PASS/FAIL banner). Edited `src/export.js` (no-JS mode + ctx + `#export-sharepoint-btn` wiring + `exportHtmlNoJs`), `index.html` (new button), and added `renderExportNoJS` to tabs/accordion/flip-cards/click-reveal/carousel/hotspot/knowledge-check. Per-widget conversions were drafted by a parallel agent workflow against the Tabs reference, then fixed (the `!important` inline-override bug) and browser-verified.
 - 2026-06-09: Stage 7 Features 2 & 3 complete + bug fixes. Shipped as v2.0.0.
   - Feature 2: `src/ui/rich-text-field.js` (new), rich text in all 11 widgets, v1→v2 migration in save-load.js.
@@ -78,5 +150,14 @@ What's built (all stages):
 - `window.contentEditor.getDocumentTitle()` shared by tab title (editor.js), save filename (save-load.js), and export title (export.js).
 
 ## Pointer
-→ Stage 8 (No-JS / SharePoint export) is code-complete and self-test-verified. Active feature file: `staging/stage-8-nojs-export/overview.md`.
-→ Next: human-verify the "Export for SharePoint" button in the live editor + a real SharePoint Embed web part, then commit. The `Things I've Changed` Tried/Failed insight: scoped-`<style>` state rules must use `!important` to beat widgets' inline base styles.
+→ Stage 9 (v3 rebuild) is COMPLETE on branch `stage-9-v3-rebuild` — F1–F7 built,
+self-tested, independently reviewed, committed. Active feature file:
+`staging/stage-9-v3-rebuild/overview.md`; course-mode plan in
+`staging/stage-10-course-mode-plan.md`.
+→ Next (human decisions): (1) try it in the live editor and confirm it feels right;
+(2) approve merge of `stage-9-v3-rebuild` → `main` + push (not done yet); (3) decide on
+the parked §3 follow-up (export align/link/strike gap) and the other named follow-ups in
+the stage overview; (4) approve starting course mode (C1) when ready.
+→ Test suites (run over localhost): `_modal_tests.html` 30/30 · `_codeview_tests.html`
+27/27 · `_import_tests.html` 15/15 · `_widgets2_tests.html` 22/22 · `_styling_tests.html`
+13/13 · `_nojs_tests.html` 27/27 · `_nojs_selftest.html` baseline byte-identical.

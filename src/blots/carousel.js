@@ -27,6 +27,7 @@
       autoplay:   false,
       showDots:   true,
       showArrows: true,
+      navStyle:   'buttons',
     };
 
     attach() {
@@ -124,7 +125,14 @@
       });
     }
 
-    renderExport(container, data) {
+    renderExport(container, data, ctx) {
+      // Author-selected navigation style (F6, item 9): 'snap' emits the
+      // CSS-only scroll-snap carousel (the SharePoint renderer) in BOTH export
+      // modes. Default 'buttons' keeps the existing JS arrows/dots behavior
+      // byte-for-byte unchanged (§3).
+      if (data.navStyle === 'snap' && typeof this.renderExportNoJS === 'function') {
+        return this.renderExportNoJS(container, data, ctx);
+      }
       const root    = getComputedStyle(document.documentElement);
       const primary = root.getPropertyValue('--color-primary').trim()        || '#2563eb';
       const border  = root.getPropertyValue('--color-border').trim()         || '#e2e8f0';
@@ -435,8 +443,10 @@
       header.appendChild(titleEl);
       header.appendChild(closeX);
 
+      // flex:1 + min-height:0 is load-bearing: it lets the body shrink inside
+      // the dialog's max-height so the footer is never pushed out.
       const body = document.createElement('div');
-      body.style.cssText = 'display:flex;min-height:340px;';
+      body.style.cssText = 'display:flex;flex:1;min-height:0;overflow:hidden;';
 
       const leftCol = document.createElement('div');
       leftCol.style.cssText =
@@ -472,6 +482,24 @@
       settingsWrap.appendChild(makeToggle('Show arrows', 'showArrows'));
       settingsWrap.appendChild(makeToggle('Show dots',   'showDots'));
       settingsWrap.appendChild(makeToggle('Autoplay',    'autoplay'));
+
+      // Navigation style (F6): JS buttons/dots vs pure CSS scroll-snap.
+      const navLabel = document.createElement('div');
+      navLabel.textContent = 'Navigation in exports';
+      navLabel.style.cssText = 'margin-top:4px;color:var(--color-text-muted);';
+      const navSelect = document.createElement('select');
+      navSelect.className = 'widget-modal-input';
+      [{ v: 'buttons', l: 'Buttons & dots (JavaScript)' },
+       { v: 'snap',    l: 'Swipe / scroll-snap (no JavaScript)' }].forEach(function (opt) {
+        const o = document.createElement('option');
+        o.value = opt.v;
+        o.textContent = opt.l;
+        if ((working.navStyle || 'buttons') === opt.v) o.selected = true;
+        navSelect.appendChild(o);
+      });
+      navSelect.addEventListener('change', function () { working.navStyle = navSelect.value; });
+      settingsWrap.appendChild(navLabel);
+      settingsWrap.appendChild(navSelect);
 
       leftCol.appendChild(slideListEl);
       leftCol.appendChild(addSlideBtn);

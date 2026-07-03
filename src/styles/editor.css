@@ -137,6 +137,9 @@
 /* ============================================================
    Content Typography
    ============================================================ */
+/* F4 opt-in controls reflect into the editor preview via var() fallbacks:
+   when the opt var is unset (removed), the fallback keeps the current look, so
+   the preview matches an export that opted into nothing. */
 .ql-editor h1 {
   font-family: var(--font-family-heading);
   font-size: 2rem;
@@ -144,7 +147,7 @@
   line-height: 1.2;
   margin-top: 2em;
   margin-bottom: 0.5em;
-  color: var(--color-text);
+  color: var(--opt-heading-color, var(--color-text));
 }
 
 .ql-editor h1:first-child {
@@ -158,7 +161,7 @@
   line-height: 1.3;
   margin-top: 1.75em;
   margin-bottom: 0.4em;
-  color: var(--color-text);
+  color: var(--opt-heading-color, var(--color-text));
 }
 
 .ql-editor h3 {
@@ -168,11 +171,11 @@
   line-height: 1.4;
   margin-top: 1.5em;
   margin-bottom: 0.35em;
-  color: var(--color-text);
+  color: var(--opt-heading-color, var(--color-text));
 }
 
 .ql-editor p {
-  margin-bottom: 0.9em;
+  margin-bottom: var(--opt-paragraph-margin, 0.9em);
 }
 
 .ql-editor p:last-child {
@@ -198,7 +201,7 @@
 }
 
 .ql-editor a {
-  color: var(--color-primary);
+  color: var(--opt-link-color, var(--color-primary));
   text-decoration: underline;
   text-underline-offset: 2px;
 }

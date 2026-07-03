@@ -4,7 +4,8 @@
    ============================================================ */
 :root {
   /* App UI */
-  --font-family-ui: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  --font-family-ui:   -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  --font-family-mono: Consolas, 'SF Mono', Menlo, 'Courier New', monospace;
   --space-unit:     8px;
   --header-height:  52px;
   --sidebar-width:  260px;
@@ -14,6 +15,11 @@
   --color-bg:         #f0f0ef;
   --color-header-bg:  #ffffff;
   --color-sidebar-bg: #f7f7f6;
+
+  /* App chrome feedback (errors in chrome UI, not document content) */
+  --color-danger-bg:     #fef2f2;
+  --color-danger-border: #fecaca;
+  --color-danger-text:   #991b1b;
 
   /* Motion */
   --duration-fast: 120ms;
@@ -172,14 +178,305 @@ body {
   border-radius: var(--border-radius);
 }
 
+/* ---- Code view (whole-document HTML source toggle) ---- */
+
+#code-view {
+  display: none;
+  flex-direction: column;
+  gap: 8px;
+  max-width: var(--content-max-width);
+  margin: 0 auto;
+}
+
+.code-view-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.code-view-hint {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  font-family: var(--font-family-ui);
+}
+
+.code-view-error {
+  padding: 10px 14px;
+  background: var(--color-danger-bg);
+  border: 1px solid var(--color-danger-border);
+  border-radius: var(--border-radius);
+  color: var(--color-danger-text);
+  font-size: 13px;
+  font-family: var(--font-family-ui);
+}
+
+.code-view-error ul {
+  margin: 6px 0 0;
+  padding-left: 20px;
+}
+
+#code-editor {
+  width: 100%;
+  min-height: 65vh;
+  resize: vertical;
+  padding: 14px 16px;
+  background: var(--color-background);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  font-family: var(--font-family-mono);
+  font-size: 13px;
+  line-height: 1.5;
+  tab-size: 2;
+  white-space: pre;
+}
+
+#code-editor:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.is-disabled-by-code-view {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+/* ---- Raw HTML block widget ---- */
+
+.raw-html-widget {
+  position: relative;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--widget-border-radius);
+  padding: 10px 12px;
+  background: var(--color-surface);
+}
+
+.raw-html-badge {
+  position: absolute;
+  top: -1px;
+  right: -1px;
+  padding: 2px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  font-family: var(--font-family-ui);
+  color: var(--color-text-muted);
+  background: var(--color-sidebar-bg);
+  border: 1px dashed var(--color-border);
+  border-radius: 0 var(--widget-border-radius) 0 var(--widget-border-radius);
+}
+
+.raw-html-content {
+  overflow-x: auto;
+}
+
+.widget-modal-textarea--mono {
+  font-family: var(--font-family-mono);
+  font-size: 12px;
+  white-space: pre;
+  tab-size: 2;
+}
+
+/* ---- Toggle reveal widget (editor preview) ---- */
+
+.toggle-reveal-widget {
+  border: 1px solid var(--color-border);
+  border-radius: var(--widget-border-radius);
+  overflow: hidden;
+}
+
+.toggle-reveal-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--color-surface);
+  font-family: var(--font-family-body);
+}
+
+.toggle-reveal-hint {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--color-text-muted);
+  font-family: var(--font-family-ui);
+}
+
+.toggle-reveal-pill {
+  display: inline-flex;
+  align-items: center;
+  width: 34px;
+  height: 18px;
+  padding: 2px;
+  border-radius: 999px;
+  background: var(--color-border);
+  flex-shrink: 0;
+}
+
+.toggle-reveal-pill.is-on { background: var(--color-primary); }
+.toggle-reveal-pill.is-on .toggle-reveal-knob { transform: translateX(16px); }
+
+.toggle-reveal-knob {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  transition: transform var(--duration-fast) var(--ease);
+}
+
+.toggle-reveal-pill--checkbox {
+  width: 18px;
+  border-radius: 4px;
+  background: var(--color-surface);
+  border: 2px solid var(--color-border);
+}
+.toggle-reveal-pill--checkbox .toggle-reveal-knob { display: none; }
+
+.toggle-reveal-body {
+  padding: 12px 14px;
+  border-top: 1px solid var(--color-border);
+  font-family: var(--font-family-body);
+  color: var(--color-text-muted);
+  font-size: 14px;
+}
+
+/* ---- Popover widget (editor preview) ---- */
+
+.popover-widget {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.popover-widget-btn {
+  align-self: flex-start;
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-family: var(--font-family-body);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.popover-widget-btn--primary { background: var(--color-primary); color: #fff; }
+.popover-widget-btn--ghost {
+  background: transparent;
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary);
+}
+
+.popover-widget-preview {
+  border: 1px dashed var(--color-border);
+  border-radius: var(--widget-border-radius);
+  padding: 10px 12px;
+  font-family: var(--font-family-body);
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+.popover-widget-preview strong { display: block; color: var(--color-text); margin-bottom: 4px; }
+
+/* ---- Editable / reader-notes box (editor preview) ---- */
+
+.editable-box-widget {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-family: var(--font-family-body);
+}
+
+.editable-box-area {
+  position: relative;
+  padding: 12px 14px;
+  border: 1px dashed var(--color-primary);
+  border-radius: var(--widget-border-radius);
+  background: var(--color-surface);
+}
+
+.editable-box-ph { color: var(--color-text-muted); font-size: 14px; }
+
+.editable-box-badge {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+  font-family: var(--font-family-ui);
+}
+
+/* ---- Progress / meter widget (editor preview) ---- */
+
+.progress-meter-widget { font-family: var(--font-family-body); }
+
+.progress-meter-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 4px;
+  font-size: 14px;
+  color: var(--color-text);
+}
+
+.progress-meter-head span { color: var(--color-text-muted); font-size: 13px; }
+.progress-meter-widget progress,
+.progress-meter-widget meter { width: 100%; height: 1.2rem; }
+
+/* ---- Document title input (header) ---- */
+
+.doc-title-input {
+  flex: 1;
+  min-width: 0;
+  max-width: 360px;
+  margin: 0 16px;
+  padding: 5px 10px;
+  font-family: var(--font-family-ui);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  transition: border-color var(--duration-fast) var(--ease),
+              background var(--duration-fast) var(--ease);
+}
+
+.doc-title-input::placeholder {
+  color: var(--color-text-muted);
+  font-weight: 400;
+}
+
+.doc-title-input:hover {
+  border-color: var(--color-border);
+}
+
+.doc-title-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  background: var(--color-sidebar-bg);
+}
+
 /* ============================================================
    Theme Panel
    ============================================================ */
 .theme-presets {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
   padding: calc(var(--space-unit) * 2);
   border-bottom: 1px solid var(--color-border);
+}
+
+.optcolor-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.theme-optcolor-row .optcolor-value[disabled] {
+  opacity: 0.4;
+  pointer-events: none;
 }
 
 .preset-btn {
@@ -468,6 +765,13 @@ body {
   gap: 8px;
   padding: 12px 16px;
   border-top: 1px solid var(--color-border);
+}
+
+/* Header and footer must keep their intrinsic height no matter how tall the
+   body content gets — the body is the only region allowed to shrink/scroll. */
+.widget-modal-header,
+.widget-modal-footer {
+  flex-shrink: 0;
 }
 
 .widget-modal-btn {

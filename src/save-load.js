@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  var SAVE_VERSION = 2;
+  var SAVE_VERSION = 3;
 
   // ── Toast ─────────────────────────────────────────────────────────────────
 
@@ -97,6 +97,15 @@
     return payload;
   }
 
+  // v3 adds document-level state outside the delta: explicit title (F5) and
+  // captured document styles from HTML import (F3). Both default to ''.
+  function migrateV2toV3(payload) {
+    if (typeof payload.title !== 'string') payload.title = '';
+    if (typeof payload.documentStyles !== 'string') payload.documentStyles = '';
+    payload.version = 3;
+    return payload;
+  }
+
   // ── Apply payload (shared by JSON and HTML load paths) ────────────────────
 
   function applyPayload(payload) {
@@ -104,9 +113,8 @@
       showToast('Incompatible file — saved with a different version of Content Editor.');
       return;
     }
-    if (payload.version === 1) {
-      migrateV1toV2(payload);
-    }
+    if (payload.version === 1) migrateV1toV2(payload);
+    if (payload.version === 2) migrateV2toV3(payload);
     if (payload.version !== SAVE_VERSION) {
       showToast('Incompatible file — saved with a different version of Content Editor.');
       return;
@@ -118,6 +126,10 @@
     }
     if (payload.theme && window.ThemePanel) {
       window.ThemePanel.deserialize(JSON.stringify(payload.theme));
+    }
+    if (window.HCEDocState) {
+      window.HCEDocState.setTitle(payload.title || '');
+      window.HCEDocState.setDocumentStyles(payload.documentStyles || '');
     }
 
     setStatus('');
@@ -135,6 +147,8 @@
 
     var payload = {
       version: SAVE_VERSION,
+      title:   window.HCEDocState ? window.HCEDocState.getTitle() : '',
+      documentStyles: window.HCEDocState ? window.HCEDocState.getDocumentStyles() : '',
       content: quill.getContents(),
       theme:   window.ThemePanel ? window.ThemePanel.getCurrentTheme() : {},
     };
@@ -204,7 +218,9 @@
           applyPayload(payload);
         } catch (err) {
           if (err.message === 'NO_EMBED') {
-            showToast("This HTML file doesn't contain editor project data. Use Export HTML to create view-only files.");
+            // Foreign HTML — no embedded project data. Import it natively (F3):
+            // map what's recognizable, wrap the rest in raw-html blocks.
+            importForeignHtml(e.target.result);
           } else {
             showToast('Could not load file — it may be corrupt or from an incompatible version.');
           }
@@ -214,6 +230,84 @@
     });
 
     input.click();
+  }
+
+  // ── Native HTML import (F3) ───────────────────────────────────────────────
+
+  function importForeignHtml(fileText) {
+    var quill = window.contentEditor && window.contentEditor.quill;
+    if (!quill || !window.HCEImport) return;
+
+    var result;
+    try {
+      result = window.HCEImport.importHtml(fileText);
+    } catch (err) {
+      showToast('Import failed: ' + err.message);
+      return;
+    }
+
+    quill.setContents(result.delta, Quill.sources.SILENT);
+    if (window.HCEDocState) {
+      window.HCEDocState.setDocumentStyles(result.documentStyles || '');
+      if (result.suggestedTitle) window.HCEDocState.setTitle(result.suggestedTitle);
+    }
+    setStatus('unsaved');
+    showImportReport(result.report);
+  }
+
+  // Kept-vs-dropped report, per kickoff F3: the user must see what mapped,
+  // what got wrapped as raw HTML, and what was removed for safety.
+  function showImportReport(report) {
+    var overlay = document.createElement('div');
+    overlay.className = 'widget-modal-overlay';
+    var dialog = document.createElement('div');
+    dialog.className = 'widget-modal';
+    dialog.setAttribute('role', 'dialog');
+    dialog.style.width = '520px';
+
+    function section(title, lines) {
+      if (!lines.length) return '';
+      return '<div style="margin-top:10px;"><strong style="font-size:12px;">' + title + '</strong>' +
+        '<ul style="margin:4px 0 0;padding-left:18px;font-size:12px;color:var(--color-text-muted);">' +
+        lines.map(function (l) { return '<li>' + l + '</li>'; }).join('') + '</ul></div>';
+    }
+    function bucketLines(bucket) {
+      return Object.keys(bucket).map(function (k) { return esc(k) + ' × ' + bucket[k]; });
+    }
+    function esc(s) {
+      return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    var removed = report.removed || {};
+    var removedLines = [];
+    if (removed.scripts) removedLines.push('scripts removed × ' + removed.scripts);
+    if (removed.elements) removedLines.push('active/embed elements removed (iframe, object, meta refresh, …) × ' + removed.elements);
+    if (removed.onAttrs) removedLines.push('on* / srcdoc attributes removed × ' + removed.onAttrs);
+    if (removed.jsUrls) removedLines.push('dangerous URLs neutralized × ' + removed.jsUrls);
+
+    dialog.innerHTML =
+      '<div class="widget-modal-header"><span>Imported as editable content</span></div>' +
+      '<div class="widget-modal-body" style="font-family:var(--font-family-ui);">' +
+        '<div style="font-size:13px;">Mapped <strong>' + (report.mappedTotal || 0) + '</strong> blocks to native content' +
+        (report.wrappedTotal ? ', wrapped <strong>' + report.wrappedTotal + '</strong> in editable HTML blocks' : '') +
+        (report.flattenedInline ? ', flattened ' + report.flattenedInline + ' inline element(s) to text' : '') + '.</div>' +
+        section('Mapped', bucketLines(report.mapped || {})) +
+        section('Wrapped as HTML blocks', bucketLines(report.wrapped || {})) +
+        section('Removed for safety', removedLines) +
+        section('Notes', (report.notes || []).slice(0, 8).map(esc)) +
+      '</div>' +
+      '<div class="widget-modal-footer"></div>';
+
+    var okBtn = document.createElement('button');
+    okBtn.className = 'widget-modal-btn widget-modal-btn--save';
+    okBtn.type = 'button';
+    okBtn.textContent = 'OK';
+    okBtn.addEventListener('click', function () { document.body.removeChild(overlay); });
+    dialog.querySelector('.widget-modal-footer').appendChild(okBtn);
+
+    overlay.appendChild(dialog);
+    overlay.addEventListener('click', function (e) { if (e.target === overlay) document.body.removeChild(overlay); });
+    document.body.appendChild(overlay);
   }
 
   // ── Track unsaved changes ─────────────────────────────────────────────────
@@ -306,5 +400,5 @@
     setTimeout(trackChanges, 200);
   });
 
-  window.HCESaveLoad = { saveProject, loadProject };
+  window.HCESaveLoad = { saveProject, loadProject, importForeignHtml, applyPayload };
 })();

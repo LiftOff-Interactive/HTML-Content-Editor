@@ -365,8 +365,10 @@
       header.appendChild(titleEl);
       header.appendChild(closeX);
 
+      // flex:1 + min-height:0 is load-bearing: it lets the body shrink inside
+      // the dialog's max-height so the footer is never pushed out.
       const body = document.createElement('div');
-      body.style.cssText = 'display:flex;min-height:400px;';
+      body.style.cssText = 'display:flex;flex:1;min-height:0;overflow:hidden;';
 
       const leftCol = document.createElement('div');
       leftCol.style.cssText =
@@ -459,14 +461,22 @@
       altInput.addEventListener('input', function () { working.altText = altInput.value; });
       altRow.appendChild(altInput);
 
+      // imgArea scrolls so a tall image is fully reachable even when the dialog
+      // is clamped by max-height. Pin markers live on imgWrap — a box that
+      // shrink-wraps the image exactly — so their %-positions always agree with
+      // the click coordinates measured against the image itself.
       const imgArea = document.createElement('div');
       imgArea.style.cssText =
-        'position:relative;flex:1;min-height:180px;background:var(--color-bg);overflow:visible;';
+        'flex:1;min-height:180px;background:var(--color-bg);overflow-y:auto;';
+
+      const imgWrap = document.createElement('div');
+      imgWrap.style.cssText = 'position:relative;width:100%;';
 
       const imgEl = document.createElement('img');
       imgEl.style.cssText = 'width:100%;height:auto;display:block;cursor:crosshair;user-select:none;';
       imgEl.draggable = false;
       imgEl.alt = '';
+      imgWrap.appendChild(imgEl);
 
       const noImgPlaceholder = document.createElement('div');
       noImgPlaceholder.style.cssText =
@@ -479,7 +489,7 @@
 
       if (working.imageData) {
         imgEl.src = working.imageData;
-        imgArea.appendChild(imgEl);
+        imgArea.appendChild(imgWrap);
       } else {
         imgArea.appendChild(noImgPlaceholder);
       }
@@ -507,10 +517,13 @@
 
       const pinListEl = document.createElement('div');
       pinListEl.style.cssText =
-        'flex:1;overflow-y:auto;border-bottom:1px solid var(--color-border);min-height:0;';
+        'flex:1 1 0;overflow-y:auto;border-bottom:1px solid var(--color-border);min-height:72px;';
 
+      // The pin form scrolls its own overflow when the dialog is height-clamped,
+      // so the tooltip editor never gets clipped behind rightCol's hidden edge.
       const pinFormEl = document.createElement('div');
-      pinFormEl.style.cssText = 'padding:12px;display:flex;flex-direction:column;gap:10px;flex-shrink:0;';
+      pinFormEl.style.cssText =
+        'padding:12px;display:flex;flex-direction:column;gap:10px;flex:0 1 auto;min-height:0;overflow-y:auto;';
 
       rightCol.appendChild(pinListHeader);
       rightCol.appendChild(pinListEl);
@@ -532,7 +545,7 @@
           instrEl.textContent = 'Click on the image to place a new pin.';
           if (imgArea.contains(noImgPlaceholder)) {
             imgArea.removeChild(noImgPlaceholder);
-            imgArea.appendChild(imgEl);
+            imgArea.appendChild(imgWrap);
           }
           renderPins();
         };
@@ -550,14 +563,14 @@
           instrEl.textContent = 'Click on the image to place a new pin.';
           if (imgArea.contains(noImgPlaceholder)) {
             imgArea.removeChild(noImgPlaceholder);
-            imgArea.appendChild(imgEl);
+            imgArea.appendChild(imgWrap);
           }
         } else {
           imgEl.src = '';
           uploadBtn.textContent = '📷 Upload';
           instrEl.textContent = 'Upload an image first, then click to place pins.';
           if (!imgArea.contains(noImgPlaceholder)) {
-            if (imgArea.contains(imgEl)) imgArea.removeChild(imgEl);
+            if (imgArea.contains(imgWrap)) imgArea.removeChild(imgWrap);
             imgArea.appendChild(noImgPlaceholder);
           }
         }
@@ -587,7 +600,7 @@
 
       // --- Render functions ---
       function renderPins() {
-        imgArea.querySelectorAll('.hs-modal-pin').forEach(function (el) { el.remove(); });
+        imgWrap.querySelectorAll('.hs-modal-pin').forEach(function (el) { el.remove(); });
         working.pins.forEach(function (pin, idx) {
           const marker = document.createElement('button');
           marker.type = 'button';
@@ -614,7 +627,7 @@
             renderPinList();
             renderPinForm();
           });
-          imgArea.appendChild(marker);
+          imgWrap.appendChild(marker);
         });
       }
 

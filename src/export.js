@@ -152,7 +152,7 @@
     const colorBg     = get('--color-background')    || '#ffffff';
     const colorText   = get('--color-text')          || '#1e293b';
 
-    return [
+    const base = [
       '*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }',
       'html { scroll-behavior: smooth; }',
       'body {',
@@ -184,7 +184,25 @@
       'ul, ol { padding-left: 1.75em; margin: 0.75em 0; }',
       'li { margin: 0.25em 0; }',
       'img { max-width: 100%; height: auto; }',
-    ].join('\n');
+    ];
+
+    appendOptInRules(base, get);
+    return base.join('\n');
+  }
+
+  // F4 opt-in document styling: append override rules ONLY when the control is
+  // set. Every appended rule comes AFTER the base (later wins), and when all opt
+  // vars are empty this adds nothing — so a document that opts into nothing
+  // exports byte-identically to the Stage 8 baseline (§3, docs/baselines/).
+  function appendOptInRules(base, get) {
+    const headingColor  = get('--opt-heading-color');
+    const linkColor     = get('--opt-link-color');
+    const paraMargin    = get('--opt-paragraph-margin');
+    const headingMargin = get('--opt-heading-margin');
+    if (headingColor)  base.push('h1, h2, h3 { color: ' + headingColor + '; }');
+    if (headingMargin) base.push('h1, h2, h3 { margin: ' + headingMargin + '; }');
+    if (paraMargin)    base.push('p { margin: ' + paraMargin + ' 0; }', 'p:first-child { margin-top: 0; }');
+    if (linkColor)     base.push('a { color: ' + linkColor + '; }');
   }
 
   // ── Download helpers ──────────────────────────────────────────────────────
@@ -256,7 +274,7 @@
     const bodyHtml = deltaToHtml(delta, opts);
     const css      = buildExportCSS();
 
-    return [
+    const lines = [
       '<!DOCTYPE html>',
       '<html lang="en">',
       '<head>',
@@ -266,14 +284,34 @@
       '  <style>',
       css,
       '  </style>',
+    ];
+
+    // Styles captured from an imported HTML document (F3). Emitted ONLY when
+    // present so non-imported documents' export output stays byte-identical
+    // to the Stage 8 baseline (docs/baselines/ — protected contract).
+    // Escape EVERY '</' at the emission point ('<\/' is an escaped '/' in
+    // CSS, visually identical): documentStyles can arrive from a loaded JSON
+    // payload, not just our own import capture, and an unescaped '</style>'
+    // would end the style element early and let a '<script>' go LIVE — while
+    // a '</head>' would hijack html-roundtrip's replace('</head>') injection.
+    const docStyles = ((window.HCEDocState && window.HCEDocState.getDocumentStyles()) || '')
+      .replace(/<\//g, '<\\/');
+    if (docStyles) {
+      lines.push('  <style data-hce-imported-styles>');
+      lines.push(docStyles);
+      lines.push('  </style>');
+    }
+
+    lines.push(
       '</head>',
       '<body>',
       '  <main class="hce-content">',
       bodyHtml,
       '  </main>',
       '</body>',
-      '</html>',
-    ].join('\n');
+      '</html>'
+    );
+    return lines.join('\n');
   }
 
   function _runExport(opts) {

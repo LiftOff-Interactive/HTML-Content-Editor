@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HTML Import — Verification Suite (F3)</title>
+  <link rel="stylesheet" href="src/styles/theme-defaults.css">
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 0; padding: 20px 28px; background: #f1f5f9; color: #0f172a; }
+    h1 { margin: 0 0 4px; }
+    p.note { margin: 0 0 12px; color: #475569; font-size: 13px; }
+    #summary { font-size: 18px; font-weight: 700; margin: 10px 0 18px; padding: 8px 14px; border-radius: 8px; display: inline-block; background: #e2e8f0; }
+    .ok { background: #dcfce7; color: #166534; } .bad { background: #fee2e2; color: #991b1b; }
+    table { border-collapse: collapse; width: 100%; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+    th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid #e2e8f0; font-size: 13px; vertical-align: top; }
+    th { background: #f8fafc; }
+    .p { color: #166534; font-weight: 700; } .f { color: #991b1b; font-weight: 700; }
+  </style>
+
+  <script src="vendor/quill/dist/quill.js"></script>
+  <script src="src/ui/modal.js"></script>
+  <script src="src/ui/image-upload-field.js"></script>
+  <script src="src/ui/rich-text-field.js"></script>
+  <script src="src/registry.js"></script>
+  <script src="src/blots/base.js"></script>
+  <script src="src/blots/image.js"></script>
+  <script src="src/blots/callout.js"></script>
+  <script src="src/blots/tabs.js"></script>
+  <script src="src/blots/accordion.js"></script>
+  <script src="src/blots/quote.js"></script>
+  <script src="src/blots/timeline.js"></script>
+  <script src="src/blots/flip-cards.js"></script>
+  <script src="src/blots/click-reveal.js"></script>
+  <script src="src/blots/carousel.js"></script>
+  <script src="src/blots/hotspot.js"></script>
+  <script src="src/blots/knowledge-check.js"></script>
+  <script src="src/blots/raw-html.js"></script>
+  <script src="src/doc-state.js"></script>
+  <script src="src/export.js"></script>
+  <script src="src/html-import.js"></script>
+  <script src="_test_harness.js"></script>
+</head>
+<body>
+  <h1>HTML Import — Verification Suite (F3)</h1>
+  <p class="note">
+    Imports the four real fixtures plus synthetic structure/security cases. Asserts:
+    no throw, no silent content loss (text-probe coverage), sanitized + JS-free no-JS
+    export of the imported document, style capture, and honest timing for the 5.5MB file.
+  </p>
+  <div id="summary">running…</div>
+  <table><thead><tr><th>#</th><th>Case</th><th>Result</th><th>Evidence</th></tr></thead><tbody id="rows"></tbody></table>
+
+  <script>
+  (function () {
+    'use strict';
+    var H = window.HCETestHarness;
+
+    var FIXTURES = [
+      { file: 'fixtures/Interactive components (1).html', label: 'ARIA components (7KB)' },
+      { file: 'fixtures/soccer Tabs.html', label: 'Bootstrap-CDN tabs (14KB)' },
+      { file: 'fixtures/M19-claude-code-for-elearning.html', label: 'multi-screen course (592KB)' },
+      { file: 'fixtures/IRCC_Mandatory_Training_Roadmap_Bilingual_Accessible_TOC_v2 (4).html', label: 'bilingual course, 24 images (5.5MB)' },
+    ];
+
+    // Sample visible text runs (>= 25 chars) from the source body; coverage =
+    // fraction found verbatim in the imported delta (native text + raw-html).
+    function textProbes(sourceText, limit) {
+      var doc = new DOMParser().parseFromString(sourceText, 'text/html');
+      doc.querySelectorAll('script, style').forEach(function (el) { el.remove(); });
+      var probes = [];
+      var walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT);
+      var node;
+      while ((node = walker.nextNode()) && probes.length < limit) {
+        var t = node.nodeValue.replace(/\s+/g, ' ').trim();
+        if (t.length >= 25) probes.push(t.slice(0, 60));
+      }
+      return probes;
+    }
+
+    function deltaCorpus(delta) {
+      var parts = [];
+      delta.ops.forEach(function (op) {
+        if (typeof op.insert === 'string') { parts.push(op.insert); return; }
+        var name = Object.keys(op.insert)[0];
+        parts.push(JSON.stringify(op.insert[name]));
+      });
+      // Normalize whitespace + JSON escaping for probe matching.
+      return parts.join(' ').replace(/\\n/g, ' ').replace(/\\"/g, '"').replace(/\s+/g, ' ');
+    }
+
+    function bodyOf(html) {
+      return html.replace(/^[\s\S]*?<body>/i, '').replace(/<\/body>[\s\S]*$/i, '');
+    }
+
+    // JS-cleanliness must be judged on the LIVE DOM, not source regexes —
+    // escaped prose like "use onclick=&quot;fn&quot;" is inert text (the same
+    // trap _nojs_tests case A2 guards against).
+    function domCleanProblems(exportedHtml) {
+      var tpl = document.createElement('template');
+      tpl.innerHTML = bodyOf(exportedHtml);
+      var problems = [];
+      if (tpl.content.querySelector('script')) problems.push('live <script> element');
+      if (tpl.content.querySelector('link[rel="stylesheet"]')) problems.push('external stylesheet link');
+      var all = tpl.content.querySelectorAll('*');
+      for (var i = 0; i < all.length; i++) {
+        var el = all[i];
+        for (var j = 0; j < el.attributes.length; j++) {
+          var attr = el.attributes[j];
+          if (/^on/i.test(attr.name)) { problems.push('live on* attr: ' + attr.name + ' on <' + el.tagName.toLowerCase() + '>'); break; }
+          if (/^(href|src|action)$/i.test(attr.name) && /^\s*javascript:/i.test(attr.value)) {
+            problems.push('javascript: URL on <' + el.tagName.toLowerCase() + '>'); break;
+          }
+        }
+        if (problems.length > 4) break;
+      }
+      return problems;
+    }
+
+    async function testFixture(fx) {
+      var resp = await fetch(fx.file, { cache: 'no-cache' });
+      if (!resp.ok) { H.addRow(fx.label + ': fetch', false, 'HTTP ' + resp.status); return; }
+      var text = await resp.text();
+
+      var t0 = performance.now();
+      var result;
+      try {
+        result = window.HCEImport.importHtml(text);
+      } catch (err) {
+        H.addRow(fx.label + ': import throws nothing', false, 'THREW: ' + err.message);
+        return;
+      }
+      var ms = Math.round(performance.now() - t0);
+      var r = result.report;
+      H.addRow(fx.label + ': import throws nothing', true,
+        ms + 'ms · mapped=' + r.mappedTotal + ' wrapped=' + r.wrappedTotal +
+        ' flattenedInline=' + r.flattenedInline + ' removedScripts=' + r.removed.scripts +
+        ' styles=' + (result.documentStyles.length) + ' chars' +
+        (ms > 3000 ? ' · SLOW (honest note: consider chunking later)' : ''));
+
+      var probes = textProbes(text, 40);
+      var corpus = deltaCorpus(result.delta);
+      var found = probes.filter(function (p) { return corpus.indexOf(p) !== -1; });
+      var coverage = probes.length ? found.length / probes.length : 1;
+      H.addRow(fx.label + ': no silent content loss (text-probe coverage)', coverage >= 0.9,
+        found.length + '/' + probes.length + ' probes found (' + Math.round(coverage * 100) + '%)');
+
+      // Export the imported document no-JS and assert cleanliness.
+      window.HCEDocState.setDocumentStyles(result.documentStyles);
+      var exported = window.HCEExport.buildExportHtml(result.delta, 'import-test', { noJs: true });
+      window.HCEDocState.setDocumentStyles('');
+      var problems = domCleanProblems(exported);
+      H.addRow(fx.label + ': no-JS export clean (live-DOM check: script/on*/javascript:/stylesheet)', problems.length === 0,
+        problems.length ? problems.join('; ') : 'exported ' + Math.round(exported.length / 1024) + 'KB, DOM clean');
+    }
+
+    async function run() {
+      H.init();
+
+      // ── Synthetic: structure mapping ────────────────────────────────────────
+      (function () {
+        var html = '<html><head><title>Doc Title</title><style>.x{color:red}</style></head><body>' +
+          '<div id="page"><h1>Big</h1><h4>Sub4</h4><p>Para <b>bold</b> <em>it</em> <a href="https://x.example/a">lnk</a></p>' +
+          '<ul><li>one</li><li>two</li></ul><blockquote>Quoted wisdom</blockquote>' +
+          '<img src="https://x.example/p.png" width="300" alt="pic"><hr>' +
+          '<table><tr><td>cell</td></tr></table></div></body></html>';
+        var res = window.HCEImport.importHtml(html);
+        var s = JSON.stringify(res.delta);
+        var checks = {
+          'h1 mapped': s.indexOf('"header":1') !== -1,
+          'h4→h3': s.indexOf('"header":3') !== -1,
+          'bold kept': s.indexOf('"bold":true') !== -1,
+          'link kept': s.indexOf('x.example/a') !== -1,
+          'list mapped': s.indexOf('"list":"bullet"') !== -1,
+          'blockquote→quote widget': s.indexOf('"quote":{') !== -1 || s.indexOf('Quoted wisdom') !== -1,
+          'img→resizable-image': s.indexOf('resizable-image') !== -1 && s.indexOf('"width":300') !== -1,
+          'table wrapped raw-html': s.indexOf('raw-html') !== -1 && s.indexOf('<table>') !== -1,
+          'container descended (not wrapped whole)': s.indexOf('id=\\"page\\"') === -1,
+          'styles captured': res.documentStyles.indexOf('.x{color:red}') !== -1,
+          'title suggested': res.suggestedTitle === 'Doc Title',
+        };
+        var fails = Object.keys(checks).filter(function (k) { return !checks[k]; });
+        H.addRow('synthetic: structure maps as specified', fails.length === 0,
+          fails.length ? 'FAILED: ' + fails.join(', ') : Object.keys(checks).length + ' checks ok');
+      })();
+
+      // ── Synthetic: sanitization ─────────────────────────────────────────────
+      (function () {
+        var html = '<body><p onclick="evil()">click me</p><script>evil()</' + 'script>' +
+          '<p><a href="javascript:evil()">bad link</a></p>' +
+          '<div class="fancy"><video src="x.mp4" onplay="evil()"></video></div></body>';
+        var res = window.HCEImport.importHtml(html);
+        var exported = window.HCEExport.buildExportHtml(res.delta, 't', { noJs: true });
+        var problems = domCleanProblems(exported);
+        var counted = res.report.removed.scripts >= 1 && res.report.removed.onAttrs >= 2 && res.report.removed.jsUrls >= 1;
+        H.addRow('synthetic: scripts/on*/javascript: stripped AND counted in report', problems.length === 0 && counted,
+          'problems=' + (problems.join('; ') || 'none') + ' removed=' + JSON.stringify(res.report.removed));
+      })();
+
+      // ── Synthetic: '</style' in captured CSS cannot break the export head ──
+      (function () {
+        var html = '<html><head><style>.a::after{content:"</st' + 'yle><script>x</sc' + 'ript>"}</style></head><body><p>hi</p></body></html>';
+        var res = window.HCEImport.importHtml(html);
+        window.HCEDocState.setDocumentStyles(res.documentStyles);
+        var exported = window.HCEExport.buildExportHtml(res.delta, 't', { noJs: true });
+        window.HCEDocState.setDocumentStyles('');
+        var headEnd = exported.indexOf('</head>');
+        var bodyPart = bodyOf(exported);
+        var ok = headEnd !== -1 && !/<script/i.test(bodyPart) && /<p>hi<\/p>/.test(bodyPart);
+        H.addRow('synthetic: </style> smuggled in CSS cannot break export structure', ok,
+          'headEnd@' + headEnd + ' bodyHasP=' + /<p>hi<\/p>/.test(bodyPart));
+      })();
+
+      // ── Real fixtures ───────────────────────────────────────────────────────
+      for (var i = 0; i < FIXTURES.length; i++) {
+        await testFixture(FIXTURES[i]);
+      }
+
+      window.__importResults = H.finish();
+      window.__importDone = true;
+    }
+
+    window.addEventListener('load', function () {
+      run().catch(function (err) {
+        window.__importResults = H.fatal(err);
+        window.__importDone = true;
+      });
+    });
+  })();
+  </script>
+</body>
+</html>

@@ -2,7 +2,7 @@
   'use strict';
 
   var EMBED_ID     = 'hce-project-data';
-  var SAVE_VERSION = 2;
+  var SAVE_VERSION = 3;
 
   // ── Save as HTML ──────────────────────────────────────────────────────────
   // Builds the same viewable export as Export HTML, then embeds the full
@@ -17,7 +17,13 @@
     var title = (editor.getDocumentTitle && editor.getDocumentTitle()) || 'Document';
     var theme = window.ThemePanel ? window.ThemePanel.getCurrentTheme() : {};
 
-    var payload    = { version: SAVE_VERSION, content: delta, theme: theme };
+    var payload    = {
+      version: SAVE_VERSION,
+      title:   window.HCEDocState ? window.HCEDocState.getTitle() : '',
+      documentStyles: window.HCEDocState ? window.HCEDocState.getDocumentStyles() : '',
+      content: delta,
+      theme:   theme,
+    };
     // Escape any </script> in the JSON so the HTML parser doesn't close the tag early.
     // JSON allows \/ as an escape for /, so JSON.parse round-trips it correctly.
     var projectJson = JSON.stringify(payload).replace(/<\/script>/gi, '<\\/script>');

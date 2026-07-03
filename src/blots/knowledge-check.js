@@ -577,6 +577,8 @@
       header.appendChild(titleEl);
       header.appendChild(closeX);
 
+      // flex:1 + min-height:0 is load-bearing: it lets the body shrink inside
+      // the dialog's max-height so the footer is never pushed out.
       const body = document.createElement('div');
       body.style.cssText = 'display:flex;flex:1;min-height:0;overflow:hidden;';
 
