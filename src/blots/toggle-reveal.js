@@ -66,7 +66,7 @@
           control +
           '<span>' + esc(data.label || 'Show details') + '</span>' +
         '</label>' +
-        '<div class="hce-tr-content">' + (data.content || '') + '</div>' +
+        '<div class="hce-tr-content">' + window.HCESanitize.rich(data.content) + '</div>' +
       '</div>';
   }
 

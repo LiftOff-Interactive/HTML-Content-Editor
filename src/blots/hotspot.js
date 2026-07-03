@@ -174,7 +174,7 @@
             '</strong>' +
             (pin.content
               ? '<div style="margin:0;font-size:13px;line-height:1.5;color:' + text + ';">' +
-                  pin.content + '</div>'
+                  window.HCESanitize.rich(pin.content) + '</div>'
               : '') +
           '</div>';
       });
@@ -273,7 +273,7 @@
             '</strong>' +
             (pin.content
               ? '<div style="margin:0;font-size:13px;line-height:1.5;color:' + text + ';">' +
-                  pin.content + '</div>'
+                  window.HCESanitize.rich(pin.content) + '</div>'
               : '') +
           '</div>';
 

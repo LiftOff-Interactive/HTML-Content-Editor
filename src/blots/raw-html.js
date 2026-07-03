@@ -12,21 +12,22 @@
 (function () {
   'use strict';
 
+  // Shared with every widget's rich-text export path (defined in
+  // src/ui/rich-text-field.js): prefers html-import.js's DOM sanitizer, with an
+  // equivalent regex fallback when that file isn't loaded. Kept behind a thin
+  // wrapper so raw-html still renders (unsanitized is never acceptable here) on
+  // the theoretical chance the shared helper is missing.
   function sanitized(html) {
-    if (window.HCEImport && window.HCEImport.sanitizeHtml) {
-      return window.HCEImport.sanitizeHtml(html).html;
+    if (window.HCESanitize && window.HCESanitize.rich) {
+      return window.HCESanitize.rich(html);
     }
-    // Fallback only if html-import.js failed to load (importForeignHtml already
-    // refuses import without HCEImport, so this is defense-in-depth for stored
-    // raw-html blots under a partial script-load). Strip dangerous elements
-    // whole and neutralize handler/scheme obfuscations the primary sanitizer
-    // catches structurally.
     return String(html || '')
       .replace(/<(script|iframe|object|embed|meta|base|link|template|frame|frameset|applet)\b[\s\S]*?<\/\1\s*>/gi, '')
       .replace(/<(script|iframe|object|embed|meta|base|link|template|frame|frameset|applet)\b[^>]*>/gi, '')
       .replace(/[\s/]on[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, ' ')
       .replace(/\bsrcdoc\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '')
-      .replace(/(javascript|vbscript):/gi, 'blocked:');
+      .replace(/(javascript|vbscript|livescript|mocha)\s*(?::|&colon;?|&#0*58;?|&#x0*3a;?)/gi, 'blocked:')
+      .replace(/data\s*(?::|&colon;?|&#0*58;?|&#x0*3a;?)\s*text\/html/gi, 'blocked:text/html');
   }
 
   class RawHtmlBlot extends BaseWidgetBlot {

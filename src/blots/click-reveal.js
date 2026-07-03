@@ -163,7 +163,7 @@
                 'class="hce-cr-content" ' +
                 'style="' + contentStyle + '">' +
               '<div style="' + contentInnerStyle + '">' +
-                item.content +
+                window.HCESanitize.rich(item.content) +
               '</div>' +
             '</div>' +
           '</div>';
@@ -246,7 +246,7 @@
             '</summary>' +
             '<div class="hce-cr-content" style="' + contentStyle + '">' +
               '<div style="' + contentInnerStyle + '">' +
-                item.content +
+                window.HCESanitize.rich(item.content) +
               '</div>' +
             '</div>' +
           '</details>';

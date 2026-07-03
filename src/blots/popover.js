@@ -60,7 +60,7 @@
         '<div id="' + popId + '" popover style="max-width:440px;border:1px solid ' + t.border + ';border-radius:' + t.radius + ';' +
           'padding:16px 18px;box-shadow:' + t.shadow + ', 0 12px 30px rgba(0,0,0,0.12);background:#fff;">' +
           titleHtml +
-          '<div style="font-family:' + t.font + ';font-size:14px;color:' + t.text + ';line-height:1.6;">' + (data.content || '') + '</div>' +
+          '<div style="font-family:' + t.font + ';font-size:14px;color:' + t.text + ';line-height:1.6;">' + window.HCESanitize.rich(data.content) + '</div>' +
           '<button popovertarget="' + popId + '" popovertargetaction="hide" style="margin-top:12px;padding:6px 14px;' +
             'border-radius:999px;border:1px solid ' + t.border + ';background:' + t.surface + ';color:' + t.muted + ';' +
             'cursor:pointer;font-family:' + t.font + ';font-size:12px;">Close</button>' +

@@ -91,7 +91,7 @@
       container.innerHTML =
         '<blockquote style="' + blockStyle + '">' +
           markHtml +
-          '<div style="' + textStyle + '">' + (data.quote || '') + '</div>' +
+          '<div style="' + textStyle + '">' + window.HCESanitize.rich(data.quote) + '</div>' +
           (attrHtml
             ? '<footer><cite style="' + attrStyle + '">' + attrHtml + '</cite></footer>'
             : '') +

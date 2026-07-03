@@ -130,7 +130,7 @@
               '<span class="acc-chevron">&#9660;</span>' +
             '</summary>' +
             '<div class="acc-body">' +
-              '<div class="acc-inner" style="' + innerStyle + '">' + item.content + '</div>' +
+              '<div class="acc-inner" style="' + innerStyle + '">' + window.HCESanitize.rich(item.content) + '</div>' +
             '</div>' +
           '</details>';
       });
@@ -235,7 +235,7 @@
               '<span class="acc-chevron">&#9660;</span>' +
             '</summary>' +
             '<div class="acc-body">' +
-              '<div class="acc-inner" style="' + innerStyle + '">' + item.content + '</div>' +
+              '<div class="acc-inner" style="' + innerStyle + '">' + window.HCESanitize.rich(item.content) + '</div>' +
             '</div>' +
           '</details>';
       });

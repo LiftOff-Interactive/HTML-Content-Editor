@@ -228,7 +228,7 @@
               '</button>' +
               '<div class="hce-kc-fb" style="display:none;margin-top:8px;font-size:0.875em;' +
                   'color:' + muted + ';font-style:italic;">' +
-                (opt.feedback || '') +
+                window.HCESanitize.rich(opt.feedback) +
               '</div>' +
             '</div>';
         });
@@ -248,7 +248,7 @@
               '</label>' +
               '<div class="hce-kc-fb" style="display:none;margin-top:6px;padding-left:22px;' +
                   'font-size:0.875em;color:' + muted + ';font-style:italic;">' +
-                (opt.feedback || '') +
+                window.HCESanitize.rich(opt.feedback) +
               '</div>' +
             '</div>';
         });
@@ -265,7 +265,7 @@
               'background:' + surface + ';border:1px solid ' + border + ';' +
               'border-radius:' + radius + ';font-family:' + font + ';font-size:0.9em;' +
               'color:' + muted + ';font-style:italic;">' +
-              (data.hint || '') +
+              window.HCESanitize.rich(data.hint) +
             '</div>' +
           '</div>'
         : '';
@@ -366,7 +366,7 @@
             '<legend style="font-family:' + font + ';font-size:1.1em;font-weight:600;' +
                 'color:' + text + ';margin-bottom:16px;display:block;' +
                 'border:none;padding:0;width:100%;">' +
-              (data.question || '') +
+              window.HCESanitize.rich(data.question) +
             '</legend>' +
             hintHtml +
             '<div>' + optionsHtml + '</div>' +
@@ -424,7 +424,7 @@
               esc(opt.text) +
               '<div class="cx-kc-fb" style="display:none;margin-top:8px;font-size:0.875em;' +
                   'color:' + muted + ';font-style:italic;">' +
-                (opt.feedback || '') +
+                window.HCESanitize.rich(opt.feedback) +
               '</div>' +
             '</label>';
         } else {
@@ -441,7 +441,7 @@
               '<span style="flex:1;">' + esc(opt.text) + '</span>' +
               '<div class="cx-kc-fb" style="display:none;margin-top:6px;flex-basis:100%;padding-left:0;' +
                   'font-size:0.875em;color:' + muted + ';font-style:italic;">' +
-                (opt.feedback || '') +
+                window.HCESanitize.rich(opt.feedback) +
               '</div>' +
             '</label>';
         }
@@ -458,7 +458,7 @@
               'background:' + surface + ';border:1px solid ' + border + ';' +
               'border-radius:' + radius + ';font-family:' + font + ';font-size:0.9em;' +
               'color:' + muted + ';font-style:italic;">' +
-              (data.hint || '') +
+              window.HCESanitize.rich(data.hint) +
             '</div>' +
           '</details>'
         : '';
@@ -499,7 +499,7 @@
             '<legend style="font-family:' + font + ';font-size:1.1em;font-weight:600;' +
                 'color:' + text + ';margin-bottom:16px;display:block;' +
                 'border:none;padding:0;width:100%;">' +
-              (data.question || '') +
+              window.HCESanitize.rich(data.question) +
             '</legend>' +
             hintHtml +
             '<div class="cx-kc-options">' + optionsHtml + '</div>' +

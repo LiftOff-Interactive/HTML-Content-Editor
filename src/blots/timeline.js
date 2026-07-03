@@ -85,7 +85,7 @@
               : '') +
             (item.content
               ? '<div style="font-size:13px;color:' + muted + ';' +
-                  'font-family:' + font + ';line-height:1.6;">' + item.content + '</div>'
+                  'font-family:' + font + ';line-height:1.6;">' + window.HCESanitize.rich(item.content) + '</div>'
               : '') +
           '</li>';
       });

@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rich-Text Export Sanitization Suite</title>
+  <link rel="stylesheet" href="src/styles/theme-defaults.css">
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 0; padding: 20px 28px; background: #f1f5f9; color: #0f172a; }
+    h1 { margin: 0 0 4px; }
+    p.note { margin: 0 0 12px; color: #475569; font-size: 13px; max-width: 900px; }
+    #summary { font-size: 18px; font-weight: 700; margin: 10px 0 18px; padding: 8px 14px; border-radius: 8px; display: inline-block; background: #e2e8f0; }
+    .ok { background: #dcfce7; color: #166534; } .bad { background: #fee2e2; color: #991b1b; }
+    table { border-collapse: collapse; width: 100%; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+    th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid #e2e8f0; font-size: 13px; vertical-align: top; }
+    th { background: #f8fafc; }
+    .p { color: #166534; font-weight: 700; } .f { color: #991b1b; font-weight: 700; }
+  </style>
+  <script src="vendor/quill/dist/quill.js"></script>
+  <script src="src/ui/modal.js"></script>
+  <script src="src/ui/image-upload-field.js"></script>
+  <script src="src/ui/rich-text-field.js"></script>
+  <script src="src/registry.js"></script>
+  <script src="src/blots/base.js"></script>
+  <script src="src/blots/image.js"></script>
+  <script src="src/blots/callout.js"></script>
+  <script src="src/blots/tabs.js"></script>
+  <script src="src/blots/accordion.js"></script>
+  <script src="src/blots/quote.js"></script>
+  <script src="src/blots/timeline.js"></script>
+  <script src="src/blots/flip-cards.js"></script>
+  <script src="src/blots/click-reveal.js"></script>
+  <script src="src/blots/carousel.js"></script>
+  <script src="src/blots/hotspot.js"></script>
+  <script src="src/blots/knowledge-check.js"></script>
+  <script src="src/blots/raw-html.js"></script>
+  <script src="src/blots/toggle-reveal.js"></script>
+  <script src="src/blots/popover.js"></script>
+  <script src="src/export.js"></script>
+  <!-- Loaded so HCESanitize.rich exercises the production DOM sanitizer path
+       (the editor page loads html-import.js; the bare no-JS selftest does not
+       and falls back to the equivalent regex pass — both are covered indirectly). -->
+  <script src="src/html-import.js"></script>
+  <script src="_test_harness.js"></script>
+</head>
+<body>
+  <h1>Rich-Text Export Sanitization Suite</h1>
+  <p class="note">
+    Defense-in-depth: RichTextField-sourced widget fields (body/content/question/
+    feedback/hint/quote/…) are re-sanitized at export time via
+    <code>window.HCESanitize.rich</code>. Each widget below is exported (both modes)
+    with a hostile payload in its rich field. Every case must strip
+    <code>&lt;script&gt;</code>, neutralize <code>on*</code> handlers and
+    <code>javascript:</code>/<code>vbscript:</code> URLs, drop <code>&lt;iframe&gt;</code>
+    — while preserving benign formatting (<code>&lt;strong&gt;</code>) and safe links.
+    Unique marker <code>alert(1337)</code> means legitimate widget scripts (KC/tabs in
+    JS mode) never trip a false positive.
+  </p>
+  <div id="summary">running…</div>
+  <table><thead><tr><th>#</th><th>Case</th><th>Result</th><th>Evidence</th></tr></thead><tbody id="rows"></tbody></table>
+
+  <script>
+  (function () {
+    'use strict';
+    var H = window.HCETestHarness;
+    var EX = window.HCEExport;
+    var WR = window.WidgetRegistry;
+
+    // Hostile payload placed inside each widget's rich field. Every attack vector
+    // carries the marker alert(1337); benign content carries KEEPME + a safe link.
+    var EVIL =
+      '<strong>KEEPME</strong>' +
+      '<a href="https://ok.example/safe">safe link</a>' +
+      '<script>alert(1337)<\/script>' +
+      '<img src=x onerror="alert(1337)">' +
+      '<a href="javascript:alert(1337)">js</a>' +
+      '<a href="vbscript:alert(1337)">vb</a>' +
+      '<div onclick="alert(1337)">c</div>' +
+      '<iframe src="javascript:alert(1337)"></iframe>';
+
+    var SVG = 'data:image/svg+xml;base64,' +
+      btoa('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="120"><rect width="200" height="120" fill="#cbd5e1"/></svg>');
+
+    function D(name, over) {
+      return Object.assign({}, JSON.parse(JSON.stringify((WR.get(name) || {}).defaultData || {})), over || {});
+    }
+    function emb(name, data) { return { ops: [{ insert: { [name]: data } }, { insert: '\n' }] }; }
+    function bodyOf(h) { return h.replace(/^[\s\S]*?<body>/i, '').replace(/<\/body>[\s\S]*$/i, ''); }
+
+    // Live-DOM structural check on the exported body (inert template parse).
+    function liveClean(h) {
+      var tpl = document.createElement('template');
+      tpl.innerHTML = bodyOf(h);
+      var problems = [];
+      if (tpl.content.querySelector('script')) problems.push('live <script>');
+      if (tpl.content.querySelector('iframe')) problems.push('live <iframe>');
+      var all = tpl.content.querySelectorAll('*');
+      for (var i = 0; i < all.length; i++) {
+        for (var j = 0; j < all[i].attributes.length; j++) {
+          var a = all[i].attributes[j];
+          if (/^on/i.test(a.name)) { problems.push('on* ' + a.name); }
+          if (/^(href|src|xlink:href)$/i.test(a.name) && /^\s*(javascript|vbscript):/i.test(a.value)) {
+            problems.push('scheme ' + a.name);
+          }
+        }
+      }
+      return problems;
+    }
+
+    // String-level check: the marker and dangerous schemes must not survive
+    // anywhere in the full export (belt to the live-DOM braces).
+    function stringClean(h) {
+      var bad = [];
+      if (/alert\(1337\)/.test(h)) bad.push('alert(1337) present');
+      if (/onerror/i.test(h)) bad.push('onerror present');
+      if (/javascript:/i.test(h)) bad.push('javascript: present');
+      if (/vbscript:/i.test(h)) bad.push('vbscript: present');
+      return bad;
+    }
+
+    // The cases: [label, name, override-that-plants EVIL in the rich field]
+    var CASES = [
+      ['callout body',            'callout',         { type: 'info', title: 'T', body: EVIL }],
+      ['tabs content',            'tabs',            { tabs: [{ id: 't1', label: 'L1', content: EVIL }, { id: 't2', label: 'L2', content: '<p>ok</p>' }], activeTab: 't1' }],
+      ['accordion content',       'accordion',       { items: [{ id: 'a1', header: 'H', content: EVIL, open: true }, { id: 'a2', header: 'H2', content: '', open: false }] }],
+      ['quote text',              'quote',           { quote: EVIL }],
+      ['timeline content',        'timeline',        { items: [{ id: 's1', date: 'D', title: 'T', content: EVIL, icon: '1' }] }],
+      ['flip-cards front/back',   'flip-cards',      { columns: 2, cards: [{ id: 'c1', front: 'F', frontBody: EVIL, back: 'B', backBody: EVIL, frontImage: null, frontImageWidth: '100%' }] }],
+      ['click-reveal content',    'click-reveal',    { items: [{ id: 'r1', triggerLabel: 'L', triggerStyle: 'button', content: EVIL }] }],
+      ['carousel textContent',    'carousel',        { slides: [{ id: 's1', imageData: null, imageWidth: '100%', altText: '', caption: '', textContent: EVIL }] }],
+      ['hotspot content',         'hotspot',         { imageData: SVG, altText: 'a', pins: [{ id: 'p1', x: 20, y: 20, label: 'L', content: EVIL }] }],
+      ['knowledge-check q/fb/hint','knowledge-check',{ question: EVIL, hint: EVIL, options: [{ id: 'o1', text: 'A', correct: true, feedback: EVIL }, { id: 'o2', text: 'B', correct: false, feedback: '<p>n</p>' }] }],
+      ['toggle-reveal content',   'toggle-reveal',   { content: EVIL }],
+      ['popover content',         'popover',         { content: EVIL }],
+    ];
+
+    function run() {
+      H.init();
+
+      CASES.forEach(function (c) {
+        var label = c[0], name = c[1], data = D(name, c[2]);
+
+        ['js', 'noJs'].forEach(function (mode) {
+          var opts = mode === 'noJs' ? { noJs: true } : undefined;
+          var h;
+          try {
+            h = EX.buildExportHtml(emb(name, data), 't', opts);
+          } catch (e) {
+            H.addRow(label + ' [' + mode + ']: exports without throwing', false, 'threw: ' + e.message);
+            return;
+          }
+          // stringClean applies to both modes (the marker + dangerous schemes must
+          // never survive). The structural no-<script>/no-on* check only applies in
+          // no-JS mode — JS-mode widgets legitimately emit their own onclick/script,
+          // none of which carry the alert(1337) marker or an unsafe scheme.
+          var sBad = stringClean(h);
+          var dBad = mode === 'noJs' ? liveClean(h) : [];
+          H.addRow(label + ' [' + mode + ']: hostile payload neutralized',
+            sBad.length === 0 && dBad.length === 0,
+            (sBad.concat(dBad)).join('; ') || 'clean');
+
+          // Benign formatting + safe link survive (proves we don't over-sanitize).
+          var kept = /<strong>KEEPME<\/strong>/.test(h);
+          var safeLink = /href="https:\/\/ok\.example\/safe"/.test(h);
+          H.addRow(label + ' [' + mode + ']: benign <strong> + safe link preserved',
+            kept && safeLink, 'strong=' + kept + ' safeLink=' + safeLink);
+        });
+      });
+
+      // Kitchen sink: one document, every widget hostile, no-JS mode — the exact
+      // contract the SharePoint export sells. Zero live script/handler/scheme.
+      (function () {
+        var ops = [{ insert: 'Hostile Kitchen Sink\n', attributes: { header: 1 } }];
+        CASES.forEach(function (c) {
+          ops.push({ insert: { [c[1]]: D(c[1], c[2]) } });
+          ops.push({ insert: '\n' });
+        });
+        var h = EX.buildExportHtml({ ops: ops }, 'sink', { noJs: true });
+        var sBad = stringClean(h);
+        var dBad = liveClean(h);
+        H.addRow('kitchen sink [noJs]: whole document is script/handler/scheme-free',
+          sBad.length === 0 && dBad.length === 0, (sBad.concat(dBad)).join('; ') || 'clean');
+      })();
+
+      // Sanity: HCESanitize.rich is present and is the DOM path here (html-import loaded).
+      H.addRow('HCESanitize.rich available (DOM sanitizer path)',
+        !!(window.HCESanitize && window.HCESanitize.rich) && !!(window.HCEImport && window.HCEImport.sanitizeHtml),
+        'HCESanitize=' + !!(window.HCESanitize && window.HCESanitize.rich) + ' HCEImport=' + !!(window.HCEImport && window.HCEImport.sanitizeHtml));
+
+      // Regex FALLBACK path (the one the bare no-JS selftest page actually uses —
+      // it does not load html-import.js). Mask HCEImport, run the hardened
+      // vectors from the security review, restore.
+      (function () {
+        var saved = window.HCEImport;
+        window.HCEImport = null;
+        try {
+          var r = window.HCESanitize.rich;
+          var t1 = r('<a href="javascript&colon;alert(1337)">x</a>');
+          var t2 = r('<a href="data:text/html,<script>alert(1337)<\/script>">x</a>');
+          var t3 = r('<a href="livescript:alert(1337)">x</a>');
+          var t4 = r('<a href="mocha:alert(1337)">x</a>');
+          var t5 = r('<a href="javascript&#58;alert(1337)">x</a>');
+          var t6 = r('<a href="javascript&#x3a;alert(1337)">x</a>');
+          var all = [t1, t2, t3, t4, t5, t6].join('|');
+          var bad = [];
+          if (/javascript(:|&colon|&#0*58|&#x0*3a)/i.test(all)) bad.push('javascript scheme survived');
+          if (/data(:|&colon|&#0*58|&#x0*3a)\s*text\/html/i.test(all)) bad.push('data:text/html survived');
+          if (/(livescript|mocha):/i.test(all)) bad.push('livescript/mocha survived');
+          if (/alert\(1337\)"?\s*>/.test(t2) && /^data/.test(t2)) bad.push('t2 unexpected');
+          H.addRow('regex fallback: entity-encoded + data:text/html + livescript/mocha schemes neutralized',
+            bad.length === 0, bad.join('; ') || 'all blocked');
+
+          // Fallback must be the identity on the real non-empty widget defaults
+          // (this is the exact path the protected no-JS baseline page exercises).
+          var identBad = [];
+          ['carousel', 'click-reveal', 'timeline', 'quote', 'knowledge-check', 'toggle-reveal', 'popover'].forEach(function (n) {
+            var dd = (WR.get(n) || {}).defaultData || {};
+            JSON.stringify(dd); // clone-safety noop
+            var fields = [];
+            (dd.slides || []).forEach(function (s) { fields.push(s.textContent); });
+            (dd.items || []).forEach(function (s) { fields.push(s.content); });
+            if (dd.quote) fields.push(dd.quote);
+            if (dd.question) fields.push(dd.question);
+            if (dd.content) fields.push(dd.content);
+            fields.filter(Boolean).forEach(function (f) {
+              if (r(f) !== f) identBad.push(n + ': "' + f.slice(0, 40) + '…" changed');
+            });
+          });
+          H.addRow('regex fallback: identity on all non-empty widget defaults (baseline-byte safety)',
+            identBad.length === 0, identBad.join('; ') || 'all byte-identical');
+        } finally {
+          window.HCEImport = saved;
+        }
+      })();
+
+      window.__richSanitizeResults = H.finish();
+      window.__richSanitizeDone = true;
+    }
+
+    window.addEventListener('load', function () {
+      try { run(); } catch (err) { window.__richSanitizeResults = H.fatal(err); window.__richSanitizeDone = true; }
+    });
+  })();
+  </script>
+</body>
+</html>

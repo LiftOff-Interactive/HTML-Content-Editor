@@ -126,7 +126,7 @@
           '<div role="tabpanel" data-tab-id="' + esc(tab.id) + '" ' +
             'style="padding:16px;font-family:' + font + ';color:' + text + ';' +
               'display:' + (isActive ? 'block' : 'none') + ';">' +
-            tab.content +
+            window.HCESanitize.rich(tab.content) +
           '</div>';
       });
 
@@ -179,7 +179,7 @@
         labels +=
           '<label class="cx-tab" for="' + rid + '">' + esc(tab.label) + '</label>';
         panels +=
-          '<div class="cx-tab-panel" id="' + pid + '">' + tab.content + '</div>';
+          '<div class="cx-tab-panel" id="' + pid + '">' + window.HCESanitize.rich(tab.content) + '</div>';
         rules +=
           '#' + uid + ' #' + rid + ':checked ~ .cx-tab-bar label[for="' + rid + '"]{' +
             'color:' + primary + ';font-weight:600;border-bottom-color:' + primary + ';}' +

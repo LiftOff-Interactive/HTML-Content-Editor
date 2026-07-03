@@ -58,7 +58,7 @@
         ? '<strong style="display:block;font-size:14px;font-weight:600;color:' + textColor + ';margin-bottom:4px;">' + escape(data.title) + '</strong>'
         : '';
       const bodyHtml = data.body
-        ? '<div style="font-size:14px;color:' + mutedColor + ';line-height:1.6;">' + data.body + '</div>'
+        ? '<div style="font-size:14px;color:' + mutedColor + ';line-height:1.6;">' + window.HCESanitize.rich(data.body) + '</div>'
         : '';
 
       container.setAttribute('role', cfg.role);

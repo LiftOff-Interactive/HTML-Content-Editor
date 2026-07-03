@@ -166,7 +166,7 @@
             '<div style="width:100%;height:100%;display:flex;align-items:center;' +
                 'justify-content:center;padding:24px;font-family:' + font + ';' +
                 'color:' + text + ';line-height:1.6;overflow-y:auto;text-align:center;">' +
-              (txt || '<em style="color:' + muted + ';">No content</em>') +
+              (window.HCESanitize.rich(txt) || '<em style="color:' + muted + ';">No content</em>') +
             '</div>';
         }
 
@@ -302,7 +302,7 @@
             '<div style="width:100%;height:100%;display:flex;align-items:center;' +
                 'justify-content:center;padding:24px;font-family:' + font + ';' +
                 'color:' + text + ';line-height:1.6;overflow-y:auto;text-align:center;">' +
-              (txt || '<em style="color:' + muted + ';">No content</em>') +
+              (window.HCESanitize.rich(txt) || '<em style="color:' + muted + ';">No content</em>') +
             '</div>';
         }
 

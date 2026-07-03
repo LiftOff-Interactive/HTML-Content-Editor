@@ -174,7 +174,7 @@
                 '</div>' +
                 (card.frontBody
                   ? '<div style="font-family:' + font + ';font-size:13px;line-height:1.5;margin-top:6px;">' +
-                      card.frontBody + '</div>'
+                      window.HCESanitize.rich(card.frontBody) + '</div>'
                   : '') +
               '</div>' +
               '<div style="' + backFaceStyle + '">' +
@@ -183,7 +183,7 @@
                 '</div>' +
                 (card.backBody
                   ? '<div style="font-family:' + font + ';font-size:13px;line-height:1.5;margin-top:6px;">' +
-                      card.backBody + '</div>'
+                      window.HCESanitize.rich(card.backBody) + '</div>'
                   : '') +
               '</div>' +
             '</div>' +
@@ -274,7 +274,7 @@
                 '</div>' +
                 (card.frontBody
                   ? '<div style="font-family:' + font + ';font-size:13px;line-height:1.5;margin-top:6px;">' +
-                      card.frontBody + '</div>'
+                      window.HCESanitize.rich(card.frontBody) + '</div>'
                   : '') +
               '</div>' +
               '<div style="' + backFaceStyle + '">' +
@@ -283,7 +283,7 @@
                 '</div>' +
                 (card.backBody
                   ? '<div style="font-family:' + font + ';font-size:13px;line-height:1.5;margin-top:6px;">' +
-                      card.backBody + '</div>'
+                      window.HCESanitize.rich(card.backBody) + '</div>'
                   : '') +
               '</div>' +
             '</div>' +
