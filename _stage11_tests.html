@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stage 11 — Professionalization Suite (F1–F4)</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 0; padding: 20px 28px; background: #f1f5f9; color: #0f172a; }
+    h1 { margin: 0 0 4px; }
+    p.note { margin: 0 0 12px; color: #475569; font-size: 13px; }
+    #summary { font-size: 18px; font-weight: 700; margin: 10px 0 18px; padding: 8px 14px; border-radius: 8px; display: inline-block; background: #e2e8f0; }
+    .ok { background: #dcfce7; color: #166534; } .bad { background: #fee2e2; color: #991b1b; }
+    table { border-collapse: collapse; width: 100%; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+    th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid #e2e8f0; font-size: 13px; vertical-align: top; }
+    th { background: #f8fafc; }
+    .p { color: #166534; font-weight: 700; } .f { color: #991b1b; font-weight: 700; }
+    iframe { display: block; border: 0; background: #fff; margin-top: 16px; }
+  </style>
+  <script src="_test_harness.js"></script>
+</head>
+<body>
+  <h1>Stage 11 — Professionalization Suite (F1–F4)</h1>
+  <p class="note">
+    Verifies toolbar completeness (link/strike), localStorage autosave, the WCAG fixes
+    (image alt modal, carousel pause, tabs keyboard nav), per-widget style overrides in
+    both export modes, and that the §3 protected contract still holds when no override
+    is set.
+  </p>
+  <div id="summary">running…</div>
+  <table><thead><tr><th>#</th><th>Case</th><th>Result</th><th>Evidence</th></tr></thead><tbody id="rows"></tbody></table>
+  <iframe id="app" src="about:blank" width="1100" height="700" title="Editor under test"></iframe>
+
+  <script>
+  (function () {
+    'use strict';
+    var H = window.HCETestHarness;
+    // v3.1 editor-page baseline (docs/baselines/README.md).
+    var EDITOR_PAGE_SHA = '45aed5939bbe98e976d9545a0de156f750cffa0d874f79391135c9df4d2cf740';
+
+    function selftestOps(WR) {
+      var NAMES = ['callout','tabs','accordion','quote','timeline','flip-cards','click-reveal','carousel','hotspot','knowledge-check'];
+      var ops = [{ insert: 'No-JS Export Self-Test\n', attributes: { header: 1 } }];
+      function pushWidget(name) {
+        var data = JSON.parse(JSON.stringify(WR.get(name).defaultData || {}));
+        var embed = {}; embed[name] = data;
+        ops.push({ insert: '\n' }); ops.push({ insert: '\n', attributes: { header: 2 } });
+        ops.push({ insert: name + '\n', attributes: { header: 3 } }); ops.push({ insert: embed }); ops.push({ insert: '\n' });
+      }
+      NAMES.forEach(pushWidget); pushWidget('tabs'); pushWidget('accordion');
+      return { ops: ops };
+    }
+
+    function defData(WR, name) { return JSON.parse(JSON.stringify(WR.get(name).defaultData)); }
+    function widgetDelta(name, data) {
+      var embed = {}; embed[name] = data;
+      return { ops: [ { insert: embed }, { insert: '\n' } ] };
+    }
+
+    // Run an exported document in a scratch iframe and hand its document back.
+    function mountExport(html) {
+      return new Promise(function (resolve) {
+        var f = document.createElement('iframe');
+        f.style.cssText = 'position:fixed;left:-4000px;width:900px;height:700px;';
+        f.setAttribute('title', 'export under test');
+        document.body.appendChild(f);
+        f.srcdoc = html;
+        f.onload = function () {
+          setTimeout(function () { resolve(f); }, 150);
+        };
+      });
+    }
+
+    async function run() {
+      H.init();
+      var iframe = document.getElementById('app');
+      await H.bustCaches();
+      iframe.src = 'index.html';
+      await H.poll(function () {
+        var w = iframe.contentWindow;
+        return w && w.contentEditor && w.contentEditor.quill && w.HCEExport && w.WidgetRegistry &&
+               w.HCEAutosave && w.HCEStyleControls && w.document.querySelector('.ql-toolbar') ? true : null;
+      }, 10000, 100);
+      var w = iframe.contentWindow, doc = iframe.contentDocument;
+      var EX = w.HCEExport, WR = w.WidgetRegistry, Q = w.contentEditor.quill;
+
+      // ── F1: toolbar completeness ─────────────────────────────────────────
+      H.addRow('F1: toolbar renders a strikethrough button',
+        !!doc.querySelector('.ql-toolbar button.ql-strike'), 'button.ql-strike present');
+      H.addRow('F1: toolbar renders a link button',
+        !!doc.querySelector('.ql-toolbar button.ql-link'), 'button.ql-link present');
+
+      var fmtDelta = { ops: [
+        { insert: 'plain ' },
+        { insert: 'struck', attributes: { strike: true } },
+        { insert: ' ' },
+        { insert: 'linked', attributes: { link: 'https://example.com/x' } },
+        { insert: '\n' },
+      ] };
+      var fmtJs   = EX.buildExportHtml(fmtDelta, 't', {});
+      var fmtNoJs = EX.buildExportHtml(fmtDelta, 't', { noJs: true });
+      H.addRow('F1: strike + link survive JS export',
+        fmtJs.indexOf('<s>struck</s>') !== -1 && fmtJs.indexOf('<a href="https://example.com/x">linked</a>') !== -1,
+        'both formats in output');
+      H.addRow('F1: strike + link survive no-JS export',
+        fmtNoJs.indexOf('<s>struck</s>') !== -1 && fmtNoJs.indexOf('<a href="https://example.com/x">linked</a>') !== -1,
+        'both formats in output');
+      var code = w.HCEDeltaHtml.deltaToCode(fmtDelta);
+      var back = w.HCEDeltaHtml.codeToDelta(code);
+      H.addRow('F1: strike + link round-trip through the code view',
+        H.stableStringify(back) === H.stableStringify(fmtDelta),
+        'delta → code → delta identical');
+
+      // ── F2: autosave ─────────────────────────────────────────────────────
+      var AS = w.HCEAutosave;
+      AS.clearDraft();
+      AS.enableForTest(); // autosave is deliberately inert in iframes
+      Q.setContents({ ops: [ { insert: 'Draft body text\n' } ] }, w.Quill.sources.SILENT);
+      w.HCEDocState.setTitle('Draft Title');
+      var wrote = AS.snapshotNow();
+      var draft = AS.getDraft();
+      H.addRow('F2: snapshotNow persists a v3 payload draft', wrote && !!draft && draft.payload.version === 3,
+        'wrote=' + wrote + ' version=' + (draft && draft.payload.version));
+      H.addRow('F2: draft round-trips content and title',
+        !!draft && draft.payload.title === 'Draft Title' &&
+        draft.payload.content.ops[0].insert.indexOf('Draft body text') === 0,
+        'title="' + (draft && draft.payload.title) + '"');
+      H.addRow('F2: payloadIsEmpty flags empty and non-empty correctly',
+        AS.payloadIsEmpty({ version: 3, title: '', documentStyles: '', content: { ops: [{ insert: '\n' }] } }) === true &&
+        AS.payloadIsEmpty(draft.payload) === false,
+        'empty=true, draft=false');
+      Q.setContents({ ops: [{ insert: '\n' }] }, w.Quill.sources.SILENT);
+      w.HCEDocState.setTitle('');
+      var restored = AS.restoreDraft();
+      H.addRow('F2: restoreDraft reapplies the draft to the editor',
+        restored && Q.getText().indexOf('Draft body text') === 0 && w.HCEDocState.getTitle() === 'Draft Title',
+        'text and title restored');
+      AS.clearDraft();
+      H.addRow('F2: clearDraft removes the stored draft', AS.getDraft() === null, 'draft=null');
+      Q.setContents({ ops: [{ insert: '\n' }] }, w.Quill.sources.SILENT);
+      w.HCEDocState.setTitle('');
+
+      // ── F3: image alt modal ──────────────────────────────────────────────
+      var PIXEL = 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
+      Q.insertEmbed(0, 'resizable-image', { src: PIXEL, width: 120, alt: '' }, w.Quill.sources.USER);
+      var wrapper = await H.poll(function () { return doc.querySelector('#editor .hce-image-wrapper'); }, 4000, 50);
+      wrapper.querySelector('img').dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
+      var modal = await H.poll(function () { return doc.querySelector('.widget-modal'); }, 4000, 50);
+      H.addRow('F3: clicking an image opens the edit modal', !!modal, 'modal=' + !!modal);
+      var altInput = modal.querySelector('#wm-field-0');
+      altInput.value = 'A described image';
+      altInput.dispatchEvent(new w.Event('input', { bubbles: true }));
+      modal.querySelector('.widget-modal-btn--save').click();
+      await H.poll(function () { return doc.querySelector('.widget-modal') ? null : true; }, 4000, 50);
+      var imgOp = Q.getContents().ops.filter(function (op) {
+        return op.insert && typeof op.insert === 'object' && op.insert['resizable-image'];
+      })[0];
+      H.addRow('F3: alt text saves back into the image data (WCAG 1.1.1)',
+        !!imgOp && imgOp.insert['resizable-image'].alt === 'A described image',
+        'alt="' + (imgOp && imgOp.insert['resizable-image'].alt) + '"');
+      Q.setContents({ ops: [{ insert: '\n' }] }, w.Quill.sources.SILENT);
+
+      // ── F3: carousel pause control ───────────────────────────────────────
+      var carOff = defData(WR, 'carousel');
+      var carOn  = defData(WR, 'carousel'); carOn.autoplay = true;
+      var carOffHtml = EX.buildExportHtml(widgetDelta('carousel', carOff), 't', {});
+      var carOnHtml  = EX.buildExportHtml(widgetDelta('carousel', carOn),  't', {});
+      H.addRow('F3: carousel without autoplay has NO pause button (byte-safe)',
+        carOffHtml.indexOf('hce-car-pause') === -1, 'pause absent');
+      H.addRow('F3: autoplaying carousel has a pause button (WCAG 2.2.2)',
+        carOnHtml.indexOf('hce-car-pause') !== -1 && carOnHtml.indexOf('aria-label="Pause slideshow"') !== -1,
+        'pause button present');
+      H.addRow('F3: autoplay respects prefers-reduced-motion and suspends on hover/focus',
+        carOnHtml.indexOf('prefers-reduced-motion') !== -1 && carOnHtml.indexOf('matchMedia') !== -1 &&
+        carOnHtml.indexOf('mouseenter') !== -1 && carOnHtml.indexOf('focusin') !== -1,
+        'matchMedia + engagement guards in script');
+
+      // ── F3: tabs keyboard navigation (functional) ────────────────────────
+      var tabsHtml = EX.buildExportHtml(widgetDelta('tabs', defData(WR, 'tabs')), 't', {});
+      H.addRow('F3: exported tabs carry aria-controls / aria-labelledby wiring',
+        tabsHtml.indexOf('aria-controls=') !== -1 && tabsHtml.indexOf('aria-labelledby=') !== -1,
+        'aria attributes present');
+      var tf = await mountExport(tabsHtml);
+      var tdoc = tf.contentDocument;
+      var tabBtns = tdoc.querySelectorAll('[role=tab]');
+      tabBtns[0].focus();
+      tabBtns[0].dispatchEvent(new tf.contentWindow.KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+      var secondSelected = tabBtns[1].getAttribute('aria-selected') === 'true';
+      tabBtns[1].dispatchEvent(new tf.contentWindow.KeyboardEvent('keydown', { key: 'Home', bubbles: true }));
+      var firstBack = tabBtns[0].getAttribute('aria-selected') === 'true';
+      tf.remove();
+      H.addRow('F3: ArrowRight moves + activates the next tab', secondSelected, 'tab 2 selected after ArrowRight');
+      H.addRow('F3: Home returns to the first tab', firstBack, 'tab 1 selected after Home');
+
+      // ── F4: per-widget style overrides ───────────────────────────────────
+      var five = ['callout', 'tabs', 'accordion', 'quote', 'timeline'];
+      for (var i = 0; i < five.length; i++) {
+        var name = five[i];
+        var plain = defData(WR, name);
+        var withEmpty = defData(WR, name); withEmpty.styleAccent = ''; withEmpty.styleBg = '';
+        var noJsA = EX.buildExportHtml(widgetDelta(name, plain), 't', { noJs: true });
+        var noJsB = EX.buildExportHtml(widgetDelta(name, withEmpty), 't', { noJs: true });
+        H.addRow('F4: ' + name + ' — unset overrides export byte-identically (no-JS)',
+          noJsA === noJsB, 'identical=' + (noJsA === noJsB));
+
+        var styled = defData(WR, name);
+        styled.styleAccent = '#ff0066';
+        if (name === 'quote') styled.style = 'highlight';
+        if (name !== 'timeline') styled.styleBg = '#112233';
+        var sJs = EX.buildExportHtml(widgetDelta(name, styled), 't', {});
+        var sNo = EX.buildExportHtml(widgetDelta(name, styled), 't', { noJs: true });
+        var okAccent = sJs.indexOf('#ff0066') !== -1 && sNo.indexOf('#ff0066') !== -1;
+        var okBg = name === 'timeline' || (sJs.indexOf('#112233') !== -1 && sNo.indexOf('#112233') !== -1);
+        H.addRow('F4: ' + name + ' — overrides recolor BOTH export modes',
+          okAccent && okBg, 'accent=' + okAccent + ' bg=' + okBg);
+      }
+
+      // Editor preview honors overrides.
+      var styledCallout = defData(WR, 'callout');
+      styledCallout.styleAccent = '#ff0066'; styledCallout.styleBg = '#112233';
+      Q.insertEmbed(0, 'callout', styledCallout, w.Quill.sources.USER);
+      var calNode = await H.poll(function () { return doc.querySelector('#editor .callout-preview'); }, 4000, 50);
+      H.addRow('F4: editor preview applies callout overrides inline',
+        calNode.style.borderLeftColor.length > 0 && calNode.style.background.length > 0,
+        'borderLeftColor="' + calNode.style.borderLeftColor + '"');
+      Q.setContents({ ops: [{ insert: '\n' }] }, w.Quill.sources.SILENT);
+
+      var styledTabs = defData(WR, 'tabs'); styledTabs.styleAccent = '#ff0066';
+      Q.insertEmbed(0, 'tabs', styledTabs, w.Quill.sources.USER);
+      var tabsNode = await H.poll(function () { return doc.querySelector('#editor [data-widget-type="tabs"]'); }, 4000, 50);
+      H.addRow('F4: editor preview scopes --color-primary on the tabs container',
+        tabsNode.style.getPropertyValue('--color-primary') === '#ff0066',
+        'scoped var=' + tabsNode.style.getPropertyValue('--color-primary'));
+      Q.setContents({ ops: [{ insert: '\n' }] }, w.Quill.sources.SILENT);
+
+      // Style overrides are attacker-reachable via loaded project JSON — the
+      // resolver must refuse anything that isn't plain color syntax, and the
+      // no-JS export must stay markup-free even with a hostile value.
+      var hostile = defData(WR, 'callout');
+      hostile.styleAccent = '"><img src=x onerror=alert(1)>';
+      hostile.styleBg = 'red;}</style><script>alert(1)</' + 'script>';
+      var hostileNo = EX.buildExportHtml(widgetDelta('callout', hostile), 't', { noJs: true });
+      var hostileJs = EX.buildExportHtml(widgetDelta('callout', hostile), 't', {});
+      var cleanNo = EX.buildExportHtml(widgetDelta('callout', defData(WR, 'callout')), 't', { noJs: true });
+      H.addRow('F4: hostile override values are refused (resolve → inherit theme)',
+        hostileNo === cleanNo, 'hostile no-JS export identical to clean export');
+      H.addRow('F4: hostile override values inject nothing into the JS export',
+        hostileJs.indexOf('onerror') === -1 && hostileJs.indexOf('alert(1)') === -1,
+        'no injected markup');
+      H.addRow('F4: resolver accepts normal picker colors',
+        w.HCEStyleControls.resolve({ styleAccent: '#ff0066' }, 'styleAccent') === '#ff0066' &&
+        w.HCEStyleControls.resolve({ styleAccent: 'rebeccapurple' }, 'styleAccent') === 'rebeccapurple' &&
+        w.HCEStyleControls.resolve({ styleAccent: 'rgb(1, 2, 3)' }, 'styleAccent') === 'rgb(1, 2, 3)',
+        'hex + named + rgb() accepted');
+
+      // §3 protected contract: reference delta with NO overrides — baseline hash.
+      w.ThemePanel.deserialize(JSON.stringify(w.ThemePanel.DEFAULT_THEME));
+      var refSha = await H.sha256(EX.buildExportHtml(selftestOps(WR), 'No-JS Self Test', { noJs: true }));
+      H.addRow('§3: reference delta no-JS export still byte-identical to v3.1 baseline',
+        refSha === EDITOR_PAGE_SHA, 'sha=' + refSha.slice(0, 16) + ' match=' + (refSha === EDITOR_PAGE_SHA));
+
+      H.finish();
+    }
+
+    run().catch(function (err) { H.fatal(err); });
+  })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stage 11 F5 — SCORM 1.2 Export Suite</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 0; padding: 20px 28px; background: #f1f5f9; color: #0f172a; }
+    h1 { margin: 0 0 4px; }
+    p.note { margin: 0 0 12px; color: #475569; font-size: 13px; }
+    #summary { font-size: 18px; font-weight: 700; margin: 10px 0 18px; padding: 8px 14px; border-radius: 8px; display: inline-block; background: #e2e8f0; }
+    .ok { background: #dcfce7; color: #166534; } .bad { background: #fee2e2; color: #991b1b; }
+    table { border-collapse: collapse; width: 100%; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+    th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid #e2e8f0; font-size: 13px; vertical-align: top; }
+    th { background: #f8fafc; }
+    .p { color: #166534; font-weight: 700; } .f { color: #991b1b; font-weight: 700; }
+    iframe { display: block; border: 0; background: #fff; margin-top: 16px; }
+  </style>
+  <script src="_test_harness.js"></script>
+</head>
+<body>
+  <h1>Stage 11 F5 — SCORM 1.2 Export Suite</h1>
+  <p class="note">
+    Verifies the zip container (signatures, CRC-32, central directory), the SCORM 1.2
+    manifest, and the runtime against a mock LMS API: initialize, incomplete→passed/failed
+    transitions, % score from Knowledge Checks, first-attempt-wins retry semantics, and
+    the completed path for documents with no assessment.
+  </p>
+  <div id="summary">running…</div>
+  <table><thead><tr><th>#</th><th>Case</th><th>Result</th><th>Evidence</th></tr></thead><tbody id="rows"></tbody></table>
+  <iframe id="app" src="about:blank" width="1100" height="700" title="Editor under test"></iframe>
+
+  <script>
+  (function () {
+    'use strict';
+    var H = window.HCETestHarness;
+
+    // ── Minimal STORE-zip reader (verification-side only) ───────────────────
+    function readZip(bytes) {
+      var dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+      var dec = new TextDecoder();
+      var files = {}, headers = [], off = 0;
+      while (off + 4 <= bytes.length && dv.getUint32(off, true) === 0x04034b50) {
+        var crc = dv.getUint32(off + 14, true);
+        var size = dv.getUint32(off + 22, true);
+        var nameLen = dv.getUint16(off + 26, true), extraLen = dv.getUint16(off + 28, true);
+        var name = dec.decode(bytes.subarray(off + 30, off + 30 + nameLen));
+        var start = off + 30 + nameLen + extraLen;
+        var data = bytes.subarray(start, start + size);
+        files[name] = dec.decode(data);
+        headers.push({ name: name, crc: crc, size: size, data: data });
+        off = start + size;
+      }
+      var cdSig = off + 4 <= bytes.length ? dv.getUint32(off, true) : 0;
+      // Find EOCD (fixed-size, no comment in our writer).
+      var eocdOff = bytes.length - 22;
+      var eocd = (dv.getUint32(eocdOff, true) === 0x06054b50)
+        ? { count: dv.getUint16(eocdOff + 10, true) } : null;
+      return { files: files, headers: headers, centralDirFollows: cdSig === 0x02014b50, eocd: eocd };
+    }
+
+    // Run one exported SCO against a mock API mounted on THIS window (the
+    // iframe's parent), exactly where a real LMS would put it.
+    function runSco(html, exercise) {
+      return new Promise(function (resolve) {
+        var calls = { init: 0, finish: 0, commit: 0, values: {} };
+        window.API = {
+          LMSInitialize: function () { calls.init++; return 'true'; },
+          LMSFinish: function () { calls.finish++; return 'true'; },
+          LMSCommit: function () { calls.commit++; return 'true'; },
+          LMSSetValue: function (k, v) { calls.values[k] = v; return 'true'; },
+          LMSGetValue: function () { return ''; },
+          LMSGetLastError: function () { return '0'; },
+        };
+        var f = document.createElement('iframe');
+        f.style.cssText = 'position:fixed;left:-4000px;width:900px;height:900px;';
+        f.setAttribute('title', 'SCO under test');
+        document.body.appendChild(f);
+        f.srcdoc = html;
+        f.onload = function () {
+          setTimeout(function () {
+            var result = { callsAfterBoot: JSON.parse(JSON.stringify(calls)) };
+            if (exercise) exercise(f.contentDocument, f.contentWindow);
+            setTimeout(function () {
+              result.calls = calls;
+              result.track = f.contentWindow.HCETrack ? f.contentWindow.HCETrack.state() : null;
+              delete window.API;
+              f.remove();
+              resolve(result);
+            }, 250);
+          }, 250);
+        };
+      });
+    }
+
+    function answer(idoc, kcIndex, optIdx) {
+      var kc = idoc.querySelectorAll('[data-kc]')[kcIndex];
+      kc.querySelector('input[type=radio][value="' + optIdx + '"]').click();
+      kc.querySelector('.hce-kc-submit').click();
+    }
+
+    async function run() {
+      H.init();
+      var iframe = document.getElementById('app');
+      await H.bustCaches();
+      iframe.src = 'index.html';
+      await H.poll(function () {
+        var w = iframe.contentWindow;
+        return w && w.contentEditor && w.HCEScorm && w.HCEZip && w.WidgetRegistry ? true : null;
+      }, 10000, 100);
+      var w = iframe.contentWindow;
+      var SC = w.HCEScorm, WR = w.WidgetRegistry;
+
+      function kcData() { return JSON.parse(JSON.stringify(WR.get('knowledge-check').defaultData)); }
+
+      // ── Zip container ───────────────────────────────────────────────────
+      var oneKc = { ops: [ { insert: 'Intro\n' }, { insert: { 'knowledge-check': kcData() } }, { insert: '\n' } ] };
+      var bytes = SC.buildPackage(oneKc, 'Container & Manifest <Test>');
+      var zip = readZip(bytes);
+
+      H.addRow('zip: exactly imsmanifest.xml + index.html',
+        Object.keys(zip.files).length === 2 && zip.files['imsmanifest.xml'] && zip.files['index.html'],
+        'entries=' + Object.keys(zip.files).join(', '));
+      H.addRow('zip: central directory + EOCD present with correct entry count',
+        zip.centralDirFollows && zip.eocd && zip.eocd.count === 2,
+        'cd=' + zip.centralDirFollows + ' eocdCount=' + (zip.eocd && zip.eocd.count));
+      var crcOk = zip.headers.every(function (h) { return w.HCEZip.crc32(h.data) === h.crc; });
+      H.addRow('zip: stored CRC-32 matches recomputed CRC-32 for every entry', crcOk, 'crcOk=' + crcOk);
+
+      // ── Manifest ────────────────────────────────────────────────────────
+      var manifest = zip.files['imsmanifest.xml'];
+      var mdoc = new DOMParser().parseFromString(manifest, 'application/xml');
+      var res = mdoc.querySelector('resource');
+      H.addRow('manifest: parses as XML (special chars in title escaped)',
+        !mdoc.querySelector('parsererror') && manifest.indexOf('&lt;Test&gt;') !== -1,
+        'no parsererror; title escaped');
+      H.addRow('manifest: SCORM 1.2 schema + SCO resource at index.html',
+        manifest.indexOf('<schemaversion>1.2</schemaversion>') !== -1 &&
+        res && res.getAttribute('adlcp:scormtype') === 'sco' && res.getAttribute('href') === 'index.html',
+        'schemaversion + scormtype + href ok');
+      H.addRow('manifest: mastery score declared',
+        manifest.indexOf('<adlcp:masteryscore>' + SC.MASTERY + '</adlcp:masteryscore>') !== -1,
+        'masteryscore=' + SC.MASTERY);
+
+      // ── Runtime embedding ───────────────────────────────────────────────
+      var indexHtml = zip.files['index.html'];
+      H.addRow('runtime: shim injected into the exported page',
+        indexHtml.indexOf('window.HCETrack={') !== -1 && indexHtml.indexOf('LMSInitialize') !== -1,
+        'shim present');
+      H.addRow('runtime: knowledge check calls the guarded HCETrack hook',
+        indexHtml.indexOf('HCETrack.record(') !== -1, 'hook present');
+      H.addRow('runtime: no premature script terminator in shim source',
+        SC.buildRuntime().toLowerCase().indexOf('</scr' + 'ipt') === -1, 'safe to inline');
+
+      // ── Mock-LMS behavior ───────────────────────────────────────────────
+      // No assessment → completed on load.
+      var noKcHtml = readZip(SC.buildPackage({ ops: [ { insert: 'Reading only\n' } ] }, 'R')).files['index.html'];
+      var r0 = await runSco(noKcHtml, null);
+      H.addRow('LMS: document without Knowledge Checks reports "completed" on load',
+        r0.calls.init === 1 && r0.calls.values['cmi.core.lesson_status'] === 'completed',
+        'status=' + r0.calls.values['cmi.core.lesson_status']);
+
+      // One KC, correct → 100 / passed.
+      var r1 = await runSco(indexHtml, function (idoc) { answer(idoc, 0, 0); });
+      H.addRow('LMS: all-correct answers report score 100 and "passed"',
+        r1.calls.values['cmi.core.score.raw'] === '100' && r1.calls.values['cmi.core.lesson_status'] === 'passed',
+        'raw=' + r1.calls.values['cmi.core.score.raw'] + ' status=' + r1.calls.values['cmi.core.lesson_status']);
+      H.addRow('LMS: boot sets "incomplete" before any answer, then commits',
+        r1.callsAfterBoot.values['cmi.core.lesson_status'] === 'incomplete' && r1.calls.commit >= 2,
+        'boot status=' + r1.callsAfterBoot.values['cmi.core.lesson_status'] + ' commits=' + r1.calls.commit);
+
+      // Two KCs, one wrong → 50 / failed; stays incomplete until all answered.
+      var twoKc = { ops: [
+        { insert: { 'knowledge-check': kcData() } },
+        { insert: { 'knowledge-check': kcData() } },
+        { insert: '\n' },
+      ] };
+      var twoHtml = readZip(SC.buildPackage(twoKc, 'T2')).files['index.html'];
+      // r2: answer only the first KC — status must remain incomplete.
+      var r2 = await runSco(twoHtml, function (idoc) {
+        answer(idoc, 0, 0);            // correct
+      });
+      // r2b: answer both — one wrong — final 50 / failed.
+      var r2b = await runSco(twoHtml, function (idoc) {
+        answer(idoc, 0, 0);            // correct
+        answer(idoc, 1, 1);            // wrong
+      });
+      H.addRow('LMS: 1 of 2 correct reports score 50 and "failed"',
+        r2b.calls.values['cmi.core.score.raw'] === '50' && r2b.calls.values['cmi.core.lesson_status'] === 'failed',
+        'raw=' + r2b.calls.values['cmi.core.score.raw'] + ' status=' + r2b.calls.values['cmi.core.lesson_status']);
+      H.addRow('LMS: partially-answered document stays "incomplete" (no premature status)',
+        r2.calls.values['cmi.core.lesson_status'] === 'incomplete' && r2.track.answered === 1,
+        'status=' + r2.calls.values['cmi.core.lesson_status'] + ' answered=' + r2.track.answered);
+
+      // Retry semantics: first attempt wins.
+      var retryHtml = indexHtml; // default KC has allowRetry: true
+      var r3 = await runSco(retryHtml, function (idoc) {
+        answer(idoc, 0, 1);            // wrong first
+        var retryBtn = idoc.querySelector('.hce-kc-retry');
+        if (retryBtn) retryBtn.click();
+        answer(idoc, 0, 0);            // correct on retry — must NOT rescore
+      });
+      H.addRow('LMS: retry never overwrites the first scored attempt',
+        r3.calls.values['cmi.core.score.raw'] === '0' && r3.calls.values['cmi.core.lesson_status'] === 'failed',
+        'raw=' + r3.calls.values['cmi.core.score.raw'] + ' status=' + r3.calls.values['cmi.core.lesson_status']);
+
+      // Plain exports carry no SCORM runtime.
+      var plainHtml = w.HCEExport.buildExportHtml(oneKc, 'plain', {});
+      H.addRow('plain HTML export contains NO SCORM runtime (SCORM is additive)',
+        plainHtml.indexOf('LMSInitialize') === -1 && plainHtml.indexOf('window.HCETrack={') === -1,
+        'no shim in standard export');
+
+      H.finish();
+    }
+
+    run().catch(function (err) { H.fatal(err); });
+  })();
+  </script>
+</body>
+</html>
