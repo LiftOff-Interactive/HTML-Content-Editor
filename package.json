@@ -1,0 +1,18 @@
+{
+  "name": "html-content-editor",
+  "version": "3.1.0",
+  "private": true,
+  "description": "Free, self-hosted WYSIWYG authoring tool for instructional designers — single-file HTML export, SharePoint-safe no-JS mode, SCORM 1.2 packaging.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/LiftOff-Interactive/HTML-Content-Editor.git"
+  },
+  "scripts": {
+    "test": "node scripts/run-tests.mjs",
+    "serve": "python -m http.server 8080"
+  },
+  "devDependencies": {
+    "playwright": "^1.49.0"
+  }
+}

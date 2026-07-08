@@ -11,8 +11,11 @@
    *
    * Field descriptor:
    *   { key, label, type }
-   *   type = 'text' | 'textarea' | 'select'
+   *   type = 'text' | 'textarea' | 'select' | 'rich' | 'divider' | 'optcolor'
    *   select fields also need: options — array of { value, label } objects
+   *   divider renders a section separator (no key); optcolor is a
+   *   checkbox-enabled color override where '' means "inherit theme"
+   *   (Stage 11 F4 — may carry a fallback hex for the disabled picker)
    *
    * Resolves with a shallow copy of the updated data object on Save,
    * or null if the user cancels (Escape, backdrop click, Cancel button).
@@ -53,6 +56,59 @@
       body.className = 'widget-modal-body';
 
       fields.forEach(function (field, idx) {
+        // Section separator — no input, no key.
+        if (field.type === 'divider') {
+          const sep = document.createElement('div');
+          sep.style.cssText =
+            'border-top:1px solid var(--color-border);margin:14px 0 6px;padding-top:6px;' +
+            'font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;' +
+            'color:var(--color-text-muted);font-family:var(--font-family-ui);';
+          sep.textContent = field.label || '';
+          body.appendChild(sep);
+          return;
+        }
+
+        // Checkbox-enabled color override; '' = inherit theme (Stage 11 F4).
+        if (field.type === 'optcolor') {
+          const row = document.createElement('label');
+          row.className = 'widget-modal-field widget-modal-optcolor';
+          row.style.cssText = 'display:flex;align-items:center;gap:8px;cursor:pointer;';
+
+          const enable = document.createElement('input');
+          enable.type = 'checkbox';
+          const picker = document.createElement('input');
+          picker.type = 'color';
+          picker.style.cssText = 'width:32px;height:22px;padding:0;border:1px solid var(--color-border);cursor:pointer;';
+          const text = document.createElement('span');
+          text.textContent = field.label;
+          text.style.cssText = 'flex:1;font-size:12px;font-family:var(--font-family-ui);color:var(--color-text);';
+
+          // Same SAFE_COLOR filtering as the custom-modal path in
+          // style-controls.js, so a malformed/legacy value displays
+          // identically ("inherit") in both modal styles.
+          const current = window.HCEStyleControls
+            ? window.HCEStyleControls.resolve(data, field.key)
+            : String(data[field.key] || '').trim();
+          enable.checked  = !!current;
+          picker.disabled = !current;
+          picker.value    = current || field.fallback || '#2563eb';
+          formData[field.key] = current;
+
+          enable.addEventListener('change', function () {
+            picker.disabled = !enable.checked;
+            formData[field.key] = enable.checked ? picker.value : '';
+          });
+          picker.addEventListener('input', function () {
+            if (!picker.disabled) formData[field.key] = picker.value;
+          });
+
+          row.appendChild(enable);
+          row.appendChild(text);
+          row.appendChild(picker);
+          body.appendChild(row);
+          return;
+        }
+
         const fieldId = 'wm-field-' + idx;
         const row = document.createElement('div');
         row.className = 'widget-modal-field';

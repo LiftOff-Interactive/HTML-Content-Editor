@@ -44,14 +44,20 @@
             ? '<footer class="quote-attribution"><cite>' + attrHtml + '</cite></footer>'
             : '') +
         '</blockquote>';
+
+      // Per-instance overrides (F4): preview rules resolve theme vars, so
+      // scoping them on the container recolors just this widget.
+      HCEStyleControls.applyEditorVars(container, data);
     }
 
     renderExport(container, data) {
       const style  = data.style || 'pull';
       const root   = getComputedStyle(document.documentElement);
 
-      const primary = root.getPropertyValue('--color-primary').trim()        || '#2563eb';
-      const surface = root.getPropertyValue('--color-surface').trim()        || '#f8fafc';
+      const primary = HCEStyleControls.resolve(data, 'styleAccent') ||
+                      root.getPropertyValue('--color-primary').trim()        || '#2563eb';
+      const surface = HCEStyleControls.resolve(data, 'styleBg') ||
+                      root.getPropertyValue('--color-surface').trim()        || '#f8fafc';
       const text    = root.getPropertyValue('--color-text').trim()           || '#1e293b';
       const muted   = root.getPropertyValue('--color-text-muted').trim()     || '#64748b';
       const font    = root.getPropertyValue('--font-family-body').trim()     || 'Georgia, serif';
@@ -110,7 +116,10 @@
           { key: 'quote',       label: 'Quote text',                type: 'rich' },
           { key: 'attribution', label: 'Attribution (optional)',    type: 'text' },
           { key: 'role',        label: 'Role / title (optional)',   type: 'text' },
-        ],
+        ].concat(HCEStyleControls.modalFields([
+          { key: 'styleAccent', label: 'Accent color (quote mark / border / highlight text)', fallback: '#2563eb' },
+          { key: 'styleBg',     label: 'Background color (highlight style)', fallback: '#f8fafc' },
+        ])),
         data: data,
       }).then(function (newData) {
         if (newData) this.updateData(Object.assign({}, data, newData));

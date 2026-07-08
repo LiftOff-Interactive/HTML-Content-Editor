@@ -1,14 +1,39 @@
 # Handoff — HTML Content Editor
-_Last updated: 2026-07-03 · Current stage: **Stage 9 — v3 rebuild COMPLETE (F1–F7 all built, self-tested, independently reviewed, committed on `stage-9-v3-rebuild`). Not yet merged to main or pushed.**_
+_Last updated: 2026-07-07 · Current stage: **Stage 11 — Professionalization (audit implementation) COMPLETE on branch `stage-11-professionalization`; not merged to main or pushed.**_
+
+## Stage 11 summary (read this first)
+The July 2026 audit (vs Brightspace/Creator+, Rise, SharePoint) drove six features,
+all built + verified 2026-07-07 — plan and per-feature log in
+`staging/stage-11-professionalization/overview.md`:
+- **F1** toolbar link + strikethrough · **F2** localStorage autosave with restore bar
+- **F3** WCAG fixes: image alt/width modal, carousel pause + reduced-motion,
+  tabs arrow-key nav + ARIA wiring
+- **F4** per-widget style overrides (callout/tabs/accordion/quote/timeline;
+  opt-in `styleAccent`/`styleBg` keys; SAFE_COLOR allowlist at
+  `HCEStyleControls.resolve`)
+- **F5** SCORM 1.2 export (`src/zip.js`, `src/scorm.js`, KC `HCETrack` hook,
+  first-attempt-wins scoring, mastery 70)
+- **F6** `npm test` = headless Playwright run of ALL suites incl. the no-JS
+  baseline hash; GitHub Actions workflow; README → LiftOff-Interactive;
+  SECURITY.md; CHANGELOG.md
+
+**Verification:** 11/11 suites green (288 cases); no-JS baseline byte-identical
+(`8792330f…`). New suites: `_stage11_tests.html`, `_scorm_tests.html`.
+**Gotcha:** blot-loading test pages keep their own script lists — any new blot
+dependency must be added there too (this bit us; see stage overview).
+**Next (human decisions):** merge `stage-11-professionalization` → main + push;
+import a real SCORM zip into an actual LMS (Brightspace/SCORM Cloud) as the
+final field check; then Phase 3 of the audit roadmap (Common Cartridge,
+import-side widget recognition) or course mode (stage-10 plan).
 
 ## Goals
 ~~Get the project to a public v1 release on GitHub.~~ **Done.** v1.0.0 is live.
 ~~Stage 7 post-v1 features.~~ **Done.** v2.0.0 shipped — all three Stage 7 features complete.
 
 Live URLs:
-- GitHub Pages: https://frankyface.github.io/HTML-Content-Editor/
-- v1.0.0 release: https://github.com/Frankyface/HTML-Content-Editor/releases/tag/v1.0.0
-- v2.0.0 release: https://github.com/Frankyface/HTML-Content-Editor/releases/tag/v2.0.0
+- GitHub Pages: https://liftoff-interactive.github.io/HTML-Content-Editor/
+- v1.0.0 release: https://github.com/LiftOff-Interactive/HTML-Content-Editor/releases/tag/v1.0.0
+- v2.0.0 release: https://github.com/LiftOff-Interactive/HTML-Content-Editor/releases/tag/v2.0.0
 
 ## Current State
 All stages (1–8) complete. v2.0.0 + Stage 8 shipped; `main` = `origin/main` = `d9e0b96`.
@@ -157,14 +182,16 @@ What's built (all stages):
 - `window.contentEditor.getDocumentTitle()` shared by tab title (editor.js), save filename (save-load.js), and export title (export.js).
 
 ## Pointer
-→ Stage 9 (v3 rebuild) is COMPLETE on branch `stage-9-v3-rebuild` — F1–F7 built,
-self-tested, independently reviewed, committed. Active feature file:
-`staging/stage-9-v3-rebuild/overview.md`; course-mode plan in
+→ **Stage 11 (professionalization) is COMPLETE** on branch
+`stage-11-professionalization`. Active feature file:
+`staging/stage-11-professionalization/overview.md`; course-mode plan still parked in
 `staging/stage-10-course-mode-plan.md`.
-→ Next (human decisions): (1) try it in the live editor and confirm it feels right;
-(2) approve merge of `stage-9-v3-rebuild` → `main` + push (not done yet); (3) decide on
-the parked §3 follow-up (export align/link/strike gap) and the other named follow-ups in
-the stage overview; (4) approve starting course mode (C1) when ready.
-→ Test suites (run over localhost): `_modal_tests.html` 30/30 · `_codeview_tests.html`
-27/27 · `_import_tests.html` 15/15 · `_widgets2_tests.html` 22/22 · `_styling_tests.html`
-13/13 · `_nojs_tests.html` 27/27 · `_nojs_selftest.html` baseline byte-identical.
+→ Next (human decisions): (1) merge `stage-11-professionalization` → `main` + push;
+(2) field-test a SCORM export in a real LMS (Brightspace import or SCORM Cloud);
+(3) pick the next audit-roadmap phase — Common Cartridge export / import widget
+recognition, or course mode C1.
+→ Test suites: run `npm test` (headless, all suites + baseline hash) or open over
+localhost: `_modal_tests` 30 · `_codeview_tests` 27 · `_import_tests` 15 ·
+`_widgets2_tests` 22 · `_styling_tests` 13 · `_nojs_tests` 27 ·
+`_export_format_tests` 21 · `_rich_sanitize_tests` 52 · `_stage11_tests` 34 ·
+`_scorm_tests` 16 · `_nojs_selftest` baseline byte-identical.

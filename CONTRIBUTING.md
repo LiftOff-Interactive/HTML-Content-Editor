@@ -2,7 +2,7 @@
 
 ## Reporting Bugs
 
-Open an issue at [github.com/Frankyface/HTML-Content-Editor/issues](https://github.com/Frankyface/HTML-Content-Editor/issues).
+Open an issue at [github.com/LiftOff-Interactive/HTML-Content-Editor/issues](https://github.com/LiftOff-Interactive/HTML-Content-Editor/issues).
 
 Include: what you did, what you expected, what happened, and the browser + OS.
 

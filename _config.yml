@@ -34,3 +34,10 @@ exclude:
   - LICENSE
   - .gitattributes
   - .gitignore
+  # Stage 11 dev/CI material — not part of the served app.
+  - scripts/
+  - node_modules/
+  - package.json
+  - package-lock.json
+  - SECURITY.md
+  - CHANGELOG.md
