@@ -112,8 +112,11 @@
 
       // ── F2: autosave ─────────────────────────────────────────────────────
       var AS = w.HCEAutosave;
-      AS.clearDraft();
       AS.enableForTest(); // autosave is deliberately inert in iframes
+      AS.enableForTest(); // idempotent — double-enable must not double-bind
+      AS.clearDraft();
+      H.addRow('F2: enableForTest scopes the draft to a test-only key',
+        AS.KEY === 'hce.autosave.v1.test', 'key=' + AS.KEY);
       Q.setContents({ ops: [ { insert: 'Draft body text\n' } ] }, w.Quill.sources.SILENT);
       w.HCEDocState.setTitle('Draft Title');
       var wrote = AS.snapshotNow();

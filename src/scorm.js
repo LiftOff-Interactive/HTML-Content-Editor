@@ -119,7 +119,14 @@
   function buildPackage(delta, title) {
     var html = window.HCEExport.buildExportHtml(delta, title, {});
     var shim = '<' + 'script>\n' + buildRuntime() + '\n</' + 'script>';
-    html = html.replace('</body>', shim + '\n</body>');
+    // Splice before the LAST </body>: widget content can contain the literal
+    // substring earlier in the document (e.g. a raw-html widget's <style>
+    // block with "</body>" in a CSS comment), and inserting there would bury
+    // the runtime as inert text — silently disabling all LMS tracking.
+    var at = html.lastIndexOf('</body>');
+    html = at === -1
+      ? html + '\n' + shim
+      : html.slice(0, at) + shim + '\n' + html.slice(at);
     return window.HCEZip.build([
       { name: 'imsmanifest.xml', text: buildManifest(title) },
       { name: 'index.html', text: html },

@@ -78,7 +78,12 @@
         document.body.appendChild(f);
         f.srcdoc = html;
         f.onload = function () {
-          setTimeout(function () {
+          // Poll for the runtime rather than trusting a fixed delay — a slow
+          // CI runner can take longer than any constant we'd pick.
+          var tries = 0;
+          (function ready() {
+            var booted = f.contentWindow && f.contentWindow.HCETrack;
+            if (!booted && ++tries < 120) return setTimeout(ready, 50);
             var result = { callsAfterBoot: JSON.parse(JSON.stringify(calls)) };
             if (exercise) exercise(f.contentDocument, f.contentWindow);
             setTimeout(function () {
@@ -87,8 +92,8 @@
               delete window.API;
               f.remove();
               resolve(result);
-            }, 250);
-          }, 250);
+            }, 100);
+          })();
         };
       });
     }
@@ -203,6 +208,22 @@
       H.addRow('LMS: retry never overwrites the first scored attempt',
         r3.calls.values['cmi.core.score.raw'] === '0' && r3.calls.values['cmi.core.lesson_status'] === 'failed',
         'raw=' + r3.calls.values['cmi.core.score.raw'] + ' status=' + r3.calls.values['cmi.core.lesson_status']);
+
+      // Regression (Sonnet review finding #1): a raw-html widget whose <style>
+      // block contains a literal "</body>" must NOT swallow the runtime — the
+      // shim splices before the LAST </body>, so tracking still works.
+      var spoofDelta = { ops: [
+        { insert: { 'raw-html': { _v: 1, html: '<style>/* </body> */ .x{color:red}</style><p>decoy</p>' } } },
+        { insert: { 'knowledge-check': kcData() } },
+        { insert: '\n' },
+      ] };
+      var spoofHtml = readZip(SC.buildPackage(spoofDelta, 'Spoof')).files['index.html'];
+      var rs = await runSco(spoofHtml, function (idoc) { answer(idoc, 0, 0); });
+      H.addRow('regression: literal </body> inside widget content cannot bury the runtime',
+        rs.calls.init === 1 && rs.calls.values['cmi.core.score.raw'] === '100' &&
+        rs.calls.values['cmi.core.lesson_status'] === 'passed',
+        'init=' + rs.calls.init + ' raw=' + rs.calls.values['cmi.core.score.raw'] +
+        ' status=' + rs.calls.values['cmi.core.lesson_status']);
 
       // Plain exports carry no SCORM runtime.
       var plainHtml = w.HCEExport.buildExportHtml(oneKc, 'plain', {});

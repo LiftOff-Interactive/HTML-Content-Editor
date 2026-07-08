@@ -19,9 +19,12 @@
   var DEBOUNCE_MS = 2000;
 
   var _timer = null;
-  var _lastWritten = '';   // last JSON actually persisted (skip no-op writes)
+  var _lastWritten = '';   // payload JSON last persisted (skip no-op writes)
   var _writeFailedWarned = false;
   var _enabled = window.self === window.top;
+  var _bound = false;      // bindSources must be idempotent: init()'s deferred
+                           // timer and enableForTest() can otherwise both run
+                           // it, double-registering every listener + interval
 
   function storageAvailable() {
     try {
@@ -77,11 +80,15 @@
     if (!_enabled) return true;
     var payload = buildPayload();
     if (!payload) return true;
-    var record = JSON.stringify({ savedAt: new Date().toISOString(), payload: payload });
-    if (record === _lastWritten) return true;
+    // Compare the payload alone — the stored record carries a savedAt
+    // timestamp that would defeat the no-op check on every tick.
+    var payloadJson = JSON.stringify(payload);
+    if (payloadJson === _lastWritten) return true;
     try {
-      localStorage.setItem(KEY, record);
-      _lastWritten = record;
+      localStorage.setItem(KEY,
+        '{"savedAt":' + JSON.stringify(new Date().toISOString()) + ',"payload":' + payloadJson + '}');
+      _lastWritten = payloadJson;
+      _writeFailedWarned = false; // recovered — a future failure must warn again
       return true;
     } catch (e) {
       // Quota exceeded (image-heavy document) or storage unavailable.
@@ -195,6 +202,8 @@
   // ── Wiring ────────────────────────────────────────────────────────────────
 
   function bindSources() {
+    if (_bound) return;
+    _bound = true;
     var quill = window.contentEditor && window.contentEditor.quill;
     if (quill) quill.on('text-change', scheduleSnapshot);
 
@@ -252,7 +261,13 @@
     restoreDraft: restoreDraft,
     payloadIsEmpty: payloadIsEmpty,
     enableForTest: function () {
+      // Test-scoped key: suites share the real origin's localStorage, and an
+      // aborted run must never leave a stray draft that surfaces as a false
+      // "Unsaved draft found" bar in the developer's real editor.
+      KEY = 'hce.autosave.v1.test';
+      window.HCEAutosave.KEY = KEY;
       _enabled = true;
+      _lastWritten = '';
       bindSources();
     },
   };

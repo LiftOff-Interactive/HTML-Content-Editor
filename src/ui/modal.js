@@ -83,7 +83,12 @@
           text.textContent = field.label;
           text.style.cssText = 'flex:1;font-size:12px;font-family:var(--font-family-ui);color:var(--color-text);';
 
-          const current = String(data[field.key] || '').trim();
+          // Same SAFE_COLOR filtering as the custom-modal path in
+          // style-controls.js, so a malformed/legacy value displays
+          // identically ("inherit") in both modal styles.
+          const current = window.HCEStyleControls
+            ? window.HCEStyleControls.resolve(data, field.key)
+            : String(data[field.key] || '').trim();
           enable.checked  = !!current;
           picker.disabled = !current;
           picker.value    = current || field.fallback || '#2563eb';

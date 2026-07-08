@@ -143,6 +143,42 @@ CI runs it on push/PR.
     updating them made all five styled widgets render error boxes in those
     pages and "drifted" the bare-page baseline. Script lists must mirror
     `index.html`.
-  - **Verification state:** `npm test` → **11/11 suites green, 288 cases**,
+  - **Verification state:** `npm test` → **11/11 suites green, 290 cases**,
     `_nojs_selftest` baseline **byte-identical** (`8792330f…`), editor-page
-    invariance hash intact. Independent Sonnet review/QA agents: see below.
+    invariance hash intact.
+
+- **2026-07-07 — Independent Sonnet agent verification (2 agents, parallel).**
+  - **QA agent** (adversarial probes, 33 assertions): zero defects. Verified
+    style overrides don't leak across instances of the same widget type, four
+    SAFE_COLOR bypass candidates all refused with byte-identical clean
+    exports, SCORM order-independent scoring, hostile (throwing) LMS API
+    absorbed, corrupt autosave drafts return false without throwing,
+    single-tab keyboard nav safe.
+  - **Review agent** (full diff review; verdict FIX-FIRST): SAFE_COLOR proven
+    bypass-free, zip output validated against `unzip -t` and Python `zipfile`.
+    Findings and disposition:
+    1. **FIXED (major)** — `scorm.js` spliced the runtime at the FIRST literal
+       `</body>`, which a raw-html widget's `<style>` block could spoof,
+       silently disabling all LMS tracking. Now splices before the LAST
+       occurrence; regression case in `_scorm_tests.html`.
+    2. **FIXED (major)** — `autosave.js` `init()` + `enableForTest()` could
+       both run `bindSources()` (double listeners + a second 30s interval).
+       Now guarded by `_bound`; suite double-calls `enableForTest` to pin it.
+    3. **FIXED** — no-op-write guard compared a timestamped record (always
+       different); now compares the payload JSON alone.
+    4. **FIXED** — quota-warning latch resets on a successful write so a
+       second failure warns again.
+    5. **FIXED** — `modal.js` optcolor now displays the SAFE_COLOR-filtered
+       value, matching the custom-modal path.
+    6. **FIXED** — `enableForTest()` uses a test-scoped storage key
+       (`hce.autosave.v1.test`) so aborted suite runs can't leave a stray
+       draft in the developer's real editor; suite clearDraft reordered after
+       enable for the same reason.
+    7. **FIXED** — `zip.js` throws a named error for entries with neither
+       `text` nor `bytes` (latent trap for future binary reuse).
+    8. **FIXED** — `_scorm_tests.html` polls for runtime boot instead of a
+       fixed 250 ms window (CI-slowness flake guard).
+  - Post-fix gate: `npm test` **11/11 suites green, 290 cases**, baseline
+    byte-identical. Same-class pre-existing issue noted by the reviewer in
+    `html-roundtrip.js` (`</head>` first-occurrence replace) left as a named
+    follow-up — predates this stage.

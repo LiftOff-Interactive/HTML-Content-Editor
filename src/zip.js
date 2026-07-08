@@ -69,6 +69,9 @@
     entries.forEach(function (entry) {
       var nameBytes = enc.encode(entry.name);
       var dataBytes = (entry.text !== undefined) ? enc.encode(entry.text) : entry.bytes;
+      if (!(dataBytes instanceof Uint8Array)) {
+        throw new Error('HCEZip: entry "' + entry.name + '" needs a text string or a bytes Uint8Array');
+      }
       var crc = crc32(dataBytes);
       var offset = w.length;
 
