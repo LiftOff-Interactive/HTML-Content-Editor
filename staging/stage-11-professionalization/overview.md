@@ -179,6 +179,33 @@ CI runs it on push/PR.
     8. **FIXED** — `_scorm_tests.html` polls for runtime boot instead of a
        fixed 250 ms window (CI-slowness flake guard).
   - Post-fix gate: `npm test` **11/11 suites green, 290 cases**, baseline
-    byte-identical. Same-class pre-existing issue noted by the reviewer in
-    `html-roundtrip.js` (`</head>` first-occurrence replace) left as a named
-    follow-up — predates this stage.
+    byte-identical.
+
+- **2026-07-07 — `html-roundtrip.js` follow-up investigated, NOT a bug.**
+  The reviewer's `</head>` first-occurrence concern (structurally similar to
+  the `scorm.js` `</body>` splice) was checked empirically with the real
+  `saveAsHtml()`/`loadFromHtml()` code path and a raw-html widget crafted to
+  spoof `</head>`/`<body`/`</body>` text inside its own `<style>` comment.
+  **Verdict: not exploitable, and porting `lastIndexOf` here would have been
+  wrong.** The two splices are opposite cases: `</body>` is the document's
+  LAST tag, with all attacker content (bodyHtml) preceding it in the string —
+  so a first-occurrence match can be tricked by an earlier spoof, and
+  `lastIndexOf` is the correct fix (already shipped). `</head>` is a CLOSING
+  tag built entirely from trusted/escaped content (fixed markup, escaped
+  title, theme CSS limited to color-input hex + fixed `<select>` values,
+  and `documentStyles` with every `</` escaped) — attacker content
+  (`bodyHtml`, including a raw-html widget's own `<style>` block) only ever
+  appears *after* it. A first-occurrence match can therefore never land on
+  spoofed text; the real tag is always the earliest match by construction.
+  Applying `lastIndexOf` would have been an actual regression (it would
+  match a later, spoofed occurrence inside body content instead of the real
+  one).
+  **What shipped instead:** `saveAsHtml()` refactored to expose a pure,
+  testable `buildEmbeddedHtml()` (no download side effect); an explanatory
+  comment documenting the asymmetry with `scorm.js`; and a permanent
+  regression test in `_stage11_tests.html` using the *real* production
+  code path (not a synthetic position check) that proves the embed lands
+  inside `<head>`, before `<body>`, and that `loadFromHtml` recovers the
+  exact title/content even with the spoof attempt present.
+  Post-fix gate: `npm test` **11/11 suites green, 261 cases**, baseline
+  byte-identical.

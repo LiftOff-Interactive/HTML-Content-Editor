@@ -255,6 +255,34 @@
         w.HCEStyleControls.resolve({ styleAccent: 'rgb(1, 2, 3)' }, 'styleAccent') === 'rgb(1, 2, 3)',
         'hex + named + rgb() accepted');
 
+      // Regression: a raw-html widget's own <style> block can legitimately
+      // contain literal "</head>" / "<body" / "</body>" text inside a CSS
+      // comment (the sanitizer doesn't strip <style>, and RAWTEXT parsing
+      // preserves it verbatim). html-roundtrip.js's embed splice is a
+      // first-occurrence replace('</head>', ...) — prove it still lands
+      // correctly inside <head> (not swallowed into the widget's own <style>
+      // tag, which would silently break the round-trip) via the REAL
+      // production code path, not just a string-position check.
+      var spoofHtml = '<style>/* </head> <body foo="bar"> </body> */ .x{color:red}</style><p>decoy</p>';
+      Q.insertEmbed(0, 'raw-html', { _v: 1, html: spoofHtml }, w.Quill.sources.USER);
+      w.HCEDocState.setTitle('Roundtrip Spoof Test');
+      var roundtripHtml = w.HCERoundtrip.buildEmbeddedHtml();
+      var embedIdx = roundtripHtml.indexOf('id="hce-project-data"');
+      var bodyIdx  = roundtripHtml.indexOf('<body');
+      var loaded = w.HCERoundtrip.loadFromHtml(roundtripHtml);
+      H.addRow('html round-trip: embed script lands inside <head>, before <body>, despite a spoofed </head>',
+        embedIdx !== -1 && embedIdx < bodyIdx,
+        'embedIdx=' + embedIdx + ' bodyIdx=' + bodyIdx);
+      H.addRow('html round-trip: loadFromHtml recovers the exact title and content despite the spoof',
+        !!loaded && loaded.title === 'Roundtrip Spoof Test' &&
+        loaded.content.ops.some(function (op) {
+          return op.insert && typeof op.insert === 'object' && op.insert['raw-html'] &&
+                 op.insert['raw-html'].html === spoofHtml;
+        }),
+        'title="' + (loaded && loaded.title) + '"');
+      Q.setContents({ ops: [{ insert: '\n' }] }, w.Quill.sources.SILENT);
+      w.HCEDocState.setTitle('');
+
       // §3 protected contract: reference delta with NO overrides — baseline hash.
       w.ThemePanel.deserialize(JSON.stringify(w.ThemePanel.DEFAULT_THEME));
       var refSha = await H.sha256(EX.buildExportHtml(selftestOps(WR), 'No-JS Self Test', { noJs: true }));
