@@ -4,7 +4,7 @@
 
 A free, self-hosted WYSIWYG authoring tool for instructional designers. Build rich interactive eLearning content in the browser, then export a single fully self-contained HTML file that deploys anywhere — no subscription, no backend, no lock-in.
 
-**[Live demo →](https://frankyface.github.io/HTML-Content-Editor/)**
+**[Live demo →](https://liftoff-interactive.github.io/HTML-Content-Editor/)**
 
 ---
 
@@ -25,15 +25,22 @@ Tools like Articulate Rise and BrightSpace cost $1,000+/year per seat and constr
 ## Features
 
 **Editor**
-- Quill 2.0 writing surface — text, headings, lists, bold/italic
+- Quill 2.0 writing surface — text, headings, lists, bold/italic/underline/strikethrough, links
 - Slash command (`/`) to insert any widget by name with fuzzy search
 - Toolbar dropdown as a secondary widget insertion point
 - Live theme panel — set colors, fonts, and spacing via CSS custom properties
+- Per-widget style overrides — recolor a single callout, tab group, accordion, quote, or timeline without touching the document theme
+- Autosave — a local draft is kept continuously; reopening the editor offers one-click restore
 
 **Save & Export**
 - Save your project as a portable JSON file — download and reload any time, no account required
 - Export as a single `.html` file — all CSS, JS, and images base64-inlined, zero external dependencies
+- **Export for SharePoint** — a JavaScript-free variant that survives the Embed web part's script stripping
+- **Export SCORM 1.2** — a `.zip` package importable into Brightspace, Canvas, Moodle, and other LMSs; Knowledge Check results report score and pass/fail status to the gradebook
 - Works in air-gapped environments, SharePoint, Confluence, course portals, and email attachments
+
+**Accessibility**
+- ARIA roles/labels across widgets, `prefers-reduced-motion` support, keyboard-navigable tabs (arrow keys), pause control on autoplaying carousels, and an alt-text editor on every image
 
 **10 Interactive Widgets**
 
@@ -57,7 +64,7 @@ Tools like Articulate Rise and BrightSpace cost $1,000+/year per seat and constr
 No build step. No install. No account.
 
 ```bash
-git clone https://github.com/Frankyface/HTML-Content-Editor.git
+git clone https://github.com/LiftOff-Interactive/HTML-Content-Editor.git
 cd HTML-Content-Editor
 ```
 
@@ -139,7 +146,7 @@ The exported file works:
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for a step-by-step guide to adding a new widget.
 
-Bug reports and feature requests: [open an issue](https://github.com/Frankyface/HTML-Content-Editor/issues).
+Bug reports and feature requests: [open an issue](https://github.com/LiftOff-Interactive/HTML-Content-Editor/issues).
 
 ---
 

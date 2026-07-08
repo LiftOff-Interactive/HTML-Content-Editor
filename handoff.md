@@ -6,9 +6,9 @@ _Last updated: 2026-07-03 · Current stage: **Stage 9 — v3 rebuild COMPLETE (F
 ~~Stage 7 post-v1 features.~~ **Done.** v2.0.0 shipped — all three Stage 7 features complete.
 
 Live URLs:
-- GitHub Pages: https://frankyface.github.io/HTML-Content-Editor/
-- v1.0.0 release: https://github.com/Frankyface/HTML-Content-Editor/releases/tag/v1.0.0
-- v2.0.0 release: https://github.com/Frankyface/HTML-Content-Editor/releases/tag/v2.0.0
+- GitHub Pages: https://liftoff-interactive.github.io/HTML-Content-Editor/
+- v1.0.0 release: https://github.com/LiftOff-Interactive/HTML-Content-Editor/releases/tag/v1.0.0
+- v2.0.0 release: https://github.com/LiftOff-Interactive/HTML-Content-Editor/releases/tag/v2.0.0
 
 ## Current State
 All stages (1–8) complete. v2.0.0 + Stage 8 shipped; `main` = `origin/main` = `d9e0b96`.
