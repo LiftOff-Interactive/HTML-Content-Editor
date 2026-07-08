@@ -72,15 +72,20 @@
           details.addEventListener('toggle', function (e) { e.stopPropagation(); });
         });
       }
+
+      // Per-instance overrides (F4) — preview rules resolve theme vars locally.
+      HCEStyleControls.applyEditorVars(container, data);
     }
 
     renderExport(container, data) {
       const uid  = 'ae' + Math.random().toString(36).slice(2, 7);
       const root = getComputedStyle(document.documentElement);
 
-      const primary = root.getPropertyValue('--color-primary').trim()        || '#2563eb';
+      const primary = HCEStyleControls.resolve(data, 'styleAccent') ||
+                      root.getPropertyValue('--color-primary').trim()        || '#2563eb';
       const border  = root.getPropertyValue('--color-border').trim()         || '#e2e8f0';
-      const surface = root.getPropertyValue('--color-surface').trim()        || '#f8fafc';
+      const surface = HCEStyleControls.resolve(data, 'styleBg') ||
+                      root.getPropertyValue('--color-surface').trim()        || '#f8fafc';
       const text    = root.getPropertyValue('--color-text').trim()           || '#1e293b';
       const muted   = root.getPropertyValue('--color-text-muted').trim()     || '#64748b';
       const font    = root.getPropertyValue('--font-family-body').trim()     || 'Georgia, serif';
@@ -167,9 +172,11 @@
       const uid  = (ctx && ctx.uid) || ('ae' + Math.random().toString(36).slice(2, 7));
       const root = getComputedStyle(document.documentElement);
 
-      const primary = root.getPropertyValue('--color-primary').trim()        || '#2563eb';
+      const primary = HCEStyleControls.resolve(data, 'styleAccent') ||
+                      root.getPropertyValue('--color-primary').trim()        || '#2563eb';
       const border  = root.getPropertyValue('--color-border').trim()         || '#e2e8f0';
-      const surface = root.getPropertyValue('--color-surface').trim()        || '#f8fafc';
+      const surface = HCEStyleControls.resolve(data, 'styleBg') ||
+                      root.getPropertyValue('--color-surface').trim()        || '#f8fafc';
       const text    = root.getPropertyValue('--color-text').trim()           || '#1e293b';
       const muted   = root.getPropertyValue('--color-text-muted').trim()     || '#64748b';
       const font    = root.getPropertyValue('--font-family-body').trim()     || 'Georgia, serif';
@@ -328,6 +335,10 @@
 
       leftCol.appendChild(itemListEl);
       leftCol.appendChild(addItemBtn);
+      leftCol.appendChild(HCEStyleControls.buildRows(working, [
+        { key: 'styleAccent', label: 'Accent',            fallback: '#2563eb' },
+        { key: 'styleBg',     label: 'Header background', fallback: '#f8fafc' },
+      ]));
 
       const rightCol = document.createElement('div');
       rightCol.style.cssText = 'flex:1;padding:16px;display:flex;flex-direction:column;gap:12px;overflow-y:auto;';

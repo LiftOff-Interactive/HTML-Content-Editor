@@ -36,18 +36,28 @@
             (data.body  ? '<div class="callout-rich-body">' + window.HCESanitize.rich(data.body) + '</div>' : '') +
           '</div>' +
         '</div>';
+
+      // Per-instance style overrides (F4). The type classes hardcode their
+      // colors, so apply directly — inline beats the class either way.
+      const preview = container.firstChild;
+      const accent  = HCEStyleControls.resolve(data, 'styleAccent');
+      const bg      = HCEStyleControls.resolve(data, 'styleBg');
+      if (accent) preview.style.borderLeftColor = accent;
+      if (bg)     preview.style.background = bg;
     }
 
     renderExport(container, data) {
       const cfg  = TYPE_CONFIG[data.type] || TYPE_CONFIG.info;
       const root = getComputedStyle(document.documentElement);
 
-      const borderColor = {
+      const borderColor = HCEStyleControls.resolve(data, 'styleAccent') || {
         info:    root.getPropertyValue('--color-primary').trim() || cfg.borderColor,
         warning: root.getPropertyValue('--color-accent').trim()  || cfg.borderColor,
         success: cfg.borderColor,
         danger:  cfg.borderColor,
       }[data.type] || cfg.borderColor;
+
+      const bgColor = HCEStyleControls.resolve(data, 'styleBg') || cfg.bgColor;
 
       const fontFamily = root.getPropertyValue('--font-family-body').trim() || 'Georgia, serif';
       const textColor  = root.getPropertyValue('--color-text').trim()       || '#1e293b';
@@ -67,7 +77,7 @@
           'display:flex;align-items:flex-start;gap:10px;' +
           'padding:12px 16px;' +
           'border-left:4px solid ' + borderColor + ';' +
-          'background:' + cfg.bgColor + ';' +
+          'background:' + bgColor + ';' +
           'border-radius:' + radius + ';' +
           'font-family:' + fontFamily + ';' +
           'margin:8px 0;' +
@@ -89,7 +99,10 @@
           ]},
           { key: 'title', label: 'Title', type: 'text' },
           { key: 'body',  label: 'Body',  type: 'rich' },
-        ],
+        ].concat(HCEStyleControls.modalFields([
+          { key: 'styleAccent', label: 'Accent color (overrides type color)', fallback: '#2563eb' },
+          { key: 'styleBg',     label: 'Background color (overrides type color)', fallback: '#eff6ff' },
+        ])),
         data: data,
       }).then((newData) => {
         if (newData) this.updateData(Object.assign({}, data, newData));

@@ -198,6 +198,17 @@
         ? '<button class="hce-car-next" aria-label="Next slide" style="' + arrowBase + 'right:8px;">&#8250;</button>'
         : '';
 
+      // WCAG 2.2.2: anything auto-advancing needs a visible pause control.
+      // Emitted ONLY when autoplay is on so non-autoplay documents export
+      // byte-identically (§3).
+      const pauseBtn = data.autoplay
+        ? '<button class="hce-car-pause" aria-label="Pause slideshow" aria-pressed="false" ' +
+            'style="position:absolute;bottom:8px;right:8px;z-index:2;' +
+            'background:' + primary + ';color:#fff;border:none;border-radius:50%;' +
+            'width:30px;height:30px;font-size:13px;line-height:1;cursor:pointer;' +
+            'display:flex;align-items:center;justify-content:center;opacity:0.85;">&#10074;&#10074;</button>'
+        : '';
+
       let dotsHtml = '';
       if (showDots) {
         let inner = '';
@@ -237,7 +248,24 @@
           'if(prev)prev.addEventListener("click",function(e){e.stopPropagation();goto(current-1);});' +
           'if(next)next.addEventListener("click",function(e){e.stopPropagation();goto(current+1);});' +
           'dots.forEach(function(d,i){d.addEventListener("click",function(e){e.stopPropagation();goto(i);});});' +
-          (data.autoplay ? 'setInterval(function(){goto(current+1);},3000);' : '') +
+          (data.autoplay
+            // Autoplay honors prefers-reduced-motion, suspends while hovered or
+            // focused, and is toggleable via the pause button (WCAG 2.2.2).
+            ? 'var playing=!(window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches);' +
+              'var engaged=false;' +
+              'setInterval(function(){if(playing&&!engaged)goto(current+1);},3000);' +
+              'var pause=root.querySelector(".hce-car-pause");' +
+              'function syncPause(){if(!pause)return;' +
+                'pause.innerHTML=playing?"&#10074;&#10074;":"&#9654;";' +
+                'pause.setAttribute("aria-label",playing?"Pause slideshow":"Play slideshow");' +
+                'pause.setAttribute("aria-pressed",String(!playing));}' +
+              'if(pause)pause.addEventListener("click",function(e){e.stopPropagation();playing=!playing;syncPause();});' +
+              'root.addEventListener("mouseenter",function(){engaged=true;});' +
+              'root.addEventListener("mouseleave",function(){engaged=false;});' +
+              'root.addEventListener("focusin",function(){engaged=true;});' +
+              'root.addEventListener("focusout",function(){engaged=false;});' +
+              'syncPause();'
+            : '') +
         '})();';
 
       container.innerHTML =
@@ -253,6 +281,7 @@
             '</div>' +
             prevArrow +
             nextArrow +
+            pauseBtn +
           '</div>' +
           dotsHtml +
         '</div>' +

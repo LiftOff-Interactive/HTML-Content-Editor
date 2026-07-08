@@ -33,6 +33,7 @@
         <span class="header-status" id="save-status"></span>
         <button class="header-btn" id="export-btn" title="Export as a self-contained HTML file">Export HTML</button>
         <button class="header-btn header-btn--accent" id="export-sharepoint-btn" title="Export a JavaScript-free HTML file that renders inside SharePoint (Embed web part)">Export for SharePoint</button>
+        <button class="header-btn" id="export-scorm-btn" title="Export a SCORM 1.2 package (.zip) for LMS import — Brightspace, Canvas, Moodle. Knowledge Check results report to the gradebook.">Export SCORM</button>
       </div>
     </header>
 
@@ -221,6 +222,7 @@
 
   <script src="vendor/quill/dist/quill.js"></script>
   <script src="src/ui/modal.js"></script>
+  <script src="src/ui/style-controls.js"></script>
   <script src="src/ui/image-upload-field.js"></script>
   <script src="src/ui/rich-text-field.js"></script>
   <script src="src/registry.js"></script>
@@ -247,11 +249,14 @@
   <script src="src/theme.js"></script>
   <script src="src/doc-state.js"></script>
   <script src="src/export.js"></script>
+  <script src="src/zip.js"></script>
+  <script src="src/scorm.js"></script>
   <script src="src/html-roundtrip.js"></script>
   <script src="src/save-load.js"></script>
   <script src="src/delta-html.js"></script>
   <script src="src/html-import.js"></script>
   <script src="src/code-view.js"></script>
   <script src="src/doc-title.js"></script>
+  <script src="src/autosave.js"></script>
 </body>
 </html>

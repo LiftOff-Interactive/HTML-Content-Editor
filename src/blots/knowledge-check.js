@@ -321,6 +321,9 @@
               'if(r)idx=parseInt(r.value,10);}' +
             'if(idx<0)return;' +
             'var ok=key.indexOf(idx)!==-1;' +
+            // Guarded LMS hook (Stage 11 F5): present only in SCORM packages,
+            // where the injected runtime defines HCETrack. No-op otherwise.
+            'if(window.HCETrack)window.HCETrack.record("' + uid + '",ok);' +
             'root.querySelectorAll(".hce-kc-opt").forEach(function(opt,i){' +
               'var fb=opt.querySelector(".hce-kc-fb");if(fb)fb.style.display="block";' +
               'var el=isTF?opt.querySelector(".hce-kc-tf-btn"):opt.querySelector("label");' +

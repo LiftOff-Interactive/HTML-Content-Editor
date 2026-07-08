@@ -70,6 +70,9 @@
           self.updateData(Object.assign({}, data, { activeTab: btn.dataset.tabId }));
         });
       });
+
+      // Per-instance overrides (F4) — preview rules resolve theme vars locally.
+      HCEStyleControls.applyEditorVars(container, data);
     }
 
     renderExport(container, data) {
@@ -77,9 +80,11 @@
       const activeId = data.activeTab || data.tabs[0].id;
       const root = getComputedStyle(document.documentElement);
 
-      const primary  = root.getPropertyValue('--color-primary').trim()       || '#2563eb';
+      const primary  = HCEStyleControls.resolve(data, 'styleAccent') ||
+                       root.getPropertyValue('--color-primary').trim()       || '#2563eb';
       const border   = root.getPropertyValue('--color-border').trim()        || '#e2e8f0';
-      const surface  = root.getPropertyValue('--color-surface').trim()       || '#f8fafc';
+      const surface  = HCEStyleControls.resolve(data, 'styleBg') ||
+                       root.getPropertyValue('--color-surface').trim()       || '#f8fafc';
       const text     = root.getPropertyValue('--color-text').trim()          || '#1e293b';
       const muted    = root.getPropertyValue('--color-text-muted').trim()    || '#64748b';
       const font     = root.getPropertyValue('--font-family-body').trim()    || 'Georgia, serif';
@@ -102,11 +107,31 @@
           '});' +
         '})(this)';
 
+      // Arrow-key navigation on the tablist (WAI-ARIA APG tabs pattern —
+      // WCAG 2.1.1). Self-contained like the onclick handler above.
+      const onkeydown =
+        '(function(ev,bar){' +
+          'var tabs=Array.prototype.slice.call(bar.querySelectorAll("[role=tab]"));' +
+          'var i=tabs.indexOf(ev.target);' +
+          'if(i<0)return;' +
+          'var n=null;' +
+          'if(ev.key==="ArrowLeft")n=(i-1+tabs.length)%tabs.length;' +
+          'else if(ev.key==="ArrowRight")n=(i+1)%tabs.length;' +
+          'else if(ev.key==="Home")n=0;' +
+          'else if(ev.key==="End")n=tabs.length-1;' +
+          'if(n===null)return;' +
+          'ev.preventDefault();' +
+          'tabs[n].focus();' +
+          'tabs[n].click();' +
+        '})(event,this)';
+
       let tabBtns = '';
       let tabPanels = '';
 
-      data.tabs.forEach(function (tab) {
+      data.tabs.forEach(function (tab, i) {
         const isActive = tab.id === activeId;
+        const tabDomId = uid + '-t' + i;
+        const panelId  = uid + '-p' + i;
         const btnStyle =
           'padding:8px 16px;border:none;' +
           'border-bottom:2px solid ' + (isActive ? primary : 'transparent') + ';' +
@@ -116,14 +141,16 @@
           'color:' + (isActive ? primary : muted) + ';' +
           'white-space:nowrap;';
         tabBtns +=
-          '<button role="tab" aria-selected="' + isActive + '" ' +
+          '<button role="tab" id="' + tabDomId + '" aria-selected="' + isActive + '" ' +
+            'aria-controls="' + panelId + '" ' +
             'data-tab-id="' + esc(tab.id) + '" ' +
             'onclick="' + esc(onclick) + '" ' +
             'style="' + btnStyle + '">' +
             esc(tab.label) +
           '</button>';
         tabPanels +=
-          '<div role="tabpanel" data-tab-id="' + esc(tab.id) + '" ' +
+          '<div role="tabpanel" id="' + panelId + '" aria-labelledby="' + tabDomId + '" ' +
+            'data-tab-id="' + esc(tab.id) + '" ' +
             'style="padding:16px;font-family:' + font + ';color:' + text + ';' +
               'display:' + (isActive ? 'block' : 'none') + ';">' +
             window.HCESanitize.rich(tab.content) +
@@ -136,7 +163,7 @@
           'border-radius:' + radius + ';' +
           'overflow:hidden;margin:8px 0;' +
         '">' +
-          '<div role="tablist" style="' +
+          '<div role="tablist" onkeydown="' + esc(onkeydown) + '" style="' +
             'display:flex;border-bottom:1px solid ' + border + ';' +
             'background:' + surface + ';overflow-x:auto;' +
           '">' + tabBtns + '</div>' +
@@ -156,9 +183,11 @@
       const activeId = data.activeTab || (tabs[0] && tabs[0].id);
       const root = getComputedStyle(document.documentElement);
 
-      const primary = root.getPropertyValue('--color-primary').trim()        || '#2563eb';
+      const primary = HCEStyleControls.resolve(data, 'styleAccent') ||
+                      root.getPropertyValue('--color-primary').trim()        || '#2563eb';
       const border  = root.getPropertyValue('--color-border').trim()         || '#e2e8f0';
-      const surface = root.getPropertyValue('--color-surface').trim()        || '#f8fafc';
+      const surface = HCEStyleControls.resolve(data, 'styleBg') ||
+                      root.getPropertyValue('--color-surface').trim()        || '#f8fafc';
       const text    = root.getPropertyValue('--color-text').trim()           || '#1e293b';
       const muted   = root.getPropertyValue('--color-text-muted').trim()     || '#64748b';
       const font    = root.getPropertyValue('--font-family-body').trim()     || 'Georgia, serif';
@@ -273,6 +302,10 @@
 
       leftCol.appendChild(tabListEl);
       leftCol.appendChild(addTabBtn);
+      leftCol.appendChild(HCEStyleControls.buildRows(working, [
+        { key: 'styleAccent', label: 'Accent',         fallback: '#2563eb' },
+        { key: 'styleBg',     label: 'Bar background', fallback: '#f8fafc' },
+      ]));
 
       // Right: edit fields for selected tab
       const rightCol = document.createElement('div');

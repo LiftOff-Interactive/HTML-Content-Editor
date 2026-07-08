@@ -3,7 +3,8 @@
 
   const toolbarOptions = [
     [{ header: [1, 2, 3, false] }],
-    ['bold', 'italic', 'underline'],
+    ['bold', 'italic', 'underline', 'strike'],
+    ['link'],
     [{ align: [] }],
     [{ list: 'ordered' }, { list: 'bullet' }],
     ['image'],
@@ -71,6 +72,13 @@
   // Uses event delegation so it works for both newly inserted and loaded blots,
   // regardless of when attach() fired relative to Quill's reconcile pass.
   editorEl.addEventListener('click', function (e) {
+    // Plain images: open the alt-text/width modal (Stage 11 F3, WCAG 1.1.1).
+    // The resize handle's drag path suppresses this via _hceResizedAt.
+    const imgWrapper = e.target.closest('.hce-image-wrapper');
+    if (imgWrapper && !e.target.closest('.hce-image-resize-handle')) {
+      window.ResizableImageBlot.openEditModal(imgWrapper);
+      return;
+    }
     const widgetNode = e.target.closest('[data-widget-type]');
     if (!widgetNode) return;
     const blot = Quill.find(widgetNode);
