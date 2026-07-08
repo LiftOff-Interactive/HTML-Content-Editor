@@ -118,4 +118,31 @@ CI runs it on push/PR.
 
 ## Feature log
 
-_(filled in as features land)_
+- **2026-07-07 — F1–F5 built, self-tested, committed** (commits 6a171af…c0a8112).
+  - F1 ✅ toolbar link + strike (`editor.js`); blockquote/H4–H6 excluded per plan.
+  - F2 ✅ `src/autosave.js`; design delta from plan: the `beforeunload` warning
+    fires only when the synchronous flush FAILED (quota/unavailable) — if the
+    draft persisted, leaving is safe and a warning would be noise.
+  - F3 ✅ image alt/width modal (`image.js` + `editor.js` delegation, resize-
+    click suppression); carousel pause + reduced-motion + hover/focus suspend
+    (autoplay-gated, so default exports unchanged); tabs Arrow/Home/End nav +
+    aria-controls/labelledby (JS mode only).
+  - F4 ✅ `src/ui/style-controls.js` + modal `divider`/`optcolor` field types;
+    five widgets wired in editor preview + both export modes. Hardening: 
+    override values from project JSON pass a SAFE_COLOR allowlist at the
+    single `resolve()` chokepoint (they bypass CSSOM, unlike theme vars —
+    injection regression tests in `_stage11_tests.html`).
+  - F5 ✅ `src/zip.js` + `src/scorm.js` + guarded `HCETrack` hook in
+    `knowledge-check.js` (first-attempt-wins). Mock-LMS verified: incomplete →
+    passed/failed transitions, % score, completed for no-KC documents.
+  - F6 ✅ `npm test` headless runner (11 suites), GitHub Actions, README →
+    LiftOff-Interactive, SECURITY.md, CHANGELOG.md, `_config.yml` excludes.
+  - **Gotcha (repeat of stage-9 lesson):** the blot-loading suite pages
+    (`_nojs_*`, `_rich_sanitize`, `_import`, `_export_format`) keep their own
+    script lists — adding a blot dependency (`style-controls.js`) without
+    updating them made all five styled widgets render error boxes in those
+    pages and "drifted" the bare-page baseline. Script lists must mirror
+    `index.html`.
+  - **Verification state:** `npm test` → **11/11 suites green, 288 cases**,
+    `_nojs_selftest` baseline **byte-identical** (`8792330f…`), editor-page
+    invariance hash intact. Independent Sonnet review/QA agents: see below.
